@@ -34,6 +34,12 @@ from ..libllaisys.qwen2 import (
     batch_slot_get_pos,
     batch_slot_save,
     batch_slot_restore,
+    # Per-request sampling
+    batch_decode_per_request,
+    # Paged KV-Cache block allocator queries
+    batch_get_free_blocks,
+    batch_get_total_blocks,
+    batch_get_block_size,
     # Phase 5 (项目#5): 张量并行
     model_create_tp,
     model_get_tp_size,
@@ -1153,6 +1159,52 @@ class BatchContext:
         
         return [int(output_arr[i]) for i in range(num_active)]
 
+    def decode_per_request(
+        self,
+        active_slots: Sequence[int],
+        current_tokens: Sequence[int],
+        temperatures: Sequence[float],
+        top_ks: Sequence[int],
+        top_ps: Sequence[float],
+    ) -> list[int]:
+        """Per-request sampling: each slot uses its own sampling parameters.
+        
+        Args:
+            active_slots: Active slot ID list.
+            current_tokens: Current token per slot.
+            temperatures: Temperature per slot.
+            top_ks: Top-K per slot.
+            top_ps: Top-P per slot.
+            
+        Returns:
+            list[int]: Next token per slot.
+        """
+        num_active = len(active_slots)
+        assert len(current_tokens) == num_active
+        assert len(temperatures) == num_active
+        assert len(top_ks) == num_active
+        assert len(top_ps) == num_active
+
+        slots_arr = (ctypes.c_size_t * num_active)(*active_slots)
+        tokens_arr = (ctypes.c_int64 * num_active)(*current_tokens)
+        temp_arr = (ctypes.c_float * num_active)(*temperatures)
+        topk_arr = (ctypes.c_int * num_active)(*top_ks)
+        topp_arr = (ctypes.c_float * num_active)(*top_ps)
+        output_arr = (ctypes.c_int64 * num_active)()
+
+        batch_decode_per_request(
+            self._handle,
+            slots_arr,
+            ctypes.c_size_t(num_active),
+            tokens_arr,
+            temp_arr,
+            topk_arr,
+            topp_arr,
+            output_arr,
+        )
+
+        return [int(output_arr[i]) for i in range(num_active)]
+
     def slot_get_pos(self, slot_id: int) -> int:
         """获取 slot 的当前 KV-Cache 位置."""
         return int(batch_slot_get_pos(self._handle, ctypes.c_size_t(slot_id)))
@@ -1176,3 +1228,31 @@ class BatchContext:
                 ctypes.c_size_t(slot_id),
                 snapshot_handle,
             )
+
+    def get_free_blocks(self) -> int:
+        """获取当前可用的 KV-Cache block 数量."""
+        return int(batch_get_free_blocks(self._handle))
+
+    def get_total_blocks(self) -> int:
+        """获取 KV-Cache block 总数."""
+        return int(batch_get_total_blocks(self._handle))
+
+    def get_block_size(self) -> int:
+        """获取每个 block 包含的 token 数."""
+        return int(batch_get_block_size(self._handle))
+
+    def get_block_usage(self) -> dict:
+        """获取 block 使用统计信息.
+        
+        Returns:
+            dict with keys: total, free, used, utilization (0.0~1.0)
+        """
+        total = self.get_total_blocks()
+        free = self.get_free_blocks()
+        used = total - free
+        return {
+            "total": total,
+            "free": free,
+            "used": used,
+            "utilization": used / total if total > 0 else 0.0,
+        }

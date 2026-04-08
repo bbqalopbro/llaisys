@@ -13,6 +13,7 @@
 #include "../ops/swiglu/op.hpp"
 #include "../ops/sample/op.hpp"
 #include "../ops/dequantize/op.hpp"
+#include "../ops/self_attention/paged_attention.hpp"
 
 __C {
     void llaisysAdd(llaisysTensor_t c, llaisysTensor_t a, llaisysTensor_t b) {
@@ -50,5 +51,23 @@ __C {
     }
     void llaisysDequantizeInt4(llaisysTensor_t out, llaisysTensor_t weight, llaisysTensor_t scale, int group_size) {
         llaisys::ops::dequantize_int4(out->tensor, weight->tensor, scale->tensor, group_size);
+    }
+    void llaisysPagedAttention(
+        float *output, const float *query,
+        void *k_pool, void *v_pool,
+        int *block_tables, int *seq_lens,
+        int batch_size, int num_heads, int num_kv_heads, int head_dim,
+        int block_size, int max_blocks_per_seq,
+        size_t pool_block_stride, size_t pool_layer_stride,
+        int layer_idx, float scale,
+        llaisysDeviceType_t device_type,
+        int kv_quant) {
+        llaisys::ops::paged_attention(output, query, k_pool, v_pool,
+                                       block_tables, seq_lens,
+                                       batch_size, num_heads, num_kv_heads, head_dim,
+                                       block_size, max_blocks_per_seq,
+                                       pool_block_stride, pool_layer_stride,
+                                       layer_idx, scale, device_type,
+                                       static_cast<llaisys::ops::KVQuantMode>(kv_quant));
     }
 }

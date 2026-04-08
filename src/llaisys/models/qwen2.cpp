@@ -2,8 +2,13 @@
 #include "llaisys/distributed.h"
 #include "../../ops/op.hpp"
 #include "../../ops/dequantize/op.hpp"
+#include "../../ops/self_attention/paged_attention.hpp"
 #include "../../utils/types.hpp"
-#include "../../distributed/comm.hpp"   
+#include "../../distributed/comm.hpp"
+#include "../../core/allocator/block_allocator.hpp"
+#include "../../core/page_table.hpp"
+#include "../../core/context/context.hpp"
+#include "../../core/cuda_graph.hpp"
 #include <algorithm>
 #include <vector>
 #include <iostream>
@@ -125,6 +130,16 @@ struct LlaisysQwen2Model {
         }
     }
 
+    void memcpyH2D(void* dev_dst, const void* host_src, size_t bytes) {
+        if (device_type == LLAISYS_DEVICE_CPU) {
+            std::memcpy(dev_dst, host_src, bytes);
+        } else {
+            core::context().setDevice(device_type, device_id);
+            core::context().runtime().api()->memcpy_async(
+                dev_dst, host_src, bytes, LLAISYS_MEMCPY_H2D, nullptr);
+        }
+    }
+
     void memcpyD2H(void* host_dst, tensor_t src, size_t bytes) {
         if (device_type == LLAISYS_DEVICE_CPU) {
             std::memcpy(host_dst, src->data(), bytes);
@@ -132,6 +147,16 @@ struct LlaisysQwen2Model {
             core::context().setDevice(device_type, device_id);
             core::context().runtime().api()->memcpy_sync(
                 host_dst, src->data(), bytes, LLAISYS_MEMCPY_D2H);
+        }
+    }
+
+    void memcpyD2H(void* host_dst, const void* dev_src, size_t bytes) {
+        if (device_type == LLAISYS_DEVICE_CPU) {
+            std::memcpy(host_dst, dev_src, bytes);
+        } else {
+            core::context().setDevice(device_type, device_id);
+            core::context().runtime().api()->memcpy_sync(
+                host_dst, dev_src, bytes, LLAISYS_MEMCPY_D2H);
         }
     }
 
@@ -925,26 +950,20 @@ __export int llaisysQwen2IsQuantized(struct LlaisysQwen2Model * model) {
 // 6. Phase 5 (项目#4): 批量推理上下文
 // ==========================================
 
-// Per-slot KV-Cache 状态
+// Per-slot KV-Cache 状态 (paged mode: uses shared BlockAllocator)
 struct BatchSlot {
-    std::vector<std::vector<tensor_t>> kv_caches; // [nlayer][2] (K, V)
+    llaisys::core::PageTable page_table;
     int64_t current_pos = 0;
     bool active = false;
 
-    void init(size_t nlayer, size_t maxseq, size_t nkvh, size_t dh,
-              llaisysDeviceType_t dev_type, int dev_id) {
-        std::vector<size_t> shape = {maxseq, nkvh, dh};
-        kv_caches.clear();
-        for (size_t i = 0; i < nlayer; ++i) {
-            auto k_c = Tensor::create(shape, LLAISYS_DTYPE_F32, dev_type, dev_id);
-            auto v_c = Tensor::create(shape, LLAISYS_DTYPE_F32, dev_type, dev_id);
-            kv_caches.push_back({k_c, v_c});
-        }
+    void init(int block_size) {
+        page_table = llaisys::core::PageTable(block_size);
         current_pos = 0;
         active = false;
     }
 
-    void reset() {
+    void reset(llaisys::core::BlockAllocator &alloc) {
+        page_table.release_all(alloc);
         current_pos = 0;
         active = false;
     }
@@ -953,51 +972,67 @@ struct BatchSlot {
 struct LlaisysQwen2BatchContext {
     LlaisysQwen2Model* model;
     size_t max_batch_size;
-    size_t max_seq_per_slot;  // per-slot KV-cache 最大序列长度
+    size_t max_seq_per_slot;
+    int block_size;
     std::vector<BatchSlot> slots;
 
-    // Batch 缓冲区 (按 max_batch_size 预分配)
-    tensor_t batch_input_ids;    // [max_batch]      I64
-    tensor_t batch_pos_ids;      // [max_batch]      I64
-    tensor_t batch_hidden;       // [max_batch, hs]  F32
-    tensor_t batch_residual;     // [max_batch, hs]  F32
-    tensor_t batch_norm_out;     // [max_batch, hs]  F32
-    tensor_t batch_q;            // [max_batch, q_dim]  F32
-    tensor_t batch_k;            // [max_batch, kv_dim] F32
-    tensor_t batch_v;            // [max_batch, kv_dim] F32
-    tensor_t batch_attn_out;     // [max_batch, hs]  F32  (nh * dh = hs)
-    tensor_t batch_gate;         // [max_batch, di]  F32
-    tensor_t batch_up;           // [max_batch, di]  F32
-    tensor_t batch_mlp_act;      // [max_batch, di]  F32
-    tensor_t batch_logits;       // [max_batch, voc] F32
+    // Shared block allocator for paged KV-Cache
+    std::unique_ptr<llaisys::core::BlockAllocator> block_allocator;
 
-    // 单请求临时缓冲区 (用于 per-slot attention)
-    tensor_t single_q;           // [1, nh, dh]
-    tensor_t single_attn_out;    // [1, nh, dh]
-    tensor_t single_logits;      // [1, voc]
-    tensor_t single_next_token;  // [1] I32
-    tensor_t single_max_val;     // [1] F32
+    // CUDA Graph for decode step acceleration
+    llaisys::core::CUDAGraphDecodeSession cuda_graph_session;
+
+    // Batch 缓冲区 (按 max_batch_size 预分配)
+    tensor_t batch_input_ids;
+    tensor_t batch_pos_ids;
+    tensor_t batch_hidden;
+    tensor_t batch_residual;
+    tensor_t batch_norm_out;
+    tensor_t batch_q;
+    tensor_t batch_k;
+    tensor_t batch_v;
+    tensor_t batch_attn_out;
+    tensor_t batch_gate;
+    tensor_t batch_up;
+    tensor_t batch_mlp_act;
+    tensor_t batch_logits;
+
+    // 单请求临时缓冲区
+    tensor_t single_logits;
+    tensor_t single_next_token;
+    tensor_t single_max_val;
 
     LlaisysQwen2BatchContext(LlaisysQwen2Model* m, size_t max_bs, size_t max_seq = 0)
-        : model(m), max_batch_size(max_bs)
+        : model(m), max_batch_size(max_bs), block_size(16)
     {
         auto& meta = model->meta;
         auto dev = model->device_type;
         auto dev_id = model->device_id;
-        // TP: 使用本地维度
         size_t q_dim = model->local_nh * meta.dh;
         size_t kv_dim = model->local_nkvh * meta.dh;
 
-        // per-slot 最大序列长度, 默认 2048 (避免 maxseq=32768 导致 OOM)
         max_seq_per_slot = (max_seq > 0 && max_seq <= meta.maxseq) ? max_seq : std::min((size_t)2048, meta.maxseq);
 
-        // 初始化 slots
+        // Block allocator: enough blocks for all slots at max capacity + headroom
+        size_t max_total_tokens = max_bs * max_seq_per_slot;
+        size_t num_blocks = (max_total_tokens + block_size - 1) / block_size + max_bs;
+
+        llaisys::core::BlockAllocatorConfig cfg = {
+            num_blocks, (size_t)block_size, meta.nlayer,
+            model->local_nkvh, meta.dh, sizeof(float)
+        };
+
+        if (dev != LLAISYS_DEVICE_CPU) {
+            llaisys::core::context().setDevice(dev, dev_id);
+        }
+        const LlaisysRuntimeAPI* api = llaisysGetRuntimeAPI(dev);
+        block_allocator = std::make_unique<llaisys::core::BlockAllocator>(cfg, api);
+
         slots.resize(max_bs);
         for (size_t i = 0; i < max_bs; ++i) {
-            slots[i].init(meta.nlayer, max_seq_per_slot, model->local_nkvh, meta.dh, dev, dev_id);
+            slots[i].init(block_size);
         }
 
-        // 初始化 batch 缓冲区
         batch_input_ids = Tensor::create({max_bs}, LLAISYS_DTYPE_I64, dev, dev_id);
         batch_pos_ids   = Tensor::create({max_bs}, LLAISYS_DTYPE_I64, dev, dev_id);
         batch_hidden    = Tensor::create({max_bs, meta.hs}, LLAISYS_DTYPE_F32, dev, dev_id);
@@ -1012,15 +1047,11 @@ struct LlaisysQwen2BatchContext {
         batch_mlp_act   = Tensor::create({max_bs, model->local_di}, LLAISYS_DTYPE_F32, dev, dev_id);
         batch_logits    = Tensor::create({max_bs, meta.voc}, LLAISYS_DTYPE_F32, dev, dev_id);
 
-        // 单请求缓冲区
-        single_q        = Tensor::create({1, model->local_nh, meta.dh}, LLAISYS_DTYPE_F32, dev, dev_id);
-        single_attn_out = Tensor::create({1, model->local_nh, meta.dh}, LLAISYS_DTYPE_F32, dev, dev_id);
-        single_logits   = Tensor::create({1, meta.voc}, LLAISYS_DTYPE_F32, dev, dev_id);
+        single_logits     = Tensor::create({1, meta.voc}, LLAISYS_DTYPE_F32, dev, dev_id);
         single_next_token = Tensor::create({1}, LLAISYS_DTYPE_I32, dev, dev_id);
         single_max_val    = Tensor::create({1}, LLAISYS_DTYPE_F32, dev, dev_id);
     }
 
-    // 量化感知 linear (复用 model 的 dequant cache)
     void linear_maybe_dequant(tensor_t out, tensor_t in,
                               llaisysTensor_t w_handle, llaisysTensor_t scale_handle,
                               llaisysTensor_t bias_handle,
@@ -1029,40 +1060,161 @@ struct LlaisysQwen2BatchContext {
     }
 };
 
-// ── 批量 Prefill (单 slot) ────────────────────────────────────────
+// ── Chunked Prefill: 直接写入 block pool, 无需中间拷贝 ──────────
 
 static int64_t batch_prefill_impl(LlaisysQwen2BatchContext* ctx, size_t slot_id,
                                    int64_t* token_ids, size_t ntoken,
                                    float temperature, int top_k, float top_p) {
     auto* model = ctx->model;
     auto& slot = ctx->slots[slot_id];
+    auto& alloc = *ctx->block_allocator;
+    auto& meta = model->meta;
     bool use_greedy = (top_k == 1) || (temperature <= 0.0f);
 
-    // 使用 model 的单序列推理 buffer 和方法 (prefill 不需要跨请求 batch)
-    // 临时切换 model 的 kv_caches 到 slot 的 kv_caches
-    auto saved_caches = model->kv_caches;
-    auto saved_pos = model->current_pos;
-    model->kv_caches = slot.kv_caches;
-    model->current_pos = slot.current_pos;
-
-    // 如果 current_pos > 0, prefill 不重置 (支持增量 prefill)
-    // 否则 ntoken > 1 时 model_infer 会重置
+    size_t kv_dim = model->local_nkvh * meta.dh;
+    size_t kv_bytes = kv_dim * sizeof(float);
+    float scale = 1.0f / std::sqrt((float)meta.dh);
     int64_t output_token = 0;
-    if (use_greedy) {
-        output_token = llaisysQwen2ModelInfer(model, token_ids, ntoken);
-    } else {
-        output_token = llaisysQwen2ModelInferSample(model, token_ids, ntoken,
-                                                     temperature, top_k, top_p);
+
+    // Pre-allocate enough blocks for the entire prompt
+    size_t blocks_needed = (ntoken + alloc.block_size() - 1) / alloc.block_size();
+    for (size_t bi = 0; bi < blocks_needed; ++bi) {
+        if (slot.page_table.needs_new_block()) {
+            int bid = alloc.alloc();
+            if (bid < 0) {
+                std::cerr << "[qwen2] chunked prefill: block pool exhausted" << std::endl;
+                break;
+            }
+            slot.page_table.append_block(bid);
+        }
+        for (size_t tok = 0; tok < alloc.block_size(); ++tok)
+            slot.page_table.inc_num_tokens();
+    }
+    slot.page_table.set_num_tokens(0);
+
+    // Process tokens one at a time, writing KV directly to block pool
+    for (size_t t = 0; t < ntoken; ++t) {
+        int64_t token = token_ids[t];
+        int64_t pos = static_cast<int64_t>(t);
+
+        model->memcpyH2D(model->input_ids_buf, &token, sizeof(int64_t));
+        model->memcpyH2D(model->pos_ids_buf, &pos, sizeof(int64_t));
+
+        // Embedding
+        ops::embedding(model->hidden_states, model->input_ids_buf,
+                       TO_CPP_TENSOR(model->weights.in_embed));
+
+        for (size_t layer = 0; layer < meta.nlayer; ++layer) {
+            std::swap(model->residual, model->hidden_states);
+
+            // Pre-Norm
+            ops::rms_norm(model->norm_out, model->residual,
+                         TO_CPP_TENSOR(model->weights.attn_norm_w[layer]), meta.epsilon);
+
+            // QKV Linear
+            model->linear_maybe_dequant(model->q, model->norm_out,
+                model->weights.attn_q_w[layer], model->weights.attn_q_w_scale[layer],
+                model->weights.attn_q_b[layer], model->weights.attn_q_w_qzeros[layer]);
+            model->linear_maybe_dequant(model->k, model->norm_out,
+                model->weights.attn_k_w[layer], model->weights.attn_k_w_scale[layer],
+                model->weights.attn_k_b[layer], model->weights.attn_k_w_qzeros[layer]);
+            model->linear_maybe_dequant(model->v, model->norm_out,
+                model->weights.attn_v_w[layer], model->weights.attn_v_w_scale[layer],
+                model->weights.attn_v_b[layer], model->weights.attn_v_w_qzeros[layer]);
+
+            // RoPE
+            auto q_3d = model->q->reshape({1, model->local_nh, meta.dh});
+            auto k_3d = model->k->reshape({1, model->local_nkvh, meta.dh});
+            auto v_3d = model->v->reshape({1, model->local_nkvh, meta.dh});
+            ops::rope(q_3d, q_3d, model->pos_ids_buf, meta.theta);
+            ops::rope(k_3d, k_3d, model->pos_ids_buf, meta.theta);
+
+            // Write KV directly to block pool (no contiguous cache!)
+            int bid = slot.page_table.get_block_for_token(static_cast<int>(t));
+            int off = slot.page_table.get_offset_in_block(static_cast<int>(t));
+            float* k_dst = (float*)alloc.get_k_ptr(bid, layer)
+                           + (size_t)off * kv_dim;
+            float* v_dst = (float*)alloc.get_v_ptr(bid, layer)
+                           + (size_t)off * kv_dim;
+            model->memcpyOnDevice(k_dst, k_3d->data(), kv_bytes);
+            model->memcpyOnDevice(v_dst, v_3d->data(), kv_bytes);
+
+            // Paged Attention over all tokens seen so far
+            int seq_len_so_far = static_cast<int>(t + 1);
+            int num_blocks_so_far = (seq_len_so_far + ctx->block_size - 1) / ctx->block_size;
+
+            std::vector<int> bt(num_blocks_so_far);
+            for (int j = 0; j < num_blocks_so_far; ++j)
+                bt[j] = slot.page_table.block_ids()[j];
+
+            llaisys::ops::paged_attention(
+                (float*)model->attn_out->data(),
+                (const float*)q_3d->data(),
+                alloc.pool_k_raw(), alloc.pool_v_raw(),
+                bt.data(), &seq_len_so_far,
+                1, static_cast<int>(model->local_nh),
+                static_cast<int>(model->local_nkvh),
+                static_cast<int>(meta.dh),
+                ctx->block_size, num_blocks_so_far,
+                alloc.block_stride(), alloc.layer_stride(),
+                static_cast<int>(layer), scale,
+                model->device_type);
+
+            // O Projection
+            auto attn_flat = model->attn_out->reshape({1, model->local_nh * meta.dh});
+            model->linear_maybe_dequant(model->hidden_states, attn_flat,
+                model->weights.attn_o_w[layer], model->weights.attn_o_w_scale[layer],
+                nullptr, model->weights.attn_o_w_qzeros[layer]);
+            model->allReduceIfTP(model->hidden_states, meta.hs);
+
+            // Residual Add 1
+            ops::add(model->hidden_states, model->hidden_states, model->residual);
+
+            // MLP Block
+            std::swap(model->residual, model->hidden_states);
+            ops::rms_norm(model->norm_out, model->residual,
+                         TO_CPP_TENSOR(model->weights.mlp_norm_w[layer]), meta.epsilon);
+            model->linear_maybe_dequant(model->gate, model->norm_out,
+                model->weights.mlp_gate_w[layer], model->weights.mlp_gate_w_scale[layer],
+                nullptr, model->weights.mlp_gate_w_qzeros[layer]);
+            model->linear_maybe_dequant(model->up, model->norm_out,
+                model->weights.mlp_up_w[layer], model->weights.mlp_up_w_scale[layer],
+                nullptr, model->weights.mlp_up_w_qzeros[layer]);
+            ops::swiglu(model->mlp_act, model->gate, model->up);
+            model->linear_maybe_dequant(model->hidden_states, model->mlp_act,
+                model->weights.mlp_down_w[layer], model->weights.mlp_down_w_scale[layer],
+                nullptr, model->weights.mlp_down_w_qzeros[layer]);
+            model->allReduceIfTP(model->hidden_states, meta.hs);
+
+            // Residual Add 2
+            ops::add(model->hidden_states, model->hidden_states, model->residual);
+        }
+
+        // Only compute logits for the last token
+        if (t == ntoken - 1) {
+            ops::rms_norm(model->hidden_states, model->hidden_states,
+                         TO_CPP_TENSOR(model->weights.out_norm_w), meta.epsilon);
+            model->linear_maybe_dequant(model->logits, model->hidden_states,
+                model->weights.out_embed, model->weights.out_embed_scale, nullptr);
+
+            auto logits_2d = model->logits->reshape({1, meta.voc});
+            if (use_greedy) {
+                ops::argmax(model->next_token, model->max_val, logits_2d);
+            } else {
+                ops::sample(model->next_token, logits_2d,
+                           temperature, top_k, top_p, model->rng_seed++);
+            }
+
+            int32_t host_token;
+            model->memcpyD2H(&host_token, model->next_token, sizeof(int32_t));
+            output_token = host_token;
+        }
+
+        slot.page_table.inc_num_tokens();
     }
 
-    // 保存 slot 状态
-    slot.current_pos = model->current_pos;
+    slot.current_pos = static_cast<int64_t>(ntoken);
     slot.active = true;
-
-    // 恢复 model 状态
-    model->kv_caches = saved_caches;
-    model->current_pos = saved_pos;
-
     return output_token;
 }
 
@@ -1077,14 +1229,43 @@ static void batch_decode_impl(LlaisysQwen2BatchContext* ctx,
 
     auto* model = ctx->model;
     auto& meta = model->meta;
+    auto& alloc = *ctx->block_allocator;
     size_t B = num_active;
-    size_t q_dim = model->local_nh * meta.dh;
     size_t kv_dim = model->local_nkvh * meta.dh;
     size_t kv_bytes = kv_dim * sizeof(float);
     bool use_greedy = (top_k == 1) || (temperature <= 0.0f);
 
-    // ── 1. 准备输入 (H2D) ──
-    // 创建 batch view (使用 slice 控制实际大小)
+    // ── 0. Allocate new blocks for current positions (once, before layer loop) ──
+    for (size_t i = 0; i < B; ++i) {
+        auto& slot = ctx->slots[active_slots[i]];
+        if (slot.page_table.needs_new_block()) {
+            int bid = alloc.alloc();
+            if (bid < 0) {
+                std::cerr << "[qwen2] decode: block pool exhausted for slot "
+                          << active_slots[i] << std::endl;
+                return;
+            }
+            slot.page_table.append_block(bid);
+        }
+    }
+
+    // ── 1. Build batch block tables and seq_lens for paged attention ──
+    int max_blocks_per_seq = 0;
+    for (size_t i = 0; i < B; ++i) {
+        auto& slot = ctx->slots[active_slots[i]];
+        max_blocks_per_seq = std::max(max_blocks_per_seq, slot.page_table.num_blocks());
+    }
+
+    std::vector<int> block_tables(B * max_blocks_per_seq, 0);
+    std::vector<int> seq_lens(B);
+    for (size_t i = 0; i < B; ++i) {
+        auto& slot = ctx->slots[active_slots[i]];
+        seq_lens[i] = static_cast<int>(slot.current_pos + 1);
+        for (int j = 0; j < slot.page_table.num_blocks(); ++j)
+            block_tables[i * max_blocks_per_seq + j] = slot.page_table.block_ids()[j];
+    }
+
+    // ── 2. 准备输入 (H2D) ──
     auto b_input  = ctx->batch_input_ids->slice(0, 0, B);
     auto b_pos    = ctx->batch_pos_ids->slice(0, 0, B);
     auto b_hidden = ctx->batch_hidden->slice(0, 0, B);
@@ -1099,7 +1280,6 @@ static void batch_decode_impl(LlaisysQwen2BatchContext* ctx,
     auto b_mlp    = ctx->batch_mlp_act->slice(0, 0, B);
     auto b_logits = ctx->batch_logits->slice(0, 0, B);
 
-    // 写入 batch token ids 和 position ids
     std::vector<int64_t> host_tokens(B);
     std::vector<int64_t> host_positions(B);
     for (size_t i = 0; i < B; ++i) {
@@ -1109,20 +1289,21 @@ static void batch_decode_impl(LlaisysQwen2BatchContext* ctx,
     model->memcpyH2D(b_input, host_tokens.data(), B * sizeof(int64_t));
     model->memcpyH2D(b_pos, host_positions.data(), B * sizeof(int64_t));
 
-    // ── 2. 批量 Embedding ──
+    // ── 3. 批量 Embedding ──
     ops::embedding(b_hidden, b_input, TO_CPP_TENSOR(model->weights.in_embed));
 
-    // ── 3. Transformer Layers ──
+    // ── 4. Transformer Layers ──
+    float scale = 1.0f / std::sqrt((float)meta.dh);
+
     for (size_t layer = 0; layer < meta.nlayer; ++layer) {
-        // Swap residual ← hidden
         std::swap(b_resid, b_hidden);
 
-        // A. Pre-Norm (batch)
+        // A. Pre-Norm
         ops::rms_norm(b_norm, b_resid,
                       TO_CPP_TENSOR(model->weights.attn_norm_w[layer]),
                       meta.epsilon);
 
-        // B. QKV Linear (batch)
+        // B. QKV Linear
         ctx->linear_maybe_dequant(b_q, b_norm,
             model->weights.attn_q_w[layer], model->weights.attn_q_w_scale[layer],
             model->weights.attn_q_b[layer], model->weights.attn_q_w_qzeros[layer]);
@@ -1133,59 +1314,56 @@ static void batch_decode_impl(LlaisysQwen2BatchContext* ctx,
             model->weights.attn_v_w[layer], model->weights.attn_v_w_scale[layer],
             model->weights.attn_v_b[layer], model->weights.attn_v_w_qzeros[layer]);
 
-        // C. RoPE (batch): reshape [B, nh*dh] → [B, nh, dh], pos_ids = [B]
+        // C. RoPE
         auto q_3d = b_q->reshape({B, model->local_nh, meta.dh});
         auto k_3d = b_k->reshape({B, model->local_nkvh, meta.dh});
         ops::rope(q_3d, q_3d, b_pos, meta.theta);
         ops::rope(k_3d, k_3d, b_pos, meta.theta);
 
-        // D. Per-slot: KV-Cache update + Self-Attention
+        // D. Write KV to block pool for current token
         auto v_3d = b_v->reshape({B, model->local_nkvh, meta.dh});
-        float scale = 1.0f / std::sqrt((float)meta.dh);
-
         for (size_t i = 0; i < B; ++i) {
-            size_t sid = active_slots[i];
-            auto& slot = ctx->slots[sid];
+            auto& slot = ctx->slots[active_slots[i]];
             int64_t pos = slot.current_pos;
+            int bid = slot.page_table.get_block_for_token(static_cast<int>(pos));
+            int off = slot.page_table.get_offset_in_block(static_cast<int>(pos));
 
-            // 从 batch buffer 中提取第 i 个请求的 KV
-            // k_3d[i, :, :] → single row in kv_cache
-            if (pos < (int64_t)meta.maxseq) {
-                char* k_src = (char*)k_3d->data() + i * kv_bytes;
-                char* v_src = (char*)v_3d->data() + i * kv_bytes;
-                char* k_dst = (char*)slot.kv_caches[layer][0]->data() + pos * kv_bytes;
-                char* v_dst = (char*)slot.kv_caches[layer][1]->data() + pos * kv_bytes;
-                model->memcpyOnDevice(k_dst, k_src, kv_bytes);
-                model->memcpyOnDevice(v_dst, v_src, kv_bytes);
-            }
-
-            // 提取第 i 个请求的 Q → single_q [1, nh, dh]
-            size_t q_bytes = q_dim * sizeof(float);
-            char* q_src = (char*)q_3d->data() + i * q_bytes;
-            model->memcpyOnDevice(ctx->single_q->data(), q_src, q_bytes);
-
-            // Self-Attention
-            auto k_slice = slot.kv_caches[layer][0]->slice(0, 0, pos + 1);
-            auto v_slice = slot.kv_caches[layer][1]->slice(0, 0, pos + 1);
-            ops::self_attention(ctx->single_attn_out, ctx->single_q, k_slice, v_slice, scale);
-
-            // 写回到 batch_attn_out[i]
-            size_t attn_bytes = model->local_nh * meta.dh * sizeof(float);
-            char* attn_dst = (char*)b_attn->data() + i * attn_bytes;
-            model->memcpyOnDevice(attn_dst, ctx->single_attn_out->data(), attn_bytes);
+            float* k_dst = (float*)alloc.get_k_ptr(bid, layer)
+                           + (size_t)off * model->local_nkvh * meta.dh;
+            float* v_dst = (float*)alloc.get_v_ptr(bid, layer)
+                           + (size_t)off * model->local_nkvh * meta.dh;
+            char* k_src = (char*)k_3d->data() + i * kv_bytes;
+            char* v_src = (char*)v_3d->data() + i * kv_bytes;
+            model->memcpyOnDevice(k_dst, k_src, kv_bytes);
+            model->memcpyOnDevice(v_dst, v_src, kv_bytes);
         }
 
-        // E. O Projection (batch)
+        // E. Paged Attention (all sequences in one call)
+        llaisys::ops::paged_attention(
+            (float*)b_attn->data(),
+            (const float*)q_3d->data(),
+            alloc.pool_k_raw(), alloc.pool_v_raw(),
+            block_tables.data(), seq_lens.data(),
+            static_cast<int>(B),
+            static_cast<int>(model->local_nh),
+            static_cast<int>(model->local_nkvh),
+            static_cast<int>(meta.dh),
+            ctx->block_size,
+            max_blocks_per_seq,
+            alloc.block_stride(), alloc.layer_stride(),
+            static_cast<int>(layer), scale,
+            model->device_type);
+
+        // F. O Projection
         ctx->linear_maybe_dequant(b_hidden, b_attn,
             model->weights.attn_o_w[layer], model->weights.attn_o_w_scale[layer],
             nullptr, model->weights.attn_o_w_qzeros[layer]);
-        // TP: O proj row parallel → all-reduce
         model->allReduceIfTP(b_hidden, B * meta.hs);
 
-        // F. Residual Add 1 (batch)
+        // G. Residual Add 1
         ops::add(b_hidden, b_hidden, b_resid);
 
-        // G. MLP Block (batch)
+        // H. MLP Block
         std::swap(b_resid, b_hidden);
         ops::rms_norm(b_norm, b_resid,
                       TO_CPP_TENSOR(model->weights.mlp_norm_w[layer]),
@@ -1201,26 +1379,24 @@ static void batch_decode_impl(LlaisysQwen2BatchContext* ctx,
         ctx->linear_maybe_dequant(b_hidden, b_mlp,
             model->weights.mlp_down_w[layer], model->weights.mlp_down_w_scale[layer],
             nullptr, model->weights.mlp_down_w_qzeros[layer]);
-        // TP: down proj row parallel → all-reduce
         model->allReduceIfTP(b_hidden, B * meta.hs);
 
-        // H. Residual Add 2 (batch)
+        // I. Residual Add 2
         ops::add(b_hidden, b_hidden, b_resid);
     }
 
-    // ── 4. Final Norm (batch) ──
+    // ── 5. Final Norm ──
     ops::rms_norm(b_hidden, b_hidden,
                   TO_CPP_TENSOR(model->weights.out_norm_w), meta.epsilon);
 
-    // ── 5. LM Head (batch) ──
+    // ── 6. LM Head ──
     ctx->linear_maybe_dequant(b_logits, b_hidden,
         model->weights.out_embed, model->weights.out_embed_scale, nullptr);
 
-    // ── 6. Per-slot Argmax/Sample + KV-Cache pos update ──
+    // ── 7. Per-slot Argmax/Sample + position update ──
     for (size_t i = 0; i < B; ++i) {
         size_t sid = active_slots[i];
 
-        // 提取第 i 个请求的 logits → single_logits [1, voc]
         size_t logits_bytes = meta.voc * sizeof(float);
         char* logits_src = (char*)b_logits->data() + i * logits_bytes;
         model->memcpyOnDevice(ctx->single_logits->data(), logits_src, logits_bytes);
@@ -1236,7 +1412,180 @@ static void batch_decode_impl(LlaisysQwen2BatchContext* ctx,
         model->memcpyD2H(&host_token, ctx->single_next_token, sizeof(int32_t));
         output_tokens[i] = host_token;
 
-        // 更新 slot position
+        ctx->slots[sid].page_table.inc_num_tokens();
+        ctx->slots[sid].current_pos++;
+    }
+}
+
+// Per-request sampling variant: each slot uses its own temperature/top_k/top_p
+static void batch_decode_per_request_impl(LlaisysQwen2BatchContext* ctx,
+                                           size_t* active_slots, size_t num_active,
+                                           int64_t* current_tokens,
+                                           float* temperatures, int* top_ks, float* top_ps,
+                                           int64_t* output_tokens) {
+    if (num_active == 0) return;
+
+    auto* model = ctx->model;
+    auto& meta = model->meta;
+    auto& alloc = *ctx->block_allocator;
+    size_t B = num_active;
+    size_t kv_dim = model->local_nkvh * meta.dh;
+    size_t kv_bytes = kv_dim * sizeof(float);
+
+    // Block allocation
+    for (size_t i = 0; i < B; ++i) {
+        auto& slot = ctx->slots[active_slots[i]];
+        if (slot.page_table.needs_new_block()) {
+            int bid = alloc.alloc();
+            if (bid < 0) {
+                std::cerr << "[qwen2] decode: block pool exhausted for slot "
+                          << active_slots[i] << std::endl;
+                return;
+            }
+            slot.page_table.append_block(bid);
+        }
+    }
+
+    int max_blocks_per_seq = 0;
+    for (size_t i = 0; i < B; ++i) {
+        auto& slot = ctx->slots[active_slots[i]];
+        max_blocks_per_seq = std::max(max_blocks_per_seq, slot.page_table.num_blocks());
+    }
+
+    std::vector<int> block_tables(B * max_blocks_per_seq, 0);
+    std::vector<int> seq_lens(B);
+    for (size_t i = 0; i < B; ++i) {
+        auto& slot = ctx->slots[active_slots[i]];
+        seq_lens[i] = static_cast<int>(slot.current_pos + 1);
+        for (int j = 0; j < slot.page_table.num_blocks(); ++j)
+            block_tables[i * max_blocks_per_seq + j] = slot.page_table.block_ids()[j];
+    }
+
+    auto b_input  = ctx->batch_input_ids->slice(0, 0, B);
+    auto b_pos    = ctx->batch_pos_ids->slice(0, 0, B);
+    auto b_hidden = ctx->batch_hidden->slice(0, 0, B);
+    auto b_resid  = ctx->batch_residual->slice(0, 0, B);
+    auto b_norm   = ctx->batch_norm_out->slice(0, 0, B);
+    auto b_q      = ctx->batch_q->slice(0, 0, B);
+    auto b_k      = ctx->batch_k->slice(0, 0, B);
+    auto b_v      = ctx->batch_v->slice(0, 0, B);
+    auto b_attn   = ctx->batch_attn_out->slice(0, 0, B);
+    auto b_gate   = ctx->batch_gate->slice(0, 0, B);
+    auto b_up     = ctx->batch_up->slice(0, 0, B);
+    auto b_mlp    = ctx->batch_mlp_act->slice(0, 0, B);
+    auto b_logits = ctx->batch_logits->slice(0, 0, B);
+
+    std::vector<int64_t> host_tokens(B);
+    std::vector<int64_t> host_positions(B);
+    for (size_t i = 0; i < B; ++i) {
+        host_tokens[i] = current_tokens[i];
+        host_positions[i] = ctx->slots[active_slots[i]].current_pos;
+    }
+    model->memcpyH2D(b_input, host_tokens.data(), B * sizeof(int64_t));
+    model->memcpyH2D(b_pos, host_positions.data(), B * sizeof(int64_t));
+
+    ops::embedding(b_hidden, b_input, TO_CPP_TENSOR(model->weights.in_embed));
+
+    float scale = 1.0f / std::sqrt((float)meta.dh);
+
+    for (size_t layer = 0; layer < meta.nlayer; ++layer) {
+        std::swap(b_resid, b_hidden);
+        ops::rms_norm(b_norm, b_resid,
+                      TO_CPP_TENSOR(model->weights.attn_norm_w[layer]), meta.epsilon);
+        ctx->linear_maybe_dequant(b_q, b_norm,
+            model->weights.attn_q_w[layer], model->weights.attn_q_w_scale[layer],
+            model->weights.attn_q_b[layer], model->weights.attn_q_w_qzeros[layer]);
+        ctx->linear_maybe_dequant(b_k, b_norm,
+            model->weights.attn_k_w[layer], model->weights.attn_k_w_scale[layer],
+            model->weights.attn_k_b[layer], model->weights.attn_k_w_qzeros[layer]);
+        ctx->linear_maybe_dequant(b_v, b_norm,
+            model->weights.attn_v_w[layer], model->weights.attn_v_w_scale[layer],
+            model->weights.attn_v_b[layer], model->weights.attn_v_w_qzeros[layer]);
+
+        auto q_3d = b_q->reshape({B, model->local_nh, meta.dh});
+        auto k_3d = b_k->reshape({B, model->local_nkvh, meta.dh});
+        ops::rope(q_3d, q_3d, b_pos, meta.theta);
+        ops::rope(k_3d, k_3d, b_pos, meta.theta);
+
+        auto v_3d = b_v->reshape({B, model->local_nkvh, meta.dh});
+        for (size_t i = 0; i < B; ++i) {
+            auto& slot = ctx->slots[active_slots[i]];
+            int64_t pos = slot.current_pos;
+            int bid = slot.page_table.get_block_for_token(static_cast<int>(pos));
+            int off = slot.page_table.get_offset_in_block(static_cast<int>(pos));
+
+            float* k_dst = (float*)alloc.get_k_ptr(bid, layer)
+                           + (size_t)off * model->local_nkvh * meta.dh;
+            float* v_dst = (float*)alloc.get_v_ptr(bid, layer)
+                           + (size_t)off * model->local_nkvh * meta.dh;
+            char* k_src = (char*)k_3d->data() + i * kv_bytes;
+            char* v_src = (char*)v_3d->data() + i * kv_bytes;
+            model->memcpyOnDevice(k_dst, k_src, kv_bytes);
+            model->memcpyOnDevice(v_dst, v_src, kv_bytes);
+        }
+
+        llaisys::ops::paged_attention(
+            (float*)b_attn->data(), (const float*)q_3d->data(),
+            alloc.pool_k_raw(), alloc.pool_v_raw(),
+            block_tables.data(), seq_lens.data(),
+            static_cast<int>(B), static_cast<int>(model->local_nh),
+            static_cast<int>(model->local_nkvh), static_cast<int>(meta.dh),
+            ctx->block_size, max_blocks_per_seq,
+            alloc.block_stride(), alloc.layer_stride(),
+            static_cast<int>(layer), scale, model->device_type);
+
+        ctx->linear_maybe_dequant(b_hidden, b_attn,
+            model->weights.attn_o_w[layer], model->weights.attn_o_w_scale[layer],
+            nullptr, model->weights.attn_o_w_qzeros[layer]);
+        model->allReduceIfTP(b_hidden, B * meta.hs);
+        ops::add(b_hidden, b_hidden, b_resid);
+
+        std::swap(b_resid, b_hidden);
+        ops::rms_norm(b_norm, b_resid,
+                      TO_CPP_TENSOR(model->weights.mlp_norm_w[layer]), meta.epsilon);
+        ctx->linear_maybe_dequant(b_gate, b_norm,
+            model->weights.mlp_gate_w[layer], model->weights.mlp_gate_w_scale[layer],
+            nullptr, model->weights.mlp_gate_w_qzeros[layer]);
+        ctx->linear_maybe_dequant(b_up, b_norm,
+            model->weights.mlp_up_w[layer], model->weights.mlp_up_w_scale[layer],
+            nullptr, model->weights.mlp_up_w_qzeros[layer]);
+        ops::swiglu(b_mlp, b_gate, b_up);
+        ctx->linear_maybe_dequant(b_hidden, b_mlp,
+            model->weights.mlp_down_w[layer], model->weights.mlp_down_w_scale[layer],
+            nullptr, model->weights.mlp_down_w_qzeros[layer]);
+        model->allReduceIfTP(b_hidden, B * meta.hs);
+        ops::add(b_hidden, b_hidden, b_resid);
+    }
+
+    ops::rms_norm(b_hidden, b_hidden,
+                  TO_CPP_TENSOR(model->weights.out_norm_w), meta.epsilon);
+    ctx->linear_maybe_dequant(b_logits, b_hidden,
+        model->weights.out_embed, model->weights.out_embed_scale, nullptr);
+
+    // Per-request sampling
+    for (size_t i = 0; i < B; ++i) {
+        size_t sid = active_slots[i];
+        float temp = temperatures[i];
+        int topk = top_ks[i];
+        float topp = top_ps[i];
+        bool greedy = (topk == 1) || (temp <= 0.0f);
+
+        size_t logits_bytes = meta.voc * sizeof(float);
+        char* logits_src = (char*)b_logits->data() + i * logits_bytes;
+        model->memcpyOnDevice(ctx->single_logits->data(), logits_src, logits_bytes);
+
+        if (greedy) {
+            ops::argmax(ctx->single_next_token, ctx->single_max_val, ctx->single_logits);
+        } else {
+            ops::sample(ctx->single_next_token, ctx->single_logits,
+                        temp, topk, topp, model->rng_seed++);
+        }
+
+        int32_t host_token;
+        model->memcpyD2H(&host_token, ctx->single_next_token, sizeof(int32_t));
+        output_tokens[i] = host_token;
+
+        ctx->slots[sid].page_table.inc_num_tokens();
         ctx->slots[sid].current_pos++;
     }
 }
@@ -1248,6 +1597,7 @@ static LlaisysQwen2CacheSnapshot* batch_slot_save_impl(
 {
     auto* model = ctx->model;
     auto& slot = ctx->slots[slot_id];
+    auto& alloc = *ctx->block_allocator;
     if (slot.current_pos <= 0) return nullptr;
 
     auto* snap = new LlaisysQwen2CacheSnapshot();
@@ -1256,14 +1606,31 @@ static LlaisysQwen2CacheSnapshot* batch_slot_save_impl(
     snap->pos_bytes = model->local_nkvh * model->meta.dh * sizeof(float);
     snap->tp_size = model->tp_size;
     snap->tp_rank = model->tp_rank;
-    size_t total_bytes = snap->pos * snap->pos_bytes;
     snap->buffers.resize(snap->nlayer * 2);
 
-    for (size_t i = 0; i < snap->nlayer; ++i) {
+    size_t total_bytes = snap->pos * snap->pos_bytes;
+    size_t kv_row_bytes = snap->pos_bytes;
+
+    for (size_t layer = 0; layer < snap->nlayer; ++layer) {
         for (size_t kv = 0; kv < 2; ++kv) {
-            size_t idx = i * 2 + kv;
+            size_t idx = layer * 2 + kv;
             snap->buffers[idx].resize(total_bytes);
-            model->memcpyD2H(snap->buffers[idx].data(), slot.kv_caches[i][kv], total_bytes);
+        }
+    }
+
+    // Linearize paged KV data into contiguous snapshot buffers
+    for (int64_t t = 0; t < snap->pos; ++t) {
+        int bid = slot.page_table.get_block_for_token(static_cast<int>(t));
+        int off = slot.page_table.get_offset_in_block(static_cast<int>(t));
+        for (size_t layer = 0; layer < snap->nlayer; ++layer) {
+            float* k_src = (float*)alloc.get_k_ptr(bid, layer)
+                           + (size_t)off * model->local_nkvh * model->meta.dh;
+            float* v_src = (float*)alloc.get_v_ptr(bid, layer)
+                           + (size_t)off * model->local_nkvh * model->meta.dh;
+            void* k_dst = snap->buffers[layer * 2].data() + t * kv_row_bytes;
+            void* v_dst = snap->buffers[layer * 2 + 1].data() + t * kv_row_bytes;
+            model->memcpyD2H(k_dst, k_src, kv_row_bytes);
+            model->memcpyD2H(v_dst, v_src, kv_row_bytes);
         }
     }
     return snap;
@@ -1276,22 +1643,47 @@ static void batch_slot_restore_impl(
     if (!snapshot) return;
     auto* model = ctx->model;
     auto& slot = ctx->slots[slot_id];
+    auto& alloc = *ctx->block_allocator;
     if (snapshot->nlayer != model->meta.nlayer) return;
-    // TP 兼容性校验
     if (snapshot->tp_size != model->tp_size || snapshot->tp_rank != model->tp_rank) {
         std::cerr << "[qwen2] BatchSlotRestore: TP mismatch" << std::endl;
         return;
     }
 
-    slot.current_pos = snapshot->pos;
-    size_t total_bytes = snapshot->pos * snapshot->pos_bytes;
+    // Release any existing blocks before restore
+    slot.page_table.release_all(alloc);
+    slot.current_pos = 0;
 
-    for (size_t i = 0; i < snapshot->nlayer; ++i) {
-        for (size_t kv = 0; kv < 2; ++kv) {
-            size_t idx = i * 2 + kv;
-            model->memcpyH2D(slot.kv_caches[i][kv], snapshot->buffers[idx].data(), total_bytes);
+    size_t kv_row_bytes = snapshot->pos_bytes;
+
+    // Re-populate page table and copy data from snapshot into block pool
+    for (int64_t t = 0; t < snapshot->pos; ++t) {
+        if (slot.page_table.needs_new_block()) {
+            int bid = alloc.alloc();
+            if (bid < 0) {
+                std::cerr << "[qwen2] BatchSlotRestore: block pool exhausted" << std::endl;
+                return;
+            }
+            slot.page_table.append_block(bid);
         }
+
+        int bid = slot.page_table.get_block_for_token(static_cast<int>(t));
+        int off = slot.page_table.get_offset_in_block(static_cast<int>(t));
+
+        for (size_t layer = 0; layer < snapshot->nlayer; ++layer) {
+            const void* k_src = snapshot->buffers[layer * 2].data() + t * kv_row_bytes;
+            const void* v_src = snapshot->buffers[layer * 2 + 1].data() + t * kv_row_bytes;
+            void* k_dst = (float*)alloc.get_k_ptr(bid, layer)
+                          + (size_t)off * model->local_nkvh * model->meta.dh;
+            void* v_dst = (float*)alloc.get_v_ptr(bid, layer)
+                          + (size_t)off * model->local_nkvh * model->meta.dh;
+            model->memcpyH2D(k_dst, k_src, kv_row_bytes);
+            model->memcpyH2D(v_dst, v_src, kv_row_bytes);
+        }
+        slot.page_table.inc_num_tokens();
     }
+
+    slot.current_pos = snapshot->pos;
     slot.active = true;
 }
 
@@ -1310,7 +1702,7 @@ __export void llaisysQwen2BatchContextDestroy(struct LlaisysQwen2BatchContext * 
 
 __export void llaisysQwen2BatchSlotReset(struct LlaisysQwen2BatchContext * ctx, size_t slot_id) {
     if (!ctx || slot_id >= ctx->max_batch_size) return;
-    ctx->slots[slot_id].reset();
+    ctx->slots[slot_id].reset(*ctx->block_allocator);
 }
 
 __export int64_t llaisysQwen2BatchPrefill(
@@ -1320,7 +1712,7 @@ __export int64_t llaisysQwen2BatchPrefill(
     float temperature, int top_k, float top_p)
 {
     if (!ctx || slot_id >= ctx->max_batch_size || !token_ids || ntoken == 0) return -1;
-    ctx->slots[slot_id].reset();
+    ctx->slots[slot_id].reset(*ctx->block_allocator);
     return batch_prefill_impl(ctx, slot_id, token_ids, ntoken,
                               temperature, top_k, top_p);
 }
@@ -1361,6 +1753,43 @@ __export void llaisysQwen2BatchSlotRestore(
 {
     if (!ctx || slot_id >= ctx->max_batch_size) return;
     batch_slot_restore_impl(ctx, slot_id, snapshot);
+}
+
+__export void llaisysQwen2BatchDecodePerRequest(
+    struct LlaisysQwen2BatchContext * ctx,
+    size_t * active_slots, size_t num_active,
+    int64_t * current_tokens,
+    float * temperatures, int * top_ks, float * top_ps,
+    int64_t * output_tokens)
+{
+    if (!ctx || !active_slots || !current_tokens || !output_tokens || num_active == 0) return;
+    if (!temperatures || !top_ks || !top_ps) return;
+    for (size_t i = 0; i < num_active; ++i) {
+        if (active_slots[i] >= ctx->max_batch_size) return;
+    }
+    batch_decode_per_request_impl(ctx, active_slots, num_active, current_tokens,
+                                   temperatures, top_ks, top_ps, output_tokens);
+}
+
+__export size_t llaisysQwen2BatchGetFreeBlocks(
+    struct LlaisysQwen2BatchContext * ctx)
+{
+    if (!ctx || !ctx->block_allocator) return 0;
+    return ctx->block_allocator->num_free();
+}
+
+__export size_t llaisysQwen2BatchGetTotalBlocks(
+    struct LlaisysQwen2BatchContext * ctx)
+{
+    if (!ctx || !ctx->block_allocator) return 0;
+    return ctx->block_allocator->num_total();
+}
+
+__export int llaisysQwen2BatchGetBlockSize(
+    struct LlaisysQwen2BatchContext * ctx)
+{
+    if (!ctx) return 0;
+    return ctx->block_size;
 }
 
 } // extern "C"

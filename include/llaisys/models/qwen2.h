@@ -190,5 +190,21 @@ __C {
         struct LlaisysQwen2BatchContext * ctx, size_t slot_id,
         struct LlaisysQwen2CacheSnapshot * snapshot);
 
+    // Per-request sampling: each slot uses its own temperature/top_k/top_p
+    __export void llaisysQwen2BatchDecodePerRequest(
+        struct LlaisysQwen2BatchContext * ctx,
+        size_t * active_slots, size_t num_active,
+        int64_t * current_tokens,
+        float * temperatures, int * top_ks, float * top_ps,
+        int64_t * output_tokens);
+
+    // Paged KV-Cache block allocator queries
+    __export size_t llaisysQwen2BatchGetFreeBlocks(
+        struct LlaisysQwen2BatchContext * ctx);
+    __export size_t llaisysQwen2BatchGetTotalBlocks(
+        struct LlaisysQwen2BatchContext * ctx);
+    __export int llaisysQwen2BatchGetBlockSize(
+        struct LlaisysQwen2BatchContext * ctx);
+
 }
 #endif // LLAISYS_MODELS_QWEN2_H

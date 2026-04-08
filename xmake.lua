@@ -25,6 +25,18 @@ option("dist-mpi")
     set_description("Enable MPI distributed communication backend (stage A skeleton)")
 option_end()
 
+option("flashinfer")
+    set_default(false)
+    set_showmenu(true)
+    set_description("Enable FlashInfer optimized attention kernel (requires FlashInfer headers)")
+option_end()
+
+option("flashinfer-include")
+    set_default("")
+    set_showmenu(true)
+    set_description("Path to FlashInfer include directory")
+option_end()
+
 -- MetaX (沐曦) --
 option("metax-gpu")
     set_default(false)
@@ -35,6 +47,14 @@ option_end()
 if has_config("nv-gpu") then
     add_defines("ENABLE_NVIDIA_API")
     includes("xmake/nvidia.lua")
+end
+
+if has_config("flashinfer") then
+    add_defines("ENABLE_FLASHINFER")
+    local fi_inc = get_config("flashinfer-include")
+    if fi_inc and fi_inc ~= "" then
+        add_includedirs(fi_inc)
+    end
 end
 
 if has_config("metax-gpu") then
@@ -96,6 +116,7 @@ target("llaisys-core")
     end
 
     add_files("src/core/*/*.cpp")
+    add_files("src/core/*.cpp")
 
     on_install(function (target) end)
 target_end()
@@ -126,6 +147,9 @@ target("llaisys-ops")
     end
     
     add_files("src/ops/*/*.cpp")
+    if has_config("nv-gpu") then
+        remove_files("src/ops/self_attention/paged_attention.cpp")
+    end
 
     on_install(function (target) end)
 target_end()
@@ -145,6 +169,7 @@ target("llaisys")
         add_linkdirs("/usr/local/cuda/lib64")
         set_toolset("cu", "nvcc")
         add_cuflags("-Xcompiler=-fPIC")
+        add_files("src/ops/self_attention/paged_attention.cpp")
         add_files("src/device/nvidia/*.cu")
         add_files("src/ops/*/nvidia/*.cu")
         if has_config("dist-nccl") then
@@ -246,4 +271,80 @@ target("llaisys-tp-cache-smoke")
         add_cxflags("-fPIC", "-Wno-unknown-pragmas")
     end
     add_files("test/tp_cache_smoke.cpp")
+target_end()
+
+target("llaisys-test-block-allocator")
+    set_kind("binary")
+    add_deps("llaisys")
+    set_languages("cxx17")
+    set_warnings("all", "error")
+    if not is_plat("windows") then
+        add_cxflags("-fPIC", "-Wno-unknown-pragmas")
+    end
+    add_files("test/test_block_allocator.cpp")
+    add_includedirs("$(projectdir)")
+target_end()
+
+target("llaisys-test-paged-attention")
+    set_kind("binary")
+    add_deps("llaisys")
+    set_languages("cxx17")
+    set_warnings("all", "error")
+    if not is_plat("windows") then
+        add_cxflags("-fPIC", "-Wno-unknown-pragmas")
+    end
+    if has_config("nv-gpu") then
+        add_links("cudart")
+        add_linkdirs("/usr/local/cuda/lib64")
+    end
+    add_files("test/test_paged_attention.cpp")
+    add_includedirs("$(projectdir)")
+target_end()
+
+target("llaisys-test-paged-batch")
+    set_kind("binary")
+    add_deps("llaisys")
+    set_languages("cxx17")
+    set_warnings("all", "error")
+    if not is_plat("windows") then
+        add_cxflags("-fPIC", "-Wno-unknown-pragmas")
+    end
+    if has_config("nv-gpu") then
+        add_links("cudart")
+        add_linkdirs("/usr/local/cuda/lib64")
+    end
+    add_files("test/test_paged_batch.cpp")
+    add_includedirs("$(projectdir)")
+target_end()
+
+target("llaisys-test-kv-quant")
+    set_kind("binary")
+    add_deps("llaisys")
+    set_languages("cxx17")
+    set_warnings("all", "error")
+    if not is_plat("windows") then
+        add_cxflags("-fPIC", "-Wno-unknown-pragmas")
+    end
+    if has_config("nv-gpu") then
+        add_links("cudart")
+        add_linkdirs("/usr/local/cuda/lib64")
+    end
+    add_files("test/test_kv_quant.cpp")
+    add_includedirs("$(projectdir)")
+target_end()
+
+target("llaisys-bench-paged-attention")
+    set_kind("binary")
+    add_deps("llaisys")
+    set_languages("cxx17")
+    set_warnings("all", "error")
+    if not is_plat("windows") then
+        add_cxflags("-fPIC", "-Wno-unknown-pragmas", "-O2")
+    end
+    if has_config("nv-gpu") then
+        add_links("cudart")
+        add_linkdirs("/usr/local/cuda/lib64")
+    end
+    add_files("test/bench_paged_attention.cpp")
+    add_includedirs("$(projectdir)")
 target_end()

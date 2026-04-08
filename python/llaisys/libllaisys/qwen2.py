@@ -206,6 +206,35 @@ def _setup_functions():
         ]
         lib.llaisysQwen2BatchSlotRestore.restype = None
 
+    # BatchDecodePerRequest
+    if hasattr(lib, 'llaisysQwen2BatchDecodePerRequest'):
+        lib.llaisysQwen2BatchDecodePerRequest.argtypes = [
+            ctypes.c_void_p,                 # ctx
+            ctypes.POINTER(ctypes.c_size_t), # active_slots
+            ctypes.c_size_t,                 # num_active
+            ctypes.POINTER(ctypes.c_int64),  # current_tokens
+            ctypes.POINTER(ctypes.c_float),  # temperatures
+            ctypes.POINTER(ctypes.c_int),    # top_ks
+            ctypes.POINTER(ctypes.c_float),  # top_ps
+            ctypes.POINTER(ctypes.c_int64),  # output_tokens
+        ]
+        lib.llaisysQwen2BatchDecodePerRequest.restype = None
+
+    # BatchGetFreeBlocks
+    if hasattr(lib, 'llaisysQwen2BatchGetFreeBlocks'):
+        lib.llaisysQwen2BatchGetFreeBlocks.argtypes = [ctypes.c_void_p]
+        lib.llaisysQwen2BatchGetFreeBlocks.restype = ctypes.c_size_t
+
+    # BatchGetTotalBlocks
+    if hasattr(lib, 'llaisysQwen2BatchGetTotalBlocks'):
+        lib.llaisysQwen2BatchGetTotalBlocks.argtypes = [ctypes.c_void_p]
+        lib.llaisysQwen2BatchGetTotalBlocks.restype = ctypes.c_size_t
+
+    # BatchGetBlockSize
+    if hasattr(lib, 'llaisysQwen2BatchGetBlockSize'):
+        lib.llaisysQwen2BatchGetBlockSize.argtypes = [ctypes.c_void_p]
+        lib.llaisysQwen2BatchGetBlockSize.restype = ctypes.c_int
+
     # ── Phase 5 (项目#5): 分布式推理 / 张量并行 TP API ──
 
     # CreateTP
@@ -267,6 +296,13 @@ batch_decode = LIB_LLAISYS.llaisysQwen2BatchDecode
 batch_slot_get_pos = LIB_LLAISYS.llaisysQwen2BatchSlotGetPos
 batch_slot_save = LIB_LLAISYS.llaisysQwen2BatchSlotSave
 batch_slot_restore = LIB_LLAISYS.llaisysQwen2BatchSlotRestore
+
+batch_decode_per_request = LIB_LLAISYS.llaisysQwen2BatchDecodePerRequest
+
+# Paged KV-Cache block allocator queries
+batch_get_free_blocks = LIB_LLAISYS.llaisysQwen2BatchGetFreeBlocks
+batch_get_total_blocks = LIB_LLAISYS.llaisysQwen2BatchGetTotalBlocks
+batch_get_block_size = LIB_LLAISYS.llaisysQwen2BatchGetBlockSize
 
 # Phase 5 (项目#5) 导出: 张量并行 TP
 model_create_tp = LIB_LLAISYS.llaisysQwen2ModelCreateTP
