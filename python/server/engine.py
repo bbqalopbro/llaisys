@@ -1,26 +1,32 @@
 """
-LLAISYS Inference Engine — 请求队列 + 异步推理服务
+LLAISYS Inference Engine — 请求队列 + 异步推理服务 (Continuous Batching)
 
-Phase 5 (项目#4) 核心组件:
-  - InferenceRequest: 单个推理请求
-  - SamplingParams: 采样参数
-  - RequestQueue: 线程安全的请求池
-  - InferenceEngine: 后台 worker 线程, 循环处理请求
-    - 阶段1: 逐请求串行处理
-    - 阶段3: 连续批处理调度
+核心架构:
+  ┌──────────┐     submit()    ┌──────────────┐
+  │ FastAPI  │ ───────────────→│ RequestQueue │  (线程安全, Condition 通知)
+  │ (app.py) │                 └──────┬───────┘
+  └──────────┘                        │ get_pending()
+                                      ↓
+                               ┌──────────────┐
+                               │InferenceEngine│  (后台 worker 线程)
+                               │  _worker_loop │
+                               └──────┬───────┘
+                                      │ ctypes 调用
+                                      ↓
+                               ┌──────────────┐
+                               │ C++ BatchCtx │  (PagedAttention KV-Cache)
+                               └──────────────┘
 
-用法:
-    engine = InferenceEngine(model, tokenizer)
-    engine.start()
-    
-    # 提交请求 (非阻塞)
-    request = engine.submit(input_ids, params, session_id, stream=True)
-    
-    # 等待结果
-    result = await request.future
-    # 或流式读取
-    async for token_id in request.stream_tokens():
-        ...
+worker 循环的 4 个阶段:
+  1. Admit:  从队列取新请求, 检查 block 容量, 必要时 preempt 低优先级请求
+  2. Decode: 对所有活跃 slot 执行一步批量 decode (per-request 采样参数)
+  3. Finish: 完成的请求移出 batch, KV-Cache 存入前缀树池
+  4. Wait:   空闲时阻塞等待新请求 (避免 busy loop)
+
+关键设计:
+  - 跨线程通信: worker 线程 → asyncio 主线程 via loop.call_soon_threadsafe
+  - Preemption: block 不足时驱逐已生成最多 token 的请求 (保存快照 → 重入队列)
+  - 前缀匹配: 新请求优先从前缀树池复用 KV-Cache, 跳过已 prefill 的部分
 """
 
 from __future__ import annotations

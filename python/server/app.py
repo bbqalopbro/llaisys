@@ -1,22 +1,31 @@
 """
-LLAISYS Chat Server — OpenAI-compatible Chat Completion API.
+LLAISYS Chat Server — OpenAI-compatible Chat Completion API
 
-Phase 4 新增功能:
-  - 多会话管理 (创建/切换/删除/列表)
-  - KV-Cache 快照保存/恢复
-  - 编辑历史消息 + 重新生成
-  - 前缀树 KV-Cache 池 (自动复用已计算的 KV-Cache)
+整体架构:
+  用户 HTTP 请求  →  FastAPI 路由 (app.py)
+                           │
+                    ┌──────┴──────┐
+                    │SessionManager│  管理多会话 + KV-Cache 快照
+                    └──────┬──────┘
+                           │ submit()
+                    ┌──────┴──────┐
+                    │InferenceEngine│  请求队列 + 后台 worker 线程
+                    └──────┬──────┘
+                           │ ctypes
+                    ┌──────┴──────┐
+                    │  C++ Model  │  (Qwen2 + PagedAttention)
+                    └─────────────┘
 
-Phase 5 (项目#4) 新增功能:
-  - 多用户并发推理 (请求队列 + 异步 worker)
-  - InferenceEngine 后台线程处理请求
-  - 非阻塞 API: 请求提交到队列, await 结果
+主要路由:
+  POST /v1/chat/completions — OpenAI 兼容接口 (支持 stream=true SSE 流式)
+  POST /v1/sessions         — 创建会话
+  POST /v1/sessions/{id}/switch — 切换会话 (保存/恢复 KV-Cache)
+  PUT  /v1/sessions/{id}/edit   — 编辑历史消息 (截断 KV-Cache 重新生成)
+  GET  /health              — 健康检查
+  GET  /stats               — 引擎统计 (排队数/并发数/总 token 数)
 
 Usage:
     python -m server.app --model /path/to/model [--host 0.0.0.0] [--port 8000]
-
-Or from the project root:
-    cd python && uvicorn server.app:app --host 0.0.0.0 --port 8000
 """
 
 from __future__ import annotations

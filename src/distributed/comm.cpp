@@ -1,20 +1,28 @@
+// ============================================================================
+// comm.cpp — 通信后端工厂函数实现
+// 使用条件编译 (#ifdef) 控制后端可用性:
+//   ENABLE_DIST_NCCL → 编译 NCCL 后端
+//   ENABLE_DIST_MPI  → 编译 MPI 后端
+//   Mock 始终可用
+// ============================================================================
 #include "comm.hpp"
 
 #include <stdexcept>
 
 namespace llaisys::distributed {
+
+// 前向声明: 各后端的创建函数, 实现在各自的 .cpp/.cu 中
 std::shared_ptr<Comm> createMockComm(const Config &config);
 
 #ifdef ENABLE_DIST_NCCL
-// 真正的 NCCL 实现在 nccl_comm.cpp 中
 std::shared_ptr<Comm> createNcclComm(const Config &config);
 #endif
 
 #ifdef ENABLE_DIST_MPI
-// 真正的 MPI 实现在 mpi_comm.cpp 中
 std::shared_ptr<Comm> createMpiComm(const Config &config);
 #endif
 
+// 工厂函数: 根据 config.backend 分发到具体创建函数
 std::shared_ptr<Comm> createComm(const Config &config) {
     switch (config.backend) {
         case Backend::Mock:
@@ -36,10 +44,11 @@ std::shared_ptr<Comm> createComm(const Config &config) {
     }
 }
 
+// 查询后端是否在编译时启用
 bool backendAvailable(Backend backend) {
     switch (backend) {
         case Backend::Mock:
-            return true;
+            return true;  // Mock 永远可用
         case Backend::Nccl:
 #ifdef ENABLE_DIST_NCCL
             return true;
@@ -57,6 +66,7 @@ bool backendAvailable(Backend backend) {
     }
 }
 
+// 后端名字符串 (用于日志输出)
 const char *backendToString(Backend backend) {
     switch (backend) {
         case Backend::Mock:

@@ -1,5 +1,11 @@
-// 真正的 NCCL 通信后端实现
-// 使用 ncclAllReduce 进行 GPU 多卡集合通信
+// ============================================================================
+// nccl_comm.cu — NCCL GPU-Direct 通信后端
+// 使用 ncclAllReduce 进行 GPU 多卡集合通信 (数据始终在 GPU 上, 零 CPU 拷贝)
+// 特点:
+//   1. ncclUniqueId 通过文件系统共享 (rank 0 写, 其他 rank 轮询读)
+//   2. 专用 CUDA stream 避免与计算 stream 冲突
+//   3. barrier 用单元素 allReduce 模拟 (NCCL 无原生 barrier)
+// ============================================================================
 
 #include "comm.hpp"
 

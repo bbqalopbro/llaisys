@@ -1,3 +1,10 @@
+// ============================================================================
+// distributed.cc — 分布式通信 C API 包装层
+// 将 C++ Comm 接口暴露为 C API, 供 Python ctypes 调用
+// 设计模式: 不透明句柄 (opaque handle)
+//   LlaisysDistComm 结构体内含 shared_ptr<Comm>, 外部只看到指针
+//   Python 端通过 ctypes 持有此指针, 调用 Create/Destroy 管理生命周期
+// ============================================================================
 #include "llaisys/distributed.h"
 
 #include "../distributed/comm.hpp"
@@ -5,10 +12,12 @@
 #include <memory>
 #include <stdexcept>
 
+// 不透明句柄: 外部只看到 LlaisysDistComm*, 不知道内部结构
 struct LlaisysDistComm {
-    llaisys::distributed::comm_t impl;
+    llaisys::distributed::comm_t impl;  // shared_ptr<Comm>
 };
 
+// C 枚举 → C++ 枚举转换
 static llaisys::distributed::Backend _to_backend(llaisysDistBackend_t backend) {
     switch (backend) {
         case LLAISYS_DIST_BACKEND_MOCK:
@@ -22,6 +31,7 @@ static llaisys::distributed::Backend _to_backend(llaisysDistBackend_t backend) {
     }
 }
 
+// C++ 枚举 → C 枚举转换
 static llaisysDistBackend_t _from_backend(llaisys::distributed::Backend backend) {
     switch (backend) {
         case llaisys::distributed::Backend::Mock:
@@ -35,6 +45,7 @@ static llaisysDistBackend_t _from_backend(llaisys::distributed::Backend backend)
     }
 }
 
+// 创建通信句柄: 分配 LlaisysDistComm, 调用工厂函数创建 Comm
 __C llaisysDistComm_t llaisysDistCommCreate(struct LlaisysDistConfig config) {
     auto handle = new LlaisysDistComm;
     llaisys::distributed::Config cfg;
@@ -46,6 +57,7 @@ __C llaisysDistComm_t llaisysDistCommCreate(struct LlaisysDistConfig config) {
     return handle;
 }
 
+// 销毁通信句柄: delete 会触发 shared_ptr 析构, 释放 Comm
 __C void llaisysDistCommDestroy(llaisysDistComm_t comm) {
     if (comm == nullptr) {
         return;
@@ -53,6 +65,7 @@ __C void llaisysDistCommDestroy(llaisysDistComm_t comm) {
     delete comm;
 }
 
+// 以下为属性查询接口, Python 端用于验证通信状态
 __C llaisysDistBackend_t llaisysDistCommBackend(llaisysDistComm_t comm) {
     if (comm == nullptr) {
         throw std::invalid_argument("comm is null");
@@ -74,10 +87,12 @@ __C int llaisysDistCommRank(llaisysDistComm_t comm) {
     return comm->impl->rank();
 }
 
+// 查询编译时后端可用性 (Python 端用于自动选择后端)
 __C int llaisysDistBackendAvailable(llaisysDistBackend_t backend) {
     return llaisys::distributed::backendAvailable(_to_backend(backend)) ? 1 : 0;
 }
 
+// 核心操作: 就地 allReduce 求和 (张量并行中每层调用 2 次)
 __C void llaisysDistAllReduceSumF32(llaisysDistComm_t comm, float *data, size_t count) {
     if (comm == nullptr) {
         throw std::invalid_argument("comm is null");
@@ -85,6 +100,7 @@ __C void llaisysDistAllReduceSumF32(llaisysDistComm_t comm, float *data, size_t 
     comm->impl->allReduceSum(data, count);
 }
 
+// 路障同步
 __C void llaisysDistBarrier(llaisysDistComm_t comm) {
     if (comm == nullptr) {
         throw std::invalid_argument("comm is null");
@@ -92,8 +108,8 @@ __C void llaisysDistBarrier(llaisysDistComm_t comm) {
     comm->impl->barrier();
 }
 
+// 获取内部 Comm 指针 (高级用法: C++ 内部跨模块传递 shared_ptr)
 __C void *llaisysDistCommGetImplPtr(llaisysDistComm_t comm) {
     if (comm == nullptr) return nullptr;
-    // 返回指向 shared_ptr<Comm> 的指针, 调用方需 reinterpret_cast
     return &comm->impl;
 }

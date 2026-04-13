@@ -1,3 +1,24 @@
+// ============================================================================
+// qwen2.cpp — Qwen2 模型核心实现 (feat/vllm-paged-attention 分支)
+// ============================================================================
+// 包含:
+//   1. 模型结构体 LlaisysQwen2Model (权重/KV-Cache/TP 配置)
+//   2. 单请求推理: Infer (argmax) / InferSample (top-k/top-p 采样)
+//   3. KV-Cache 快照: save/restore/truncate + 前缀树池
+//   4. 权重加载: FP32/FP16/INT8/INT4/AWQ 多格式 + TP 切分
+//   5. PagedAttention 批量推理:
+//      - BlockAllocator: GPU 显存块分配器 (固定块大小)
+//      - PageTable: 每个 slot 维护虚拟→物理块映射
+//      - batch_prefill_impl: 逐 token prefill, KV 直接写入 block pool
+//      - batch_decode_impl: 多 slot 批量 decode, B 个请求一次 paged_attention
+//   6. Per-request sampling: 每个 slot 独立采样参数
+//
+// 内存布局 (PagedAttention):
+//   block_pool_k/v: [num_blocks, nlayer, block_size, nkvh, dh]
+//   每个 slot 持有 PageTable → vector<int> block_ids
+//   token pos → block_id = block_ids[pos / block_size]
+//   token pos → offset    = pos % block_size
+// ============================================================================
 #include "llaisys/models/qwen2.h"
 #include "llaisys/distributed.h"
 #include "../../ops/op.hpp"
@@ -947,14 +968,24 @@ __export int llaisysQwen2IsQuantized(struct LlaisysQwen2Model * model) {
 }
 
 // ==========================================
-// 6. Phase 5 (项目#4): 批量推理上下文
+// 6. PagedAttention 批量推理上下文
 // ==========================================
+// vLLM 风格的 Paged KV-Cache 管理:
+//   - BlockAllocator: 共享 GPU 显存池, 按固定大小块分配
+//   - PageTable: 每个 slot 维护自己的 block 映射 (虚拟 token 位置 → 物理块)
+//   - BatchSlot: 单个请求的状态 (page_table + current_pos)
+//   - BatchContext: 管理所有 slot + 共享 block_allocator + 批量缓冲区
+// 
+// 与 Phase 3 contiguous KV-Cache 的关键区别:
+//   Phase 3: kv_caches[layer] = [maxseq, nkvh, dh] — 每个模型一个大连续数组
+//   Paged:   block_pool = [num_blocks * block_size, nkvh, dh] — 共享池, 按需分配
+//   优势:    多请求间共享显存 + 无需预留 maxseq 空间 + 可动态扩缩
 
-// Per-slot KV-Cache 状态 (paged mode: uses shared BlockAllocator)
+// 单个 slot (请求) 的 KV-Cache 状态
 struct BatchSlot {
-    llaisys::core::PageTable page_table;
-    int64_t current_pos = 0;
-    bool active = false;
+    llaisys::core::PageTable page_table;  // 虚拟→物理块映射
+    int64_t current_pos = 0;              // 该 slot 已写入的 token 数
+    bool active = false;                  // 是否有活跃请求
 
     void init(int block_size) {
         page_table = llaisys::core::PageTable(block_size);
@@ -962,6 +993,7 @@ struct BatchSlot {
         active = false;
     }
 
+    // 释放该 slot 占用的所有 block, 归还给 allocator
     void reset(llaisys::core::BlockAllocator &alloc) {
         page_table.release_all(alloc);
         current_pos = 0;
@@ -969,20 +1001,22 @@ struct BatchSlot {
     }
 };
 
+// 批量推理上下文: 管理 max_batch_size 个 slot + 共享 block pool
 struct LlaisysQwen2BatchContext {
     LlaisysQwen2Model* model;
-    size_t max_batch_size;
-    size_t max_seq_per_slot;
-    int block_size;
-    std::vector<BatchSlot> slots;
+    size_t max_batch_size;      // 最大并发请求数
+    size_t max_seq_per_slot;    // 每个 slot 最大序列长度
+    int block_size;             // 每个 block 包含的 token 数 (默认 16)
+    std::vector<BatchSlot> slots;  // 所有 slot
 
-    // Shared block allocator for paged KV-Cache
+    // 共享 block 分配器: 所有 slot 从同一个池分配/释放块
+    // block_pool 是一整块 GPU 显存, 按 (block_id, layer, offset) 索引
     std::unique_ptr<llaisys::core::BlockAllocator> block_allocator;
 
-    // CUDA Graph for decode step acceleration
+    // CUDA Graph 加速 (可选)
     llaisys::core::CUDAGraphDecodeSession cuda_graph_session;
 
-    // Batch 缓冲区 (按 max_batch_size 预分配)
+    // Batch 缓冲区: 按 max_batch_size 预分配, decode 时 slice 到实际 B
     tensor_t batch_input_ids;
     tensor_t batch_pos_ids;
     tensor_t batch_hidden;
@@ -1060,7 +1094,10 @@ struct LlaisysQwen2BatchContext {
     }
 };
 
-// ── Chunked Prefill: 直接写入 block pool, 无需中间拷贝 ──────────
+// ── Prefill: 逐 token 处理 prompt, KV 直接写入 block pool ─────
+// 注意: 当前实现是逐 token prefill (性能瓶颈!)
+// 优化方向: batch prefill — 一次处理所有 prompt token 的 QKV 投影
+//          只在最后一个 token 计算 logits
 
 static int64_t batch_prefill_impl(LlaisysQwen2BatchContext* ctx, size_t slot_id,
                                    int64_t* token_ids, size_t ntoken,
@@ -1218,7 +1255,13 @@ static int64_t batch_prefill_impl(LlaisysQwen2BatchContext* ctx, size_t slot_id,
     return output_token;
 }
 
-// ── 批量 Decode ────────────────────────────────────────────────────
+// ── 批量 Decode: B 个 slot 并行处理一步 ───────────────────────────
+// 流程:
+//   1. 为每个 slot 分配新 block (如果当前 block 已满)
+//   2. 构建 block_tables[B * max_blocks] + seq_lens[B] 传给 paged_attention
+//   3. 整 batch 一次 Embedding → Transformer Layers → LM Head
+//   4. 每层 attention 调用 paged_attention() 同时处理所有 B 个序列
+//   5. 逐 slot argmax/sample, 更新 page_table + current_pos
 
 static void batch_decode_impl(LlaisysQwen2BatchContext* ctx,
                                size_t* active_slots, size_t num_active,
@@ -1590,7 +1633,10 @@ static void batch_decode_per_request_impl(LlaisysQwen2BatchContext* ctx,
     }
 }
 
-// ── 批量 Slot KV-Cache 保存/恢复 ────────────────────────────────
+// ── Slot KV-Cache 保存/恢复 (Paged → 连续快照) ───────────────────
+// 保存: 遍历 page_table, 从分散的 block pool 中按 token 顺序拷贝到连续 CPU buffer
+// 恢复: 分配新 block, 将连续 CPU buffer 按 block_size 切分写回 block pool
+// 用途: 会话切换, preemption (抢占时先保存, 重新调度时恢复)
 
 static LlaisysQwen2CacheSnapshot* batch_slot_save_impl(
     LlaisysQwen2BatchContext* ctx, size_t slot_id)

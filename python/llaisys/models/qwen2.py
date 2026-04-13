@@ -1,3 +1,19 @@
+"""
+models/qwen2.py — Qwen2 模型高层 Python 封装
+==============================================
+核心职责:
+  1. 读取 config.json → 填充 LlaisysQwen2Meta → 调用 C API 创建模型
+  2. 加载权重: FP32 / INT8 / INT4 / GPTQ / AWQ 多格式支持
+     - GPTQ/AWQ: CPU 端解包 → FP16 反量化, 结果缓存到 .llaisys_cache/
+     - AWQ native: 原始 I32 数据直接传 GPU, 推理时 GPU 在线反量化
+  3. generate / generate_stream: 调用 C 端 Infer/InferSample 做推理
+  4. KV-Cache 管理: save/restore/truncate + 前缀树池
+  5. BatchContext: 批量推理 (多 slot 并发 decode)
+  6. 张量并行 (TP): model_create_tp + comm 绑定
+
+调用链:
+  Python Qwen2 → ctypes → C API (distributed.cc / qwen2.cc) → C++ Model
+"""
 import ctypes
 import numpy as np
 import torch
