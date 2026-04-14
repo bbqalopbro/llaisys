@@ -229,7 +229,68 @@ paged_attention(attn_out->data(), q->data(), ..., model->act_dtype);
 
 ---
 
-## 6. 编译验证
+## 6. 混合精度 Bug 修复记录
+
+初始实现编译通过但推理输出垃圾。原因：多个 kernel 的 dtype 分发逻辑不兼容 FP16 激活 + FP32 权重场景。
+
+### Bug 1: Embedding — 缺少 F32 权重 → F16 输出路径
+
+**问题**: `embedding_nvidia.cu` 按 `weight->dtype()` (F32) 分发，将 FP16 output buffer cast 为 `float*`，导致 2× stride 错位。
+
+**修复**: 在 `LLAISYS_DTYPE_F32` case 中检查 `out->dtype() == F16`，调用新增的 `embedding_f32_to_f16_kernel`。
+
+### Bug 2: RMSNorm — 按 weight dtype 而非 input dtype 分发
+
+**问题**: `rms_norm_nvidia.cu` 按 `weight->dtype()` (F32) 分发，将 FP16 input/output cast 为 `float*`，同样导致 stride 错位。这是每层最先执行的操作，错误立即级联。
+
+**修复**: 
+- 新增 `rms_norm_mixed_kernel<Tio, Tw>` 双类型模板
+- 先检查 `in_dtype vs w_dtype` 是否需要混合路径，再 fallback 到同类型 switch
+
+### Bug 3: Linear — FP32 bias + FP16 output 处理错误
+
+**问题**: F32w × F16in → F16out 路径中，bias 在 F32→F16 转换**之后**添加到已废弃的 `out_f32_buf`，且将 FP32 bias 错误 cast 为 `__half*`。
+
+**修复**: 将 bias 加法移到 F32→F16 转换**之前**，在 F32 空间完成 bias 加法。
+
+### Bug 4: Linear — 缺少 F32w × F16in → F32out 路径
+
+**问题**: LM Head 需要 F32 weight × F16 input → F32 logits，但该组合不存在。
+
+**修复**: 在混合精度分支中按 `out_dtype` 分流，F32 输出直接写入 `out->data()`。
+
+---
+
+## 7. 性能基准测试
+
+**模型**: DeepSeek-R1-Distill-Qwen-1.5B (FP32 权重)  
+**设备**: NVIDIA GPU | **生成**: 128 tokens | **采样**: greedy (top_k=1) | **3 runs avg**
+
+| 指标 | FP32 | FP16 | 变化 |
+|------|------|------|------|
+| 吞吐量 | 30.1 tok/s | 30.3 tok/s | +0.7% |
+| 总显存 (加载后) | 7252 MB | 7196 MB | **-56 MB** |
+| 总显存 (推理后) | 7252 MB | 7216 MB | **-36 MB** |
+| KV-Cache 理论大小 | 224 MB | **112 MB** | **-50%** |
+| 正确性 | 基准 | **token-for-token 一致** | ✅ |
+
+### 分析
+
+- **吞吐量几乎不变**: 权重仍为 FP32，所有 GEMM 通过 `cublasGemmEx` 在 FP32 精度执行。FP16 激活的带宽节省被 F16↔F32 转换开销抵消。
+- **显存节省有限**: 权重占 ~6.8GB（FP32 × 1.5B 参数），KV-Cache 节省 ~112MB 相对占比小。
+- **KV-Cache 减半**: 28层 × 2(K+V) × 4096(maxseq) × 2(nkvh) × 128(dh) = 58.7M elem; FP32=224MB → FP16=112MB。
+- **更大收益场景**: FP16 权重模型（跳过转换开销）、更长上下文（KV-Cache 占比更大）、Batch 推理（激活缓冲区随 batch 线性增长）。
+
+### 环境变量
+
+```bash
+# 强制 FP32 模式 (用于 benchmark 对比)
+LLAISYS_FORCE_FP32=1 python test/test_infer.py --device nvidia ...
+```
+
+---
+
+## 8. 编译验证
 
 ```bash
 $ xmake build

@@ -210,7 +210,11 @@ struct LlaisysQwen2Model {
           tp_size(tp_sz), tp_rank(tp_rk) {
         // GPU 默认 FP16 激活, CPU 只支持 FP32
         // TP 模式 (tp_size>1) 暂不支持 FP16 allReduce, 强制 FP32
-        if (dev != LLAISYS_DEVICE_CPU && tp_sz <= 1) {
+        // 环境变量 LLAISYS_FORCE_FP32=1 可强制 FP32 (用于 benchmark 对比)
+        const char* force_fp32 = std::getenv("LLAISYS_FORCE_FP32");
+        if (force_fp32 && std::string(force_fp32) == "1") {
+            act_dtype = LLAISYS_DTYPE_F32;
+        } else if (dev != LLAISYS_DEVICE_CPU && tp_sz <= 1) {
             act_dtype = LLAISYS_DTYPE_F16;
         } else {
             act_dtype = LLAISYS_DTYPE_F32;
