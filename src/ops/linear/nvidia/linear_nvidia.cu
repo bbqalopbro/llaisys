@@ -149,9 +149,9 @@ void linear(tensor_t out, tensor_t in, tensor_t weight, tensor_t bias) {
         return;
     }
 
-    // ---- Mixed precision path: F32 weight + FP16 input → FP16 output ----
+    // ---- Mixed precision path: F32 weight + FP16 input ----
     // 场景: 量化权重 dequant 到 FP32 后, 与 FP16 激活做 GEMM
-    // 策略: FP16 input → 转 F32 → cublasGemmEx(F32, F32, F32) → 转 FP16 output
+    // 策略: FP16 input → 转 F32 → cublasGemmEx(F32, F32, F32) → 转 FP16 output (或直接 F32)
     if (w_dtype == LLAISYS_DTYPE_F32 && in_dtype == LLAISYS_DTYPE_F16) {
         // 1. Convert FP16 input → FP32 (input is small: [B, K])
         static thread_local float *in_f32_buf = nullptr;
@@ -165,47 +165,68 @@ void linear(tensor_t out, tensor_t in, tensor_t weight, tensor_t bias) {
         int thr = 256, blk = ((int)in_elems + thr - 1) / thr;
         convert_f16_to_f32_kernel<<<blk, thr>>>(in_f32_buf, (const __half*)in->data(), in_elems);
 
-        // 2. Allocate FP32 output buffer
-        static thread_local float *out_f32_buf = nullptr;
-        static thread_local int64_t out_f32_cap = 0;
-        int64_t out_elems = M * N;
-        if (out_elems > out_f32_cap) {
-            if (out_f32_buf) cudaFree(out_f32_buf);
-            cudaMalloc(&out_f32_buf, out_elems * sizeof(float));
-            out_f32_cap = out_elems;
-        }
-
-        // 3. cublasGemmEx: F32 × F32 → F32
-        CUBLAS_CHECK(cublasGemmEx(handle,
-                                  CUBLAS_OP_T, CUBLAS_OP_N,
-                                  (int)N, (int)M, (int)K,
-                                  &alpha,
-                                  weight->data(), CUDA_R_32F, (int)K,
-                                  in_f32_buf,     CUDA_R_32F, (int)K,
-                                  &beta,
-                                  out_f32_buf,    CUDA_R_32F, (int)N,
-                                  CUBLAS_COMPUTE_32F,
-                                  CUBLAS_GEMM_DEFAULT));
-
-        // 4. Convert F32 output → FP16
-        blk = ((int)out_elems + thr - 1) / thr;
-        convert_f32_to_f16_kernel<<<blk, thr>>>((__half*)out->data(), out_f32_buf, out_elems);
-
-        // 5. Add bias (handle FP16 or FP32 bias)
-        if (bias && bias->data()) {
-            int64_t total = M * N;
-            thr = 256; blk = ((int)total + thr - 1) / thr;
-            if (bias->dtype() == LLAISYS_DTYPE_F16) {
-                add_bias_kernel<__half><<<blk, thr>>>(
-                    (__half*)out->data(), (const __half*)bias->data(), M, N);
-            } else {
-                // FP32 bias → add to FP16 output (convert on-the-fly)
-                add_bias_f16_to_f32_kernel<<<blk, thr>>>(
-                    out_f32_buf, (const __half*)bias->data(), M, N);
-                // Actually need to handle FP32 bias + FP16 output properly
-                // For now, use the FP16 add_bias since output is FP16
+        if (out_dtype == LLAISYS_DTYPE_F32) {
+            // F32 weight × F16 input → F32 output (lm_head 场景)
+            CUBLAS_CHECK(cublasGemmEx(handle,
+                                      CUBLAS_OP_T, CUBLAS_OP_N,
+                                      (int)N, (int)M, (int)K,
+                                      &alpha,
+                                      weight->data(), CUDA_R_32F, (int)K,
+                                      in_f32_buf,     CUDA_R_32F, (int)K,
+                                      &beta,
+                                      out->data(),    CUDA_R_32F, (int)N,
+                                      CUBLAS_COMPUTE_32F,
+                                      CUBLAS_GEMM_DEFAULT));
+            // Bias
+            if (bias && bias->data()) {
+                int64_t total = M * N;
+                thr = 256; blk = ((int)total + thr - 1) / thr;
+                add_bias_kernel<float><<<blk, thr>>>(
+                    (float*)out->data(), (const float*)bias->data(), M, N);
+                CUDA_CHECK(cudaGetLastError());
             }
-            CUDA_CHECK(cudaGetLastError());
+        } else {
+            // F32 weight × F16 input → FP16 output (标准激活场景)
+            // 2. Allocate FP32 output buffer
+            static thread_local float *out_f32_buf = nullptr;
+            static thread_local int64_t out_f32_cap = 0;
+            int64_t out_elems = M * N;
+            if (out_elems > out_f32_cap) {
+                if (out_f32_buf) cudaFree(out_f32_buf);
+                cudaMalloc(&out_f32_buf, out_elems * sizeof(float));
+                out_f32_cap = out_elems;
+            }
+
+            // 3. cublasGemmEx: F32 × F32 → F32
+            CUBLAS_CHECK(cublasGemmEx(handle,
+                                      CUBLAS_OP_T, CUBLAS_OP_N,
+                                      (int)N, (int)M, (int)K,
+                                      &alpha,
+                                      weight->data(), CUDA_R_32F, (int)K,
+                                      in_f32_buf,     CUDA_R_32F, (int)K,
+                                      &beta,
+                                      out_f32_buf,    CUDA_R_32F, (int)N,
+                                      CUBLAS_COMPUTE_32F,
+                                      CUBLAS_GEMM_DEFAULT));
+
+            // 4. Add bias to FP32 buffer BEFORE converting to FP16
+            if (bias && bias->data()) {
+                int64_t total = M * N;
+                thr = 256; blk = ((int)total + thr - 1) / thr;
+                if (bias->dtype() == LLAISYS_DTYPE_F32) {
+                    add_bias_kernel<float><<<blk, thr>>>(
+                        out_f32_buf, (const float*)bias->data(), M, N);
+                } else {
+                    // FP16 bias → FP32 buffer
+                    add_bias_f16_to_f32_kernel<<<blk, thr>>>(
+                        out_f32_buf, (const __half*)bias->data(), M, N);
+                }
+                CUDA_CHECK(cudaGetLastError());
+            }
+
+            // 5. Convert F32 output (with bias) → FP16
+            blk = ((int)out_elems + thr - 1) / thr;
+            convert_f32_to_f16_kernel<<<blk, thr>>>((__half*)out->data(), out_f32_buf, out_elems);
         }
         return;
     }

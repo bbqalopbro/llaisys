@@ -83,6 +83,28 @@ __global__ void embedding_bf16_to_f32_kernel(
     out[i * o_row_stride + j * o_col_stride] = __bfloat162float(weight[token_id * w_row_stride + j * w_col_stride]);
 }
 
+// Mixed precision: FP32 weight → FP16 output
+__global__ void embedding_f32_to_f16_kernel(
+    __half *out,
+    const int64_t *index,
+    const float *weight,
+    int64_t num_rows,
+    int64_t embed_dim,
+    int64_t w_row_stride, int64_t w_col_stride,
+    int64_t o_row_stride, int64_t o_col_stride,
+    int64_t i_stride
+) {
+    int64_t tid = blockIdx.x * blockDim.x + threadIdx.x;
+    int64_t total = num_rows * embed_dim;
+    if (tid >= total) return;
+
+    int64_t i = tid / embed_dim;
+    int64_t j = tid % embed_dim;
+
+    int64_t token_id = index[i * i_stride];
+    out[i * o_row_stride + j * o_col_stride] = __float2half(weight[token_id * w_row_stride + j * w_col_stride]);
+}
+
 namespace llaisys::ops::nvidia {
 
 void embedding(tensor_t out, tensor_t index, tensor_t weight) {
@@ -103,9 +125,16 @@ void embedding(tensor_t out, tensor_t index, tensor_t weight) {
 
     switch (dtype) {
     case LLAISYS_DTYPE_F32:
-        embedding_kernel<float><<<blocks, threads>>>(
-            (float *)out->data(), (const int64_t *)index->data(), (const float *)weight->data(),
-            num_rows, embed_dim, w_row_stride, w_col_stride, o_row_stride, o_col_stride, i_stride);
+        if (out->dtype() == LLAISYS_DTYPE_F16) {
+            // Mixed precision: FP32 weight → FP16 output
+            embedding_f32_to_f16_kernel<<<blocks, threads>>>(
+                (__half *)out->data(), (const int64_t *)index->data(), (const float *)weight->data(),
+                num_rows, embed_dim, w_row_stride, w_col_stride, o_row_stride, o_col_stride, i_stride);
+        } else {
+            embedding_kernel<float><<<blocks, threads>>>(
+                (float *)out->data(), (const int64_t *)index->data(), (const float *)weight->data(),
+                num_rows, embed_dim, w_row_stride, w_col_stride, o_row_stride, o_col_stride, i_stride);
+        }
         break;
     case LLAISYS_DTYPE_F16:
         if (out->dtype() == LLAISYS_DTYPE_F32) {

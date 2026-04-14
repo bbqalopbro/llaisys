@@ -67,10 +67,49 @@ __global__ void rms_norm_kernel(
     }
 }
 
+// Mixed precision RMS Norm: Tio for input/output, Tw for weight
+// 支持 FP16 激活 + FP32 权重的场景
+template<typename Tio, typename Tw>
+__global__ void rms_norm_mixed_kernel(
+    Tio *Y, const Tio *X, const Tw *W,
+    int64_t rows, int64_t cols, float eps,
+    int64_t y_row_stride, int64_t y_col_stride,
+    int64_t x_row_stride, int64_t x_col_stride,
+    int64_t w_stride
+) {
+    int64_t row = blockIdx.x;
+    if (row >= rows) return;
+
+    extern __shared__ float sdata[];
+
+    float local_sum = 0.0f;
+    for (int64_t j = threadIdx.x; j < cols; j += blockDim.x) {
+        float val = to_float(X[row * x_row_stride + j * x_col_stride]);
+        local_sum += val * val;
+    }
+    sdata[threadIdx.x] = local_sum;
+    __syncthreads();
+
+    for (int s = blockDim.x / 2; s > 0; s >>= 1) {
+        if (threadIdx.x < s)
+            sdata[threadIdx.x] += sdata[threadIdx.x + s];
+        __syncthreads();
+    }
+
+    float inv_rms = rsqrtf(sdata[0] / (float)cols + eps);
+
+    for (int64_t j = threadIdx.x; j < cols; j += blockDim.x) {
+        float x_val = to_float(X[row * x_row_stride + j * x_col_stride]);
+        float w_val = to_float(W[j * w_stride]);
+        Y[row * y_row_stride + j * y_col_stride] = from_float<Tio>(x_val * w_val * inv_rms);
+    }
+}
+
 namespace llaisys::ops::nvidia {
 
 void rms_norm(tensor_t out, tensor_t in, tensor_t weight, float eps) {
-    auto dtype = weight->dtype();
+    auto in_dtype = in->dtype();
+    auto w_dtype  = weight->dtype();
 
     int64_t rows = in->shape()[0];
     int64_t cols = in->shape()[1];
@@ -83,7 +122,24 @@ void rms_norm(tensor_t out, tensor_t in, tensor_t weight, float eps) {
     auto xs0 = in->strides()[0], xs1 = in->strides()[1];
     auto ws0 = weight->strides()[0];
 
-    switch (dtype) {
+    // Mixed precision: FP16 input/output + FP32 weight
+    if (in_dtype == LLAISYS_DTYPE_F16 && w_dtype == LLAISYS_DTYPE_F32) {
+        rms_norm_mixed_kernel<__half, float><<<(int)rows, threads, smem_size>>>(
+            (__half*)out->data(), (const __half*)in->data(), (const float*)weight->data(),
+            rows, cols, eps, ys0, ys1, xs0, xs1, ws0);
+        CUDA_CHECK(cudaGetLastError());
+        return;
+    }
+    if (in_dtype == LLAISYS_DTYPE_BF16 && w_dtype == LLAISYS_DTYPE_F32) {
+        rms_norm_mixed_kernel<__nv_bfloat16, float><<<(int)rows, threads, smem_size>>>(
+            (__nv_bfloat16*)out->data(), (const __nv_bfloat16*)in->data(), (const float*)weight->data(),
+            rows, cols, eps, ys0, ys1, xs0, xs1, ws0);
+        CUDA_CHECK(cudaGetLastError());
+        return;
+    }
+
+    // Same-type dispatch
+    switch (in_dtype) {
     case LLAISYS_DTYPE_F32:
         rms_norm_kernel<float><<<(int)rows, threads, smem_size>>>(
             (float*)out->data(), (const float*)in->data(), (const float*)weight->data(),
