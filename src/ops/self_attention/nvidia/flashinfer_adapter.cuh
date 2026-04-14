@@ -10,7 +10,7 @@ namespace llaisys::ops::nvidia {
 bool flashinfer_available();
 
 void flashinfer_paged_attention(
-    float *output, const float *query,
+    void *output, const void *query,
     const void *k_pool, const void *v_pool,
     const int *block_tables, const int *seq_lens,
     int batch_size, int num_heads, int num_kv_heads, int head_dim,
@@ -23,7 +23,7 @@ void flashinfer_paged_attention(
 inline bool flashinfer_available() { return false; }
 
 inline void flashinfer_paged_attention(
-    float *, const float *, const void *, const void *,
+    void *, const void *, const void *, const void *,
     const int *, const int *, int, int, int, int, int, int,
     size_t, size_t, int, float) {}
 

@@ -239,7 +239,7 @@ static void paged_attention_cpu_int4(
 // ── Dispatch ──────────────────────────────────────────────────────
 
 void paged_attention(
-    float *output, const float *query,
+    void *output, const void *query,
     const void *k_pool, const void *v_pool,
     const int *block_tables, const int *seq_lens,
     int batch_size, int num_heads, int num_kv_heads, int head_dim,
@@ -247,7 +247,8 @@ void paged_attention(
     size_t pool_block_stride, size_t pool_layer_stride,
     int layer_idx, float scale,
     llaisysDeviceType_t device_type,
-    KVQuantMode kv_quant)
+    KVQuantMode kv_quant,
+    llaisysDataType_t dtype)
 {
 #ifdef ENABLE_NVIDIA_API
     if (device_type == LLAISYS_DEVICE_NVIDIA && kv_quant == KVQuantMode::FP32) {
@@ -265,14 +266,15 @@ void paged_attention(
                                 batch_size, num_heads, num_kv_heads, head_dim,
                                 block_size, max_blocks_per_seq,
                                 pool_block_stride, pool_layer_stride,
-                                layer_idx, scale);
+                                layer_idx, scale, dtype);
         return;
     }
 #endif
 
+    // CPU fallback: 仍然使用 float* (CPU 推理不走 FP16)
     switch (kv_quant) {
         case KVQuantMode::INT8:
-            paged_attention_cpu_int8(output, query, k_pool, v_pool,
+            paged_attention_cpu_int8((float*)output, (const float*)query, k_pool, v_pool,
                                      block_tables, seq_lens,
                                      batch_size, num_heads, num_kv_heads, head_dim,
                                      block_size, max_blocks_per_seq,
@@ -280,7 +282,7 @@ void paged_attention(
                                      layer_idx, scale);
             break;
         case KVQuantMode::INT4:
-            paged_attention_cpu_int4(output, query, k_pool, v_pool,
+            paged_attention_cpu_int4((float*)output, (const float*)query, k_pool, v_pool,
                                      block_tables, seq_lens,
                                      batch_size, num_heads, num_kv_heads, head_dim,
                                      block_size, max_blocks_per_seq,
@@ -288,7 +290,7 @@ void paged_attention(
                                      layer_idx, scale);
             break;
         default:
-            paged_attention_cpu_fp32(output, query, k_pool, v_pool,
+            paged_attention_cpu_fp32((float*)output, (const float*)query, k_pool, v_pool,
                                      block_tables, seq_lens,
                                      batch_size, num_heads, num_kv_heads, head_dim,
                                      block_size, max_blocks_per_seq,

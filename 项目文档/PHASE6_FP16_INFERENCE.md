@@ -1,0 +1,243 @@
+# Phase 6: FP16 半精度推理
+
+## 概述
+
+在 Phase 1-5（PagedAttention + 调度器 + 优化）的基础上，本阶段为推理引擎添加 **FP16 半精度激活**支持。
+
+核心思路：**Mixed Precision（混合精度）**——激活张量和 KV-Cache 使用 FP16 存储与传输，所有数学运算（QK 点积、softmax、V 累加、归约等）保持 FP32，兼顾速度与数值稳定性。
+
+### 收益
+
+| 指标 | FP32 | FP16 |
+|------|------|------|
+| 激活缓冲区大小 | 4 bytes/elem | **2 bytes/elem** |
+| KV-Cache 显存 | 4 bytes/elem | **2 bytes/elem** |
+| 显存带宽利用 | 基准 | **约 2× 带宽节省** |
+| 数值精度 | 完整 | 计算精度保持 FP32 |
+
+---
+
+## 修改清单
+
+| 文件 | 修改内容 |
+|------|----------|
+| `src/ops/self_attention/nvidia/paged_attention_nvidia.cu` | 内核模板化 + dtype 分发 |
+| `src/ops/self_attention/nvidia/paged_attention_nvidia.cuh` | 声明改 `void*` + dtype 参数 |
+| `src/ops/self_attention/paged_attention.hpp` | 平台无关接口 `void*` + dtype |
+| `src/ops/self_attention/paged_attention.cpp` | 转发 dtype 到 GPU 后端 |
+| `src/ops/self_attention/nvidia/flashinfer_adapter.cuh` | FlashInfer 签名 `void*` |
+| `src/ops/linear/nvidia/linear_nvidia.cu` | 新增混合精度路径（F32 权重 × F16 激活） |
+| `src/llaisys/models/qwen2.cpp` | `act_dtype` 字段 + 全流程 FP16 集成 |
+
+---
+
+## 1. PagedAttention 内核模板化
+
+**文件**: `src/ops/self_attention/nvidia/paged_attention_nvidia.cu`
+
+### 设计
+
+已有的 5/7 个 CUDA 内核（RMSNorm、RoPE、Embedding、SwiGLU、Add）已经通过模板 `to_float<T>()` / `from_float<T>()` 支持 FP16，唯独 PagedAttention 硬编码 `float*`。本次将其模板化。
+
+### 关键实现
+
+**1) 精度转换辅助函数**
+
+```cpp
+template<typename T> __device__ inline float to_float(T v);
+template<> __device__ inline float to_float<float>(float v)           { return v; }
+template<> __device__ inline float to_float<__half>(__half v)         { return __half2float(v); }
+template<> __device__ inline float to_float<__nv_bfloat16>(__nv_bfloat16 v) { return __bfloat162float(v); }
+
+template<typename T> __device__ inline T from_float(float v);
+template<> __device__ inline float from_float<float>(float v)                { return v; }
+template<> __device__ inline __half from_float<__half>(float v)              { return __float2half(v); }
+template<> __device__ inline __nv_bfloat16 from_float<__nv_bfloat16>(float v){ return __float2bfloat16(v); }
+```
+
+**2) 模板化内核签名**
+
+```cpp
+template<typename T>
+__global__ void paged_attention_kernel(
+    T *__restrict__ output,         // I/O 类型 = T
+    const T *__restrict__ query,
+    const char *__restrict__ k_pool, // KV pool 按字节寻址
+    const char *__restrict__ v_pool,
+    ...);
+```
+
+- KV pool 使用 `const char*`（字节指针），通过 `reinterpret_cast<const T*>` 转换
+- 中间变量 `partial`、`acc[]`、`m`、`l` 全部 FP32
+- 最终输出 `from_float<T>(acc[i] * inv_l)` 转回 T 类型
+
+**3) dtype 运行时分发**
+
+```cpp
+void paged_attention(..., llaisysDataType_t dtype) {
+    switch (dtype) {
+    case LLAISYS_DTYPE_F32:  paged_attention_typed<float>(...);            break;
+    case LLAISYS_DTYPE_F16:  paged_attention_typed<__half>(...);           break;
+    case LLAISYS_DTYPE_BF16: paged_attention_typed<__nv_bfloat16>(...);   break;
+    default: throw std::runtime_error("unsupported dtype");
+    }
+}
+```
+
+### 接口变更
+
+```
+// 旧签名
+void paged_attention(float *output, const float *query, ...);
+
+// 新签名 — 所有 4 层 (cuh / hpp / cpp / cu)
+void paged_attention(void *output, const void *query, ..., llaisysDataType_t dtype = LLAISYS_DTYPE_F32);
+```
+
+默认值 `LLAISYS_DTYPE_F32` 保证已有调用站点（测试、benchmark）无需修改。
+
+---
+
+## 2. Linear 算子混合精度扩展
+
+**文件**: `src/ops/linear/nvidia/linear_nvidia.cu`
+
+### 问题
+
+原有 linear 有一条 mixed-precision 路径：`FP16 权重 × FP32 输入`。但 FP16 推理中出现的场景是反过来的：
+
+- INT8/INT4/AWQ 量化模型 → dequantize 输出 FP32 权重
+- 激活是 FP16
+
+因此需要新增 `FP32 权重 × FP16 输入 → FP16 输出` 路径。
+
+### 实现
+
+```
+新增路径: w_dtype == F32 && in_dtype == F16
+  1. FP16 输入 → convert_f16_to_f32_kernel → FP32
+  2. cublasGemmEx F32 × F32 → F32
+  3. F32 输出 → convert_f32_to_f16_kernel → FP16
+```
+
+使用 thread-local 缓存缓冲区（`in_f32_buf` / `out_f32_buf`），避免每次调用 cudaMalloc。
+
+---
+
+## 3. 模型层 FP16 集成
+
+**文件**: `src/llaisys/models/qwen2.cpp`
+
+### 3.1 `act_dtype` 字段
+
+```cpp
+// 模型结构体新增字段
+llaisysDataType_t act_dtype;
+
+// 构造函数中根据设备决定
+if (dev != LLAISYS_DEVICE_CPU && tp_sz <= 1) {
+    act_dtype = LLAISYS_DTYPE_F16;   // GPU 单卡 → FP16
+} else {
+    act_dtype = LLAISYS_DTYPE_F32;   // CPU 或 TP 多卡 → FP32
+}
+```
+
+**为什么 TP 模式强制 FP32？** 当前 `allReduceSum` 实现只支持 `float*`（NCCL FP32）。未来可扩展为 FP16 allReduce。
+
+### 3.2 KV-Cache
+
+```cpp
+void init_cache() {
+    // 旧: Tensor::create(shape, LLAISYS_DTYPE_F32, ...)
+    // 新: 使用 act_dtype, FP16 时 KV-Cache 显存减半
+    auto k_c = Tensor::create(shape, act_dtype, device_type, device_id);
+    auto v_c = Tensor::create(shape, act_dtype, device_type, device_id);
+}
+```
+
+### 3.3 激活缓冲区
+
+`init_buffers()` 中所有激活张量统一使用 `act_dtype`：
+
+| 缓冲区 | dtype |
+|--------|-------|
+| hidden_states, residual, norm_out | `act_dtype` |
+| q, k, v, attn_out | `act_dtype` |
+| gate, up, mlp_act | `act_dtype` |
+| **logits** | **FP32（固定）** |
+| **max_val** | **FP32（固定）** |
+
+logits 保持 FP32 是因为采样（softmax + argmax）对精度敏感。
+
+### 3.4 BlockAllocator 适配
+
+```cpp
+// 旧: elem_size = sizeof(float)  →  4 bytes
+// 新: elem_size = dsize(act_dtype) → FP16 时 = 2 bytes
+BlockAllocatorConfig cfg;
+cfg.elem_size = llaisys::utils::dsize(model->act_dtype);
+```
+
+### 3.5 KV-Cache 指针算术
+
+原来使用 `float*` 指针偏移，只对 FP32 正确。改为 `char*` 字节寻址：
+
+```cpp
+// 旧: float* k_ptr = (float*)pool->data() + block_id * stride + ...;
+// 新: dtype 无关的字节寻址
+size_t kv_bytes = kv_dim * dsize(act_dtype);   // 原来: kv_dim * sizeof(float)
+char* pool_base = (char*)pool->data();
+char* k_dst = pool_base + block_id * pool_block_stride + layer * pool_layer_stride
+              + t * nkvh * dh * dsize(act_dtype) + head * dh * dsize(act_dtype);
+cudaMemcpyAsync(k_dst, k_src_bytes, kv_bytes, ...);
+```
+
+### 3.6 PagedAttention 调用
+
+```cpp
+// 旧: paged_attention((float*)attn_out->data(), (const float*)q->data(), ...)
+// 新: 直接传 void*, 加 dtype 参数
+paged_attention(attn_out->data(), q->data(), ..., model->act_dtype);
+```
+
+---
+
+## 4. 已有 Kernel 兼容性
+
+以下 5 个 kernel 已经通过模板支持 FP16，本次**无需修改**：
+
+| Kernel | 文件 | FP16 支持方式 |
+|--------|------|---------------|
+| RMSNorm | `rms_norm_nvidia.cu` | `to_float<T>` / `from_float<T>` 模板 |
+| RoPE | `rope_nvidia.cu` | 同上 |
+| Embedding | `embedding_nvidia.cu` | 同上 |
+| SwiGLU | `swiglu_nvidia.cu` | 同上 |
+| Add | `add_nvidia.cu` | 同上 |
+
+---
+
+## 5. 设计决策总结
+
+| 决策 | 原因 |
+|------|------|
+| 中间计算保持 FP32 | 避免 FP16 精度不足导致 softmax/归约数值不稳定 |
+| logits 保持 FP32 | 采样对精度敏感,vocab 维度大时 FP16 容易溢出 |
+| TP 模式强制 FP32 | 现有 allReduce 只支持 float*,待后续优化 |
+| KV pool 用 `char*` 字节寻址 | dtype-agnostic 指针算术,避免硬编码 `float*` 偏移 |
+| 默认参数 `dtype=F32` | 向后兼容已有测试和 benchmark,无需修改调用站点 |
+| `to_float`/`from_float` 模板 | 与项目已有 5 个 kernel 的风格一致 |
+
+---
+
+## 6. 编译验证
+
+```bash
+$ xmake build
+[100%]: build ok
+```
+
+所有目标编译通过，包括：
+- `libllaisys.so`（主库）
+- `llaisys-test-paged-attention`（PA 单元测试）
+- `llaisys-bench-paged-attention`（PA 基准测试）
+- `llaisys-test-block-allocator`、`llaisys-test-paged-batch` 等

@@ -98,6 +98,11 @@ struct LlaisysQwen2Model {
     llaisysDeviceType_t device_type;
     int device_id;
 
+    // ── 计算精度 (FP32 / FP16) ──
+    // GPU 默认 FP16: 激活/KV-Cache 用半精度, 中间计算保持 FP32
+    // CPU 只支持 FP32
+    llaisysDataType_t act_dtype;
+
     // ── TP (Tensor Parallel) 字段 ──
     int tp_size = 1;   // 总并行数
     int tp_rank = 0;   // 当前 rank
@@ -192,6 +197,7 @@ struct LlaisysQwen2Model {
     }
 
     // TP: 若 tp_size>1 且有 comm, 对 tensor 执行 all-reduce sum
+    // TP: 若 tp_size>1 且有 comm, 对 tensor 执行 all-reduce sum
     void allReduceIfTP(tensor_t t, size_t count) {
         if (tp_size > 1 && comm) {
             comm->allReduceSum((float*)t->data(), count);
@@ -202,6 +208,13 @@ struct LlaisysQwen2Model {
                       int tp_sz = 1, int tp_rk = 0)
         : meta(*m), device_type(dev), device_id(dev_id >= 0 ? dev_id : 0),
           tp_size(tp_sz), tp_rank(tp_rk) {
+        // GPU 默认 FP16 激活, CPU 只支持 FP32
+        // TP 模式 (tp_size>1) 暂不支持 FP16 allReduce, 强制 FP32
+        if (dev != LLAISYS_DEVICE_CPU && tp_sz <= 1) {
+            act_dtype = LLAISYS_DTYPE_F16;
+        } else {
+            act_dtype = LLAISYS_DTYPE_F32;
+        }
         // 验证 TP 维度可整除
         if (tp_size < 1) tp_size = 1;
         if (tp_rank < 0 || tp_rank >= tp_size) tp_rank = 0;
@@ -272,10 +285,11 @@ struct LlaisysQwen2Model {
 
     void init_cache() {
         // TP: 每个 rank 只存 local_nkvh 个 KV head
+        // KV-Cache 使用 act_dtype (FP16 时显存减半)
         std::vector<size_t> shape = {meta.maxseq, local_nkvh, meta.dh};
         for (size_t i = 0; i < meta.nlayer; ++i) {
-            auto k_c = Tensor::create(shape, LLAISYS_DTYPE_F32, device_type, device_id);
-            auto v_c = Tensor::create(shape, LLAISYS_DTYPE_F32, device_type, device_id);
+            auto k_c = Tensor::create(shape, act_dtype, device_type, device_id);
+            auto v_c = Tensor::create(shape, act_dtype, device_type, device_id);
             kv_caches.push_back({k_c, v_c});
         }
     }
@@ -284,25 +298,27 @@ struct LlaisysQwen2Model {
         input_ids_buf = Tensor::create({1}, LLAISYS_DTYPE_I64, device_type, device_id);
         pos_ids_buf = Tensor::create({1}, LLAISYS_DTYPE_I64, device_type, device_id);
         
-        hidden_states = Tensor::create({1, meta.hs}, LLAISYS_DTYPE_F32, device_type, device_id);
-        residual = Tensor::create({1, meta.hs}, LLAISYS_DTYPE_F32, device_type, device_id);
-        norm_out = Tensor::create({1, meta.hs}, LLAISYS_DTYPE_F32, device_type, device_id);
+        // 激活缓冲区使用 act_dtype (GPU=FP16, CPU=FP32)
+        hidden_states = Tensor::create({1, meta.hs}, act_dtype, device_type, device_id);
+        residual = Tensor::create({1, meta.hs}, act_dtype, device_type, device_id);
+        norm_out = Tensor::create({1, meta.hs}, act_dtype, device_type, device_id);
 
         // TP: Q/K/V/attn_out 使用 local head 数
         size_t q_dim = local_nh * meta.dh;
         size_t kv_dim = local_nkvh * meta.dh;
         
-        q = Tensor::create({1, q_dim}, LLAISYS_DTYPE_F32, device_type, device_id);
-        k = Tensor::create({1, kv_dim}, LLAISYS_DTYPE_F32, device_type, device_id);
-        v = Tensor::create({1, kv_dim}, LLAISYS_DTYPE_F32, device_type, device_id);
+        q = Tensor::create({1, q_dim}, act_dtype, device_type, device_id);
+        k = Tensor::create({1, kv_dim}, act_dtype, device_type, device_id);
+        v = Tensor::create({1, kv_dim}, act_dtype, device_type, device_id);
         
-        attn_out = Tensor::create({1, local_nh, meta.dh}, LLAISYS_DTYPE_F32, device_type, device_id);
+        attn_out = Tensor::create({1, local_nh, meta.dh}, act_dtype, device_type, device_id);
         
         // TP: MLP 使用 local_di
-        gate = Tensor::create({1, local_di}, LLAISYS_DTYPE_F32, device_type, device_id);
-        up = Tensor::create({1, local_di}, LLAISYS_DTYPE_F32, device_type, device_id);
-        mlp_act = Tensor::create({1, local_di}, LLAISYS_DTYPE_F32, device_type, device_id);
+        gate = Tensor::create({1, local_di}, act_dtype, device_type, device_id);
+        up = Tensor::create({1, local_di}, act_dtype, device_type, device_id);
+        mlp_act = Tensor::create({1, local_di}, act_dtype, device_type, device_id);
         
+        // logits 始终 FP32 (采样精度要求)
         logits = Tensor::create({1, meta.voc}, LLAISYS_DTYPE_F32, device_type, device_id);
         next_token = Tensor::create({1}, LLAISYS_DTYPE_I32, device_type, device_id);
         max_val = Tensor::create({1}, LLAISYS_DTYPE_F32, device_type, device_id);
@@ -536,9 +552,9 @@ __export int64_t llaisysQwen2ModelInfer(struct LlaisysQwen2Model * model, int64_
             ops::rope(q_3d, q_3d, model->pos_ids_buf, model->meta.theta);
             ops::rope(k_3d, k_3d, model->pos_ids_buf, model->meta.theta);
 
-            // D. Update KV Cache
+            // D. Update KV Cache (字节数根据 act_dtype 计算)
             if (model->current_pos < (int64_t)model->meta.maxseq) {
-                size_t bytes = model->local_nkvh * model->meta.dh * 4;
+                size_t bytes = model->local_nkvh * model->meta.dh * llaisys::utils::dsize(model->act_dtype);
                 char* k_dst = (char*)model->kv_caches[i][0]->data() + model->current_pos * bytes;
                 char* v_dst = (char*)model->kv_caches[i][1]->data() + model->current_pos * bytes;
                 model->memcpyOnDevice(k_dst, k_3d->data(), bytes);
@@ -637,9 +653,9 @@ __export int64_t llaisysQwen2ModelInferSample(struct LlaisysQwen2Model * model, 
             ops::rope(q_3d, q_3d, model->pos_ids_buf, model->meta.theta);
             ops::rope(k_3d, k_3d, model->pos_ids_buf, model->meta.theta);
             
-            //kv cache
+            //kv cache (字节数根据 act_dtype 计算)
             if (model->current_pos < (int64_t)model->meta.maxseq) {
-                size_t bytes = model->local_nkvh * model->meta.dh * 4;
+                size_t bytes = model->local_nkvh * model->meta.dh * llaisys::utils::dsize(model->act_dtype);
                 char* k_dst = (char*)model->kv_caches[i][0]->data() + model->current_pos * bytes;
                 char* v_dst = (char*)model->kv_caches[i][1]->data() + model->current_pos * bytes;
                 model->memcpyOnDevice(k_dst, k_3d->data(), bytes);
@@ -841,7 +857,7 @@ __export struct LlaisysQwen2CacheSnapshot *llaisysQwen2SaveCache(struct LlaisysQ
     auto* snap = new LlaisysQwen2CacheSnapshot();
     snap->pos = model->current_pos;
     snap->nlayer = model->meta.nlayer;
-    snap->pos_bytes = model->local_nkvh * model->meta.dh * sizeof(float);
+    snap->pos_bytes = model->local_nkvh * model->meta.dh * llaisys::utils::dsize(model->act_dtype);
     snap->tp_size = model->tp_size;
     snap->tp_rank = model->tp_rank;
 
@@ -1051,9 +1067,10 @@ struct LlaisysQwen2BatchContext {
         size_t max_total_tokens = max_bs * max_seq_per_slot;
         size_t num_blocks = (max_total_tokens + block_size - 1) / block_size + max_bs;
 
+        // elem_size 使用 act_dtype 的字节数 (FP16=2, FP32=4)
         llaisys::core::BlockAllocatorConfig cfg = {
             num_blocks, (size_t)block_size, meta.nlayer,
-            model->local_nkvh, meta.dh, sizeof(float)
+            model->local_nkvh, meta.dh, llaisys::utils::dsize(model->act_dtype)
         };
 
         if (dev != LLAISYS_DEVICE_CPU) {
@@ -1069,16 +1086,19 @@ struct LlaisysQwen2BatchContext {
 
         batch_input_ids = Tensor::create({max_bs}, LLAISYS_DTYPE_I64, dev, dev_id);
         batch_pos_ids   = Tensor::create({max_bs}, LLAISYS_DTYPE_I64, dev, dev_id);
-        batch_hidden    = Tensor::create({max_bs, meta.hs}, LLAISYS_DTYPE_F32, dev, dev_id);
-        batch_residual  = Tensor::create({max_bs, meta.hs}, LLAISYS_DTYPE_F32, dev, dev_id);
-        batch_norm_out  = Tensor::create({max_bs, meta.hs}, LLAISYS_DTYPE_F32, dev, dev_id);
-        batch_q         = Tensor::create({max_bs, q_dim}, LLAISYS_DTYPE_F32, dev, dev_id);
-        batch_k         = Tensor::create({max_bs, kv_dim}, LLAISYS_DTYPE_F32, dev, dev_id);
-        batch_v         = Tensor::create({max_bs, kv_dim}, LLAISYS_DTYPE_F32, dev, dev_id);
-        batch_attn_out  = Tensor::create({max_bs, model->local_nh * meta.dh}, LLAISYS_DTYPE_F32, dev, dev_id);
-        batch_gate      = Tensor::create({max_bs, model->local_di}, LLAISYS_DTYPE_F32, dev, dev_id);
-        batch_up        = Tensor::create({max_bs, model->local_di}, LLAISYS_DTYPE_F32, dev, dev_id);
-        batch_mlp_act   = Tensor::create({max_bs, model->local_di}, LLAISYS_DTYPE_F32, dev, dev_id);
+        // 批量激活缓冲区使用 act_dtype (FP16/FP32)
+        auto adtype = model->act_dtype;
+        batch_hidden    = Tensor::create({max_bs, meta.hs}, adtype, dev, dev_id);
+        batch_residual  = Tensor::create({max_bs, meta.hs}, adtype, dev, dev_id);
+        batch_norm_out  = Tensor::create({max_bs, meta.hs}, adtype, dev, dev_id);
+        batch_q         = Tensor::create({max_bs, q_dim}, adtype, dev, dev_id);
+        batch_k         = Tensor::create({max_bs, kv_dim}, adtype, dev, dev_id);
+        batch_v         = Tensor::create({max_bs, kv_dim}, adtype, dev, dev_id);
+        batch_attn_out  = Tensor::create({max_bs, model->local_nh * meta.dh}, adtype, dev, dev_id);
+        batch_gate      = Tensor::create({max_bs, model->local_di}, adtype, dev, dev_id);
+        batch_up        = Tensor::create({max_bs, model->local_di}, adtype, dev, dev_id);
+        batch_mlp_act   = Tensor::create({max_bs, model->local_di}, adtype, dev, dev_id);
+        // logits 始终 FP32 (采样精度)
         batch_logits    = Tensor::create({max_bs, meta.voc}, LLAISYS_DTYPE_F32, dev, dev_id);
 
         single_logits     = Tensor::create({1, meta.voc}, LLAISYS_DTYPE_F32, dev, dev_id);
@@ -1109,7 +1129,7 @@ static int64_t batch_prefill_impl(LlaisysQwen2BatchContext* ctx, size_t slot_id,
     bool use_greedy = (top_k == 1) || (temperature <= 0.0f);
 
     size_t kv_dim = model->local_nkvh * meta.dh;
-    size_t kv_bytes = kv_dim * sizeof(float);
+    size_t kv_bytes = kv_dim * llaisys::utils::dsize(model->act_dtype);
     float scale = 1.0f / std::sqrt((float)meta.dh);
     int64_t output_token = 0;
 
@@ -1166,13 +1186,13 @@ static int64_t batch_prefill_impl(LlaisysQwen2BatchContext* ctx, size_t slot_id,
             ops::rope(q_3d, q_3d, model->pos_ids_buf, meta.theta);
             ops::rope(k_3d, k_3d, model->pos_ids_buf, meta.theta);
 
-            // Write KV directly to block pool (no contiguous cache!)
+            // Write KV directly to block pool (按字节寻址, 兼容 FP16/FP32)
             int bid = slot.page_table.get_block_for_token(static_cast<int>(t));
             int off = slot.page_table.get_offset_in_block(static_cast<int>(t));
-            float* k_dst = (float*)alloc.get_k_ptr(bid, layer)
-                           + (size_t)off * kv_dim;
-            float* v_dst = (float*)alloc.get_v_ptr(bid, layer)
-                           + (size_t)off * kv_dim;
+            char* k_dst = (char*)alloc.get_k_ptr(bid, layer)
+                           + (size_t)off * kv_bytes;
+            char* v_dst = (char*)alloc.get_v_ptr(bid, layer)
+                           + (size_t)off * kv_bytes;
             model->memcpyOnDevice(k_dst, k_3d->data(), kv_bytes);
             model->memcpyOnDevice(v_dst, v_3d->data(), kv_bytes);
 
@@ -1185,8 +1205,8 @@ static int64_t batch_prefill_impl(LlaisysQwen2BatchContext* ctx, size_t slot_id,
                 bt[j] = slot.page_table.block_ids()[j];
 
             llaisys::ops::paged_attention(
-                (float*)model->attn_out->data(),
-                (const float*)q_3d->data(),
+                model->attn_out->data(),
+                q_3d->data(),
                 alloc.pool_k_raw(), alloc.pool_v_raw(),
                 bt.data(), &seq_len_so_far,
                 1, static_cast<int>(model->local_nh),
@@ -1195,7 +1215,9 @@ static int64_t batch_prefill_impl(LlaisysQwen2BatchContext* ctx, size_t slot_id,
                 ctx->block_size, num_blocks_so_far,
                 alloc.block_stride(), alloc.layer_stride(),
                 static_cast<int>(layer), scale,
-                model->device_type);
+                model->device_type,
+                llaisys::ops::KVQuantMode::FP32,
+                model->act_dtype);
 
             // O Projection
             auto attn_flat = model->attn_out->reshape({1, model->local_nh * meta.dh});
@@ -1275,7 +1297,7 @@ static void batch_decode_impl(LlaisysQwen2BatchContext* ctx,
     auto& alloc = *ctx->block_allocator;
     size_t B = num_active;
     size_t kv_dim = model->local_nkvh * meta.dh;
-    size_t kv_bytes = kv_dim * sizeof(float);
+    size_t kv_bytes = kv_dim * llaisys::utils::dsize(model->act_dtype);
     bool use_greedy = (top_k == 1) || (temperature <= 0.0f);
 
     // ── 0. Allocate new blocks for current positions (once, before layer loop) ──
@@ -1363,7 +1385,7 @@ static void batch_decode_impl(LlaisysQwen2BatchContext* ctx,
         ops::rope(q_3d, q_3d, b_pos, meta.theta);
         ops::rope(k_3d, k_3d, b_pos, meta.theta);
 
-        // D. Write KV to block pool for current token
+        // D. Write KV to block pool for current token (字节寻址, 兼容 FP16/FP32)
         auto v_3d = b_v->reshape({B, model->local_nkvh, meta.dh});
         for (size_t i = 0; i < B; ++i) {
             auto& slot = ctx->slots[active_slots[i]];
@@ -1371,10 +1393,10 @@ static void batch_decode_impl(LlaisysQwen2BatchContext* ctx,
             int bid = slot.page_table.get_block_for_token(static_cast<int>(pos));
             int off = slot.page_table.get_offset_in_block(static_cast<int>(pos));
 
-            float* k_dst = (float*)alloc.get_k_ptr(bid, layer)
-                           + (size_t)off * model->local_nkvh * meta.dh;
-            float* v_dst = (float*)alloc.get_v_ptr(bid, layer)
-                           + (size_t)off * model->local_nkvh * meta.dh;
+            char* k_dst = (char*)alloc.get_k_ptr(bid, layer)
+                           + (size_t)off * kv_bytes;
+            char* v_dst = (char*)alloc.get_v_ptr(bid, layer)
+                           + (size_t)off * kv_bytes;
             char* k_src = (char*)k_3d->data() + i * kv_bytes;
             char* v_src = (char*)v_3d->data() + i * kv_bytes;
             model->memcpyOnDevice(k_dst, k_src, kv_bytes);
@@ -1383,8 +1405,8 @@ static void batch_decode_impl(LlaisysQwen2BatchContext* ctx,
 
         // E. Paged Attention (all sequences in one call)
         llaisys::ops::paged_attention(
-            (float*)b_attn->data(),
-            (const float*)q_3d->data(),
+            b_attn->data(),
+            q_3d->data(),
             alloc.pool_k_raw(), alloc.pool_v_raw(),
             block_tables.data(), seq_lens.data(),
             static_cast<int>(B),
@@ -1395,7 +1417,9 @@ static void batch_decode_impl(LlaisysQwen2BatchContext* ctx,
             max_blocks_per_seq,
             alloc.block_stride(), alloc.layer_stride(),
             static_cast<int>(layer), scale,
-            model->device_type);
+            model->device_type,
+            llaisys::ops::KVQuantMode::FP32,
+            model->act_dtype);
 
         // F. O Projection
         ctx->linear_maybe_dequant(b_hidden, b_attn,
@@ -1473,7 +1497,7 @@ static void batch_decode_per_request_impl(LlaisysQwen2BatchContext* ctx,
     auto& alloc = *ctx->block_allocator;
     size_t B = num_active;
     size_t kv_dim = model->local_nkvh * meta.dh;
-    size_t kv_bytes = kv_dim * sizeof(float);
+    size_t kv_bytes = kv_dim * llaisys::utils::dsize(model->act_dtype);
 
     // Block allocation
     for (size_t i = 0; i < B; ++i) {
@@ -1557,10 +1581,10 @@ static void batch_decode_per_request_impl(LlaisysQwen2BatchContext* ctx,
             int bid = slot.page_table.get_block_for_token(static_cast<int>(pos));
             int off = slot.page_table.get_offset_in_block(static_cast<int>(pos));
 
-            float* k_dst = (float*)alloc.get_k_ptr(bid, layer)
-                           + (size_t)off * model->local_nkvh * meta.dh;
-            float* v_dst = (float*)alloc.get_v_ptr(bid, layer)
-                           + (size_t)off * model->local_nkvh * meta.dh;
+            char* k_dst = (char*)alloc.get_k_ptr(bid, layer)
+                           + (size_t)off * kv_bytes;
+            char* v_dst = (char*)alloc.get_v_ptr(bid, layer)
+                           + (size_t)off * kv_bytes;
             char* k_src = (char*)k_3d->data() + i * kv_bytes;
             char* v_src = (char*)v_3d->data() + i * kv_bytes;
             model->memcpyOnDevice(k_dst, k_src, kv_bytes);
@@ -1568,14 +1592,15 @@ static void batch_decode_per_request_impl(LlaisysQwen2BatchContext* ctx,
         }
 
         llaisys::ops::paged_attention(
-            (float*)b_attn->data(), (const float*)q_3d->data(),
+            b_attn->data(), q_3d->data(),
             alloc.pool_k_raw(), alloc.pool_v_raw(),
             block_tables.data(), seq_lens.data(),
             static_cast<int>(B), static_cast<int>(model->local_nh),
             static_cast<int>(model->local_nkvh), static_cast<int>(meta.dh),
             ctx->block_size, max_blocks_per_seq,
             alloc.block_stride(), alloc.layer_stride(),
-            static_cast<int>(layer), scale, model->device_type);
+            static_cast<int>(layer), scale, model->device_type,
+            llaisys::ops::KVQuantMode::FP32, model->act_dtype);
 
         ctx->linear_maybe_dequant(b_hidden, b_attn,
             model->weights.attn_o_w[layer], model->weights.attn_o_w_scale[layer],
@@ -1649,7 +1674,7 @@ static LlaisysQwen2CacheSnapshot* batch_slot_save_impl(
     auto* snap = new LlaisysQwen2CacheSnapshot();
     snap->pos = slot.current_pos;
     snap->nlayer = model->meta.nlayer;
-    snap->pos_bytes = model->local_nkvh * model->meta.dh * sizeof(float);
+    snap->pos_bytes = model->local_nkvh * model->meta.dh * llaisys::utils::dsize(model->act_dtype);
     snap->tp_size = model->tp_size;
     snap->tp_rank = model->tp_rank;
     snap->buffers.resize(snap->nlayer * 2);
@@ -1669,10 +1694,10 @@ static LlaisysQwen2CacheSnapshot* batch_slot_save_impl(
         int bid = slot.page_table.get_block_for_token(static_cast<int>(t));
         int off = slot.page_table.get_offset_in_block(static_cast<int>(t));
         for (size_t layer = 0; layer < snap->nlayer; ++layer) {
-            float* k_src = (float*)alloc.get_k_ptr(bid, layer)
-                           + (size_t)off * model->local_nkvh * model->meta.dh;
-            float* v_src = (float*)alloc.get_v_ptr(bid, layer)
-                           + (size_t)off * model->local_nkvh * model->meta.dh;
+            char* k_src = (char*)alloc.get_k_ptr(bid, layer)
+                           + (size_t)off * kv_row_bytes;
+            char* v_src = (char*)alloc.get_v_ptr(bid, layer)
+                           + (size_t)off * kv_row_bytes;
             void* k_dst = snap->buffers[layer * 2].data() + t * kv_row_bytes;
             void* v_dst = snap->buffers[layer * 2 + 1].data() + t * kv_row_bytes;
             model->memcpyD2H(k_dst, k_src, kv_row_bytes);
@@ -1719,10 +1744,10 @@ static void batch_slot_restore_impl(
         for (size_t layer = 0; layer < snapshot->nlayer; ++layer) {
             const void* k_src = snapshot->buffers[layer * 2].data() + t * kv_row_bytes;
             const void* v_src = snapshot->buffers[layer * 2 + 1].data() + t * kv_row_bytes;
-            void* k_dst = (float*)alloc.get_k_ptr(bid, layer)
-                          + (size_t)off * model->local_nkvh * model->meta.dh;
-            void* v_dst = (float*)alloc.get_v_ptr(bid, layer)
-                          + (size_t)off * model->local_nkvh * model->meta.dh;
+            void* k_dst = (char*)alloc.get_k_ptr(bid, layer)
+                          + (size_t)off * kv_row_bytes;
+            void* v_dst = (char*)alloc.get_v_ptr(bid, layer)
+                          + (size_t)off * kv_row_bytes;
             model->memcpyH2D(k_dst, k_src, kv_row_bytes);
             model->memcpyH2D(v_dst, v_src, kv_row_bytes);
         }

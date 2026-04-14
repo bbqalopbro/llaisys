@@ -1,6 +1,8 @@
 #include "paged_attention_nvidia.cuh"
 
 #include <cuda_runtime.h>
+#include <cuda_fp16.h>
+#include <cuda_bf16.h>
 #include <cstdio>
 #include <cmath>
 #include <limits>
@@ -17,6 +19,18 @@
         }                                                                         \
     } while (0)
 
+// ── FP32/FP16/BF16 混合精度转换辅助 ────────────────────────────────
+// 所有中间计算（QK点积、softmax、V累加）保持 FP32，仅 I/O 使用模板类型 T
+template<typename T> __device__ inline float to_float(T v);
+template<> __device__ inline float to_float<float>(float v) { return v; }
+template<> __device__ inline float to_float<__half>(__half v) { return __half2float(v); }
+template<> __device__ inline float to_float<__nv_bfloat16>(__nv_bfloat16 v) { return __bfloat162float(v); }
+
+template<typename T> __device__ inline T from_float(float v);
+template<> __device__ inline float from_float<float>(float v) { return v; }
+template<> __device__ inline __half from_float<__half>(float v) { return __float2half(v); }
+template<> __device__ inline __nv_bfloat16 from_float<__nv_bfloat16>(float v) { return __float2bfloat16(v); }
+
 static constexpr int WARP_SIZE = 32;
 
 __device__ __forceinline__ float warp_reduce_sum(float val) {
@@ -31,12 +45,16 @@ __device__ __forceinline__ float warp_reduce_max(float val) {
     return val;
 }
 
-// Paged Attention decode kernel: one (batch, head) pair per thread block.
-// Threads cooperate on head_dim for QK dot products and output accumulation.
-// Uses online softmax across KV blocks referenced by the page table.
+// Paged Attention decode kernel (模板化版本):
+// 一个 (batch, head) 对应一个 thread block。
+// 线程协作完成 head_dim 维度的 QK 点积和输出累加。
+// 使用 online softmax 跨越 page table 引用的 KV blocks。
+// T = float / __half / __nv_bfloat16 (I/O 类型)
+// 中间计算始终使用 FP32 保证数值稳定性。
+template<typename T>
 __global__ void paged_attention_kernel(
-    float *__restrict__ output,
-    const float *__restrict__ query,
+    T *__restrict__ output,
+    const T *__restrict__ query,
     const char *__restrict__ k_pool,
     const char *__restrict__ v_pool,
     const int *__restrict__ block_tables,
@@ -59,12 +77,12 @@ __global__ void paged_attention_kernel(
     int seq_len = seq_lens[batch_idx];
     int num_blocks = (seq_len + block_size - 1) / block_size;
 
-    const float *q_vec = query + batch_idx * num_heads * head_dim + head_idx * head_dim;
+    const T *q_vec = query + batch_idx * num_heads * head_dim + head_idx * head_dim;
 
     int tid = threadIdx.x;
     int nthreads = blockDim.x;
 
-    // Shared memory for scores and cross-warp reduction
+    // Shared memory for scores and cross-warp reduction (始终 FP32)
     extern __shared__ float smem[];
     float *s_scores = smem;
     float *s_reduce = smem + block_size;  // [2 * num_warps] for max and sum
@@ -77,6 +95,7 @@ __global__ void paged_attention_kernel(
     float l = 0.0f;
 
     // Thread-local accumulator: each thread handles dims [tid, tid+nthreads, ...]
+    // 累加器始终 FP32，最终写出时转回 T
     float acc[8];
     int dims_per_thread = (head_dim + nthreads - 1) / nthreads;
     for (int i = 0; i < dims_per_thread; ++i) acc[i] = 0.0f;
@@ -85,22 +104,24 @@ __global__ void paged_attention_kernel(
         int block_id = block_tables[batch_idx * max_blocks_per_seq + bi];
         int tokens_in_block = min(block_size, seq_len - bi * block_size);
 
-        const float *k_base = reinterpret_cast<const float *>(
+        // KV pool 按字节寻址，reinterpret_cast 到实际 I/O 类型 T
+        const T *k_base = reinterpret_cast<const T *>(
             k_pool + (size_t)block_id * pool_block_stride +
             (size_t)layer_idx * pool_layer_stride);
-        const float *v_base = reinterpret_cast<const float *>(
+        const T *v_base = reinterpret_cast<const T *>(
             v_pool + (size_t)block_id * pool_block_stride +
             (size_t)layer_idx * pool_layer_stride);
 
         // Compute QK^T scores: threads partition over head_dim, reduce to score
         for (int t = 0; t < tokens_in_block; ++t) {
-            const float *k_vec = k_base + t * num_kv_heads * head_dim + kv_head_idx * head_dim;
+            const T *k_vec = k_base + t * num_kv_heads * head_dim + kv_head_idx * head_dim;
 
+            // 读入 T → 转 float 计算点积
             float partial = 0.0f;
             for (int d = tid; d < head_dim; d += nthreads)
-                partial += q_vec[d] * k_vec[d];
+                partial += to_float(q_vec[d]) * to_float(k_vec[d]);
 
-            // Warp-level reduction
+            // Warp-level reduction (FP32)
             partial = warp_reduce_sum(partial);
 
             // Cross-warp reduction via shared memory
@@ -116,7 +137,7 @@ __global__ void paged_attention_kernel(
             __syncthreads();
         }
 
-        // Online softmax: all threads read the same scores,
+        // Online softmax: all threads read the same scores (FP32),
         // but each accumulates its own subset of V dimensions
         for (int t = 0; t < tokens_in_block; ++t) {
             float score = s_scores[t];
@@ -125,31 +146,33 @@ __global__ void paged_attention_kernel(
             float correction = expf(m - m_new);
             l = correction * l + p;
 
-            const float *v_vec = v_base + t * num_kv_heads * head_dim + kv_head_idx * head_dim;
+            const T *v_vec = v_base + t * num_kv_heads * head_dim + kv_head_idx * head_dim;
             for (int i = 0; i < dims_per_thread; ++i) {
                 int d = tid + i * nthreads;
                 if (d < head_dim)
-                    acc[i] = correction * acc[i] + p * v_vec[d];
+                    acc[i] = correction * acc[i] + p * to_float(v_vec[d]);
             }
             m = m_new;
         }
         __syncthreads();
     }
 
-    // Write output: each thread writes its own dimensions
-    float *out_vec = output + batch_idx * num_heads * head_dim + head_idx * head_dim;
+    // Write output: FP32 累加结果 → from_float 转回 T 类型写出
+    T *out_vec = output + batch_idx * num_heads * head_dim + head_idx * head_dim;
     float inv_l = (l > 0.0f) ? (1.0f / l) : 0.0f;
     for (int i = 0; i < dims_per_thread; ++i) {
         int d = tid + i * nthreads;
         if (d < head_dim)
-            out_vec[d] = acc[i] * inv_l;
+            out_vec[d] = from_float<T>(acc[i] * inv_l);
     }
 }
 
 namespace llaisys::ops::nvidia {
 
-void paged_attention(
-    float *output, const float *query,
+// ── 模板化 GPU paged attention 启动器 ──────────────────────────────
+template<typename T>
+static void paged_attention_typed(
+    T *output, const T *query,
     const void *k_pool, const void *v_pool,
     const int *block_tables_host, const int *seq_lens_host,
     int batch_size, int num_heads, int num_kv_heads, int head_dim,
@@ -174,7 +197,7 @@ void paged_attention(
     int num_warps = threads / WARP_SIZE;
     size_t smem = block_size * sizeof(float) + 2 * num_warps * sizeof(float);
 
-    paged_attention_kernel<<<grid, threads, smem>>>(
+    paged_attention_kernel<T><<<grid, threads, smem>>>(
         output, query,
         static_cast<const char *>(k_pool),
         static_cast<const char *>(v_pool),
@@ -187,6 +210,50 @@ void paged_attention(
 
     cudaFree(d_block_tables);
     cudaFree(d_seq_lens);
+}
+
+// ── dtype 分发入口 ────────────────────────────────────────────────
+void paged_attention(
+    void *output, const void *query,
+    const void *k_pool, const void *v_pool,
+    const int *block_tables_host, const int *seq_lens_host,
+    int batch_size, int num_heads, int num_kv_heads, int head_dim,
+    int block_size, int max_blocks_per_seq,
+    size_t pool_block_stride, size_t pool_layer_stride,
+    int layer_idx, float scale,
+    llaisysDataType_t dtype)
+{
+    switch (dtype) {
+    case LLAISYS_DTYPE_F32:
+        paged_attention_typed<float>(
+            (float*)output, (const float*)query,
+            k_pool, v_pool, block_tables_host, seq_lens_host,
+            batch_size, num_heads, num_kv_heads, head_dim,
+            block_size, max_blocks_per_seq,
+            pool_block_stride, pool_layer_stride,
+            layer_idx, scale);
+        break;
+    case LLAISYS_DTYPE_F16:
+        paged_attention_typed<__half>(
+            (__half*)output, (const __half*)query,
+            k_pool, v_pool, block_tables_host, seq_lens_host,
+            batch_size, num_heads, num_kv_heads, head_dim,
+            block_size, max_blocks_per_seq,
+            pool_block_stride, pool_layer_stride,
+            layer_idx, scale);
+        break;
+    case LLAISYS_DTYPE_BF16:
+        paged_attention_typed<__nv_bfloat16>(
+            (__nv_bfloat16*)output, (const __nv_bfloat16*)query,
+            k_pool, v_pool, block_tables_host, seq_lens_host,
+            batch_size, num_heads, num_kv_heads, head_dim,
+            block_size, max_blocks_per_seq,
+            pool_block_stride, pool_layer_stride,
+            layer_idx, scale);
+        break;
+    default:
+        throw std::runtime_error("paged_attention: unsupported dtype");
+    }
 }
 
 } // namespace llaisys::ops::nvidia

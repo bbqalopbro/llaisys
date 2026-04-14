@@ -18,8 +18,8 @@ enum class KVQuantMode : int {
 // Layout of block pool (FP32): flat [num_blocks, nlayer, block_size, nkvh, dh]
 // Layout of block pool (INT8): flat [num_blocks, nlayer, {block_size*nkvh*dh INT8 + block_size*nkvh FP32 scales}]
 void paged_attention(
-    float *output,              // [batch_size, num_heads, head_dim]
-    const float *query,         // [batch_size, num_heads, head_dim]
+    void *output,               // [batch_size, num_heads, head_dim] (dtype 决定类型)
+    const void *query,          // [batch_size, num_heads, head_dim] (dtype 决定类型)
     const void *k_pool,         // Block pool K base pointer
     const void *v_pool,         // Block pool V base pointer
     const int *block_tables,    // [batch_size, max_blocks_per_seq] CPU-side
@@ -35,7 +35,8 @@ void paged_attention(
     int layer_idx,
     float scale,
     llaisysDeviceType_t device_type,
-    KVQuantMode kv_quant = KVQuantMode::FP32
+    KVQuantMode kv_quant = KVQuantMode::FP32,
+    llaisysDataType_t dtype = LLAISYS_DTYPE_F32
 );
 
 } // namespace llaisys::ops
