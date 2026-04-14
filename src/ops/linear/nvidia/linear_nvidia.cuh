@@ -4,4 +4,6 @@
 
 namespace llaisys::ops::nvidia {
 void linear(tensor_t out, tensor_t in, tensor_t weight, tensor_t bias);
+void linear_add(tensor_t out, tensor_t in, tensor_t weight, tensor_t bias,
+                tensor_t residual);
 } // namespace llaisys::ops::nvidia

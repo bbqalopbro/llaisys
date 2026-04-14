@@ -30,14 +30,16 @@
     } while (0)
 
 // ---- GEMV kernel for M=1 decode (FP16 weights+input, FP32 accumulation) ----
-// y[row] = dot(W[row, :], x[:]) + bias[row]
+// y[row] = dot(W[row, :], x[:]) + bias[row] + residual[row]
 // W is row-major [N, K], x is [K], y is [N]
 // Uses half2 vectorized loads for 2x bandwidth
+// residual is optional (nullptr to skip)
 template<int WARPS_PER_ROW>
 __global__ void gemv_f16_kernel(const __half *__restrict__ W,
                                 const __half *__restrict__ x,
                                 __half *__restrict__ y,
                                 const __half *__restrict__ bias,
+                                const __half *__restrict__ residual,
                                 int N, int K) {
     const int WARP_SIZE = 32;
     const int THREADS_PER_ROW = WARPS_PER_ROW * WARP_SIZE;
@@ -89,35 +91,36 @@ __global__ void gemv_f16_kernel(const __half *__restrict__ W,
         if (bias) {
             total += __half2float(bias[row]);
         }
+        if (residual) {
+            total += __half2float(residual[row]);
+        }
         y[row] = __float2half(total);
     }
 }
 
 // GEMV launcher: WARPS_PER_ROW tuned by K dimension
+// residual can be nullptr (no add fusion)
 static void gemv_f16_launch(const __half *W, const __half *x, __half *y,
-                            const __half *bias, int N, int K,
-                            cudaStream_t stream = 0) {
+                            const __half *bias, const __half *residual,
+                            int N, int K, cudaStream_t stream = 0) {
     if (K <= 512) {
-        // 1 warp/row, 8 rows/block = 256 threads
         constexpr int WPR = 1;
-        int rpb = 256 / (WPR * 32);  // 8
+        int rpb = 256 / (WPR * 32);
         int grid = (N + rpb - 1) / rpb;
         int smem = rpb * WPR * (int)sizeof(float);
-        gemv_f16_kernel<WPR><<<grid, 256, smem, stream>>>(W, x, y, bias, N, K);
+        gemv_f16_kernel<WPR><<<grid, 256, smem, stream>>>(W, x, y, bias, residual, N, K);
     } else if (K <= 2048) {
-        // 2 warps/row, 4 rows/block
         constexpr int WPR = 2;
-        int rpb = 256 / (WPR * 32);  // 4
+        int rpb = 256 / (WPR * 32);
         int grid = (N + rpb - 1) / rpb;
         int smem = rpb * WPR * (int)sizeof(float);
-        gemv_f16_kernel<WPR><<<grid, 256, smem, stream>>>(W, x, y, bias, N, K);
+        gemv_f16_kernel<WPR><<<grid, 256, smem, stream>>>(W, x, y, bias, residual, N, K);
     } else {
-        // 4 warps/row, 2 rows/block
         constexpr int WPR = 4;
-        int rpb = 256 / (WPR * 32);  // 2
+        int rpb = 256 / (WPR * 32);
         int grid = (N + rpb - 1) / rpb;
         int smem = rpb * WPR * (int)sizeof(float);
-        gemv_f16_kernel<WPR><<<grid, 256, smem, stream>>>(W, x, y, bias, N, K);
+        gemv_f16_kernel<WPR><<<grid, 256, smem, stream>>>(W, x, y, bias, residual, N, K);
     }
     CUDA_CHECK(cudaGetLastError());
 }
@@ -372,6 +375,47 @@ void linear(tensor_t out, tensor_t in, tensor_t weight, tensor_t bias) {
                 (__nv_bfloat16*)out->data(), (const __nv_bfloat16*)bias->data(), M, N);
             break;
         default: break;
+        }
+        CUDA_CHECK(cudaGetLastError());
+    }
+}
+
+// Y = X * W^T + bias + residual  (fused GEMV+Add for M=1 FP16 decode)
+// Falls back to linear() + separate add for non-M=1 or non-FP16 cases
+void linear_add(tensor_t out, tensor_t in, tensor_t weight, tensor_t bias,
+                tensor_t residual) {
+    int64_t M = in->shape()[0];
+    auto w_dtype = weight->dtype();
+
+    // Fused path: M=1, FP16, no quantization mixing
+    if (M == 1 && w_dtype == LLAISYS_DTYPE_F16
+        && in->dtype() == LLAISYS_DTYPE_F16
+        && out->dtype() == LLAISYS_DTYPE_F16) {
+        int64_t K = in->shape()[1];
+        int64_t N = weight->shape()[0];
+        const __half *bias_ptr = (bias && bias->data())
+            ? (const __half *)bias->data() : nullptr;
+        const __half *res_ptr = (residual && residual->data())
+            ? (const __half *)residual->data() : nullptr;
+        gemv_f16_launch((const __half *)weight->data(),
+                        (const __half *)in->data(),
+                        (__half *)out->data(),
+                        bias_ptr, res_ptr, (int)N, (int)K);
+        return;
+    }
+
+    // Fallback: separate linear + add
+    linear(out, in, weight, bias);
+    if (residual && residual->data()) {
+        // element-wise add: out[i] += residual[i]
+        int64_t total = out->numel();
+        int thr = 256, blk = ((int)total + thr - 1) / thr;
+        if (w_dtype == LLAISYS_DTYPE_F16) {
+            add_bias_kernel<__half><<<blk, thr>>>(
+                (__half *)out->data(), (const __half *)residual->data(), M, out->shape()[1]);
+        } else {
+            add_bias_kernel<float><<<blk, thr>>>(
+                (float *)out->data(), (const float *)residual->data(), M, out->shape()[1]);
         }
         CUDA_CHECK(cudaGetLastError());
     }

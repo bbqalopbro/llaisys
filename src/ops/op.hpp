@@ -16,6 +16,10 @@ void embedding(tensor_t out, tensor_t index, tensor_t weight);
 // 3. Linear (Y = XW^T + b)
 void linear(tensor_t out, tensor_t in, tensor_t weight, tensor_t bias);
 
+// 3b. Fused Linear+Add (Y = XW^T + b + residual), M=1 FP16 uses GEMV kernel
+void linear_add(tensor_t out, tensor_t in, tensor_t weight, tensor_t bias,
+                tensor_t residual);
+
 // 4. RMS Normalization
 void rms_norm(tensor_t out, tensor_t in, tensor_t weight, float eps);
 

@@ -118,4 +118,34 @@ void linear(tensor_t out, tensor_t in, tensor_t weight, tensor_t bias) {
         throw std::runtime_error("数据类型不支持");
     }
 }
+
+void linear_add(tensor_t out, tensor_t in, tensor_t weight, tensor_t bias,
+                tensor_t residual) {
+#ifdef ENABLE_NVIDIA_API
+    if (out->deviceType() == LLAISYS_DEVICE_NVIDIA) {
+        return nvidia::linear_add(out, in, weight, bias, residual);
+    }
+#endif
+
+    // CPU fallback: separate linear + add
+    linear(out, in, weight, bias);
+    if (residual && residual->data()) {
+        // reuse existing ops::add
+        auto dt = out->dtype();
+        int64_t n = out->numel();
+        if (dt == LLAISYS_DTYPE_F32) {
+            float *o = reinterpret_cast<float *>(out->data());
+            const float *r = reinterpret_cast<const float *>(residual->data());
+            for (int64_t i = 0; i < n; i++) o[i] += r[i];
+        } else if (dt == LLAISYS_DTYPE_F16) {
+            auto *o = reinterpret_cast<llaisys::fp16_t *>(out->data());
+            const auto *r = reinterpret_cast<const llaisys::fp16_t *>(residual->data());
+            for (int64_t i = 0; i < n; i++) {
+                float v = llaisys::utils::cast<float>(o[i]) + llaisys::utils::cast<float>(r[i]);
+                o[i] = llaisys::utils::cast<llaisys::fp16_t>(v);
+            }
+        }
+    }
+}
+
 } // namespace llaisys::ops

@@ -392,7 +392,8 @@ struct LlaisysQwen2Model {
     void linear_maybe_dequant(tensor_t out, tensor_t in,
                               llaisysTensor_t w_handle, llaisysTensor_t scale_handle,
                               llaisysTensor_t bias_handle,
-                              llaisysTensor_t qzeros_handle = nullptr) {
+                              llaisysTensor_t qzeros_handle = nullptr,
+                              tensor_t residual = nullptr) {
         auto w = TO_CPP_TENSOR(w_handle);
         if (!w) {
             fprintf(stderr, "[ERROR] linear_maybe_dequant: weight is NULL\n");
@@ -440,7 +441,11 @@ struct LlaisysQwen2Model {
             // FP32 / FP16 / BF16 原始路径
             // 如果 weight 是 FP16 而 input 是 FP32, ops::linear 内部
             // 会自动走混合精度路径 (GPU: cuBLAS F16×F16→F32, CPU: cast 累加)
-            ops::linear(out, in, w, b);
+            if (residual) {
+                ops::linear_add(out, in, w, b, residual);
+            } else {
+                ops::linear(out, in, w, b);
+            }
         }
     }
 };
@@ -794,11 +799,18 @@ __export int64_t llaisysQwen2ModelInferSample(struct LlaisysQwen2Model * model, 
                         (int)i, scale, model->device_type, model->act_dtype);
 
                     auto attn_flat = model->attn_out->reshape({1, model->local_nh * model->meta.dh});
-                    model->linear_maybe_dequant(model->hidden_states, attn_flat,
-                        model->weights.attn_o_w[i], model->weights.attn_o_w_scale[i],
-                        nullptr, model->weights.attn_o_w_qzeros[i]);
-                    model->allReduceIfTP(model->hidden_states, model->meta.hs);
-                    ops::add(model->hidden_states, model->hidden_states, model->residual);
+                    if (model->tp_size <= 1) {
+                        // Fused linear+add: GEMV+residual in one kernel
+                        model->linear_maybe_dequant(model->hidden_states, attn_flat,
+                            model->weights.attn_o_w[i], model->weights.attn_o_w_scale[i],
+                            nullptr, model->weights.attn_o_w_qzeros[i], model->residual);
+                    } else {
+                        model->linear_maybe_dequant(model->hidden_states, attn_flat,
+                            model->weights.attn_o_w[i], model->weights.attn_o_w_scale[i],
+                            nullptr, model->weights.attn_o_w_qzeros[i]);
+                        model->allReduceIfTP(model->hidden_states, model->meta.hs);
+                        ops::add(model->hidden_states, model->hidden_states, model->residual);
+                    }
 
                     std::swap(model->residual, model->hidden_states);
                     ops::rms_norm(model->norm_out, model->residual,
@@ -810,11 +822,18 @@ __export int64_t llaisysQwen2ModelInferSample(struct LlaisysQwen2Model * model, 
                         model->weights.mlp_up_w[i], model->weights.mlp_up_w_scale[i],
                         nullptr, model->weights.mlp_up_w_qzeros[i]);
                     ops::swiglu(model->mlp_act, model->gate, model->up);
-                    model->linear_maybe_dequant(model->hidden_states, model->mlp_act,
-                        model->weights.mlp_down_w[i], model->weights.mlp_down_w_scale[i],
-                        nullptr, model->weights.mlp_down_w_qzeros[i]);
-                    model->allReduceIfTP(model->hidden_states, model->meta.hs);
-                    ops::add(model->hidden_states, model->hidden_states, model->residual);
+                    if (model->tp_size <= 1) {
+                        // Fused linear+add: GEMV+residual in one kernel
+                        model->linear_maybe_dequant(model->hidden_states, model->mlp_act,
+                            model->weights.mlp_down_w[i], model->weights.mlp_down_w_scale[i],
+                            nullptr, model->weights.mlp_down_w_qzeros[i], model->residual);
+                    } else {
+                        model->linear_maybe_dequant(model->hidden_states, model->mlp_act,
+                            model->weights.mlp_down_w[i], model->weights.mlp_down_w_scale[i],
+                            nullptr, model->weights.mlp_down_w_qzeros[i]);
+                        model->allReduceIfTP(model->hidden_states, model->meta.hs);
+                        ops::add(model->hidden_states, model->hidden_states, model->residual);
+                    }
                 }
 
                 // 4. Final Norm + LM Head
