@@ -378,6 +378,63 @@ for (size_t t = 0; t < ntoken; ++t) {
 
 **修改文件：** `src/llaisys/models/qwen2.cpp`
 
+### 10.2.1 核心代码
+
+#### 入口路由
+
+```cpp
+// llaisysQwen2ModelInferSample 入口
+if (ntoken > 1) {
+    // 首次推理 (prefill): 所有 token 一次性通过 transformer
+    return prefill_batch(model, token_ids, ntoken, temperature, top_k, top_p);
+}
+// ntoken == 1: 逐 token decode 路径 (使用 PagedAttention)
+```
+
+#### 临时缓冲区分配
+
+```cpp
+// 所有中间张量从 [1, ...] 扩展为 [S, ...]
+auto hs_buf   = Tensor::create({S, hs}, dt, dev, did);       // [S, 1536]
+auto q_buf    = Tensor::create({S, q_dim}, dt, dev, did);     // [S, 1536] (12*128)
+auto k_buf    = Tensor::create({S, kv_dim}, dt, dev, did);    // [S, 256]  (2*128)
+auto v_buf    = Tensor::create({S, kv_dim}, dt, dev, did);    // [S, 256]
+auto attn_buf = Tensor::create({S, nh_local, dh}, dt, dev, did); // [S, 12, 128]
+auto gate_buf = Tensor::create({S, di_local}, dt, dev, did);  // [S, 8960]
+// ... 更多缓冲区
+```
+
+#### KV-Cache 批量写入
+
+```cpp
+// 将 S 个 token 的 KV 向量一次性写入 PagedAttention 缓存
+size_t kv_row_bytes = nkvh_local * dh * dsize(dt);  // 每个 token 的 KV 大小
+char* k_dst = (char*)model->kv_caches[layer][0]->data();  // 从 pos 0 开始
+char* v_dst = (char*)model->kv_caches[layer][1]->data();
+model->memcpyOnDevice(k_dst, k_3d->data(), S * kv_row_bytes);  // 单次拷贝
+model->memcpyOnDevice(v_dst, v_3d->data(), S * kv_row_bytes);
+```
+
+#### 最后一个 token 提取
+
+```cpp
+// hs_buf 形状 [S, hs]，取最后一行 [S-1, :] → model->hidden_states [1, hs]
+char* last_hs_src = (char*)hs_buf->data() + (S - 1) * hs * elem_sz;
+model->memcpyOnDevice(model->hidden_states->data(), last_hs_src, hs * elem_sz);
+// 之后 Final Norm → LM Head → Sample，与 decode 路径完全相同
+```
+
+#### 原始逐 token 路径 vs Batch Prefill 对比
+
+| 操作 | 逐 token (原始) | Batch Prefill |
+|------|:--:|:--:|
+| Kernel launch 次数 | ~10 × S × L | ~10 × L |
+| GEMM 矩阵尺寸 | [1, hidden] × [hidden, dim] | [S, hidden] × [hidden, dim] |
+| cudaMemcpy (KV写入) | S × L 次 (每次1行) | L 次 (每次S行) |
+| GPU 利用率 | 低 (大量 launch overhead) | 高 (矩阵运算并行) |
+
+> L = 28 (Qwen2-1.5B 层数), S = prefill token 数
+
 ### 10.3 正确性验证
 
 ```
