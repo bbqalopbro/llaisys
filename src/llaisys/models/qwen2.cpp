@@ -1238,167 +1238,176 @@ struct LlaisysQwen2BatchContext {
     }
 };
 
-// ── Prefill: 逐 token 处理 prompt, KV 直接写入 block pool ─────
-// 注意: 当前实现是逐 token prefill (性能瓶颈!)
-// 优化方向: batch prefill — 一次处理所有 prompt token 的 QKV 投影
-//          只在最后一个 token 计算 logits
+// ── Batch Prefill for BatchContext: 一次性处理所有 token，KV 写入 Block Pool ──
+// 所有 token 并行通过每层 transformer，然后将 KV scatter 到 paged block pool
+// 返回最后一个 token 对应的 output_token
 
 static int64_t batch_prefill_impl(LlaisysQwen2BatchContext* ctx, size_t slot_id,
                                    int64_t* token_ids, size_t ntoken,
                                    float temperature, int top_k, float top_p) {
+    using Tensor = llaisys::Tensor;
+
     auto* model = ctx->model;
     auto& slot = ctx->slots[slot_id];
     auto& alloc = *ctx->block_allocator;
     auto& meta = model->meta;
     bool use_greedy = (top_k == 1) || (temperature <= 0.0f);
 
-    size_t kv_dim = model->local_nkvh * meta.dh;
-    size_t kv_bytes = kv_dim * llaisys::utils::dsize(model->act_dtype);
-    float scale = 1.0f / std::sqrt((float)meta.dh);
-    int64_t output_token = 0;
+    size_t S = ntoken;
+    auto dt = model->act_dtype;
+    auto dev = model->device_type;
+    auto did = model->device_id;
+    size_t hs = meta.hs;
+    size_t dh = meta.dh;
+    size_t di_local = model->local_di;
+    size_t nh_local = model->local_nh;
+    size_t nkvh_local = model->local_nkvh;
+    size_t q_dim = nh_local * dh;
+    size_t kv_dim = nkvh_local * dh;
+    size_t kv_bytes = kv_dim * llaisys::utils::dsize(dt);
+    float scale = 1.0f / std::sqrt((float)dh);
+    int bs = ctx->block_size;
 
-    // Pre-allocate enough blocks for the entire prompt
-    size_t blocks_needed = (ntoken + alloc.block_size() - 1) / alloc.block_size();
+    // ── 1. 分配 blocks ──
+    size_t blocks_needed = (S + bs - 1) / bs;
     for (size_t bi = 0; bi < blocks_needed; ++bi) {
         if (slot.page_table.needs_new_block()) {
             int bid = alloc.alloc();
             if (bid < 0) {
-                std::cerr << "[qwen2] chunked prefill: block pool exhausted" << std::endl;
-                break;
+                std::cerr << "[qwen2] batch prefill: block pool exhausted, need "
+                          << blocks_needed << " blocks, only allocated " << bi << std::endl;
+                return -1;
             }
             slot.page_table.append_block(bid);
         }
-        for (size_t tok = 0; tok < alloc.block_size(); ++tok)
+        // 预增 num_tokens 以触发 needs_new_block
+        size_t tokens_in_block = std::min((size_t)bs, S - bi * bs);
+        for (size_t t = 0; t < tokens_in_block; ++t)
             slot.page_table.inc_num_tokens();
     }
-    slot.page_table.set_num_tokens(0);
+    slot.page_table.set_num_tokens(0);  // 重置, 最后设为 S
 
-    // Process tokens one at a time, writing KV directly to block pool
-    for (size_t t = 0; t < ntoken; ++t) {
-        int64_t token = token_ids[t];
-        int64_t pos = static_cast<int64_t>(t);
+    // ── 2. 创建临时缓冲区 [S, ...] ──
+    auto ids_buf  = Tensor::create({S}, LLAISYS_DTYPE_I64, dev, did);
+    auto pos_buf  = Tensor::create({S}, LLAISYS_DTYPE_I64, dev, did);
+    auto hs_buf   = Tensor::create({S, hs}, dt, dev, did);
+    auto res_buf  = Tensor::create({S, hs}, dt, dev, did);
+    auto norm_buf = Tensor::create({S, hs}, dt, dev, did);
+    auto q_buf    = Tensor::create({S, q_dim}, dt, dev, did);
+    auto k_buf    = Tensor::create({S, kv_dim}, dt, dev, did);
+    auto v_buf    = Tensor::create({S, kv_dim}, dt, dev, did);
+    auto attn_buf = Tensor::create({S, nh_local, dh}, dt, dev, did);
+    auto gate_buf = Tensor::create({S, di_local}, dt, dev, did);
+    auto up_buf   = Tensor::create({S, di_local}, dt, dev, did);
+    auto mlp_buf  = Tensor::create({S, di_local}, dt, dev, did);
 
-        model->memcpyH2D(model->input_ids_buf, &token, sizeof(int64_t));
-        model->memcpyH2D(model->pos_ids_buf, &pos, sizeof(int64_t));
+    // ── 3. 上传 token_ids 和 pos_ids ──
+    model->memcpyH2D(ids_buf, token_ids, S * sizeof(int64_t));
+    std::vector<int64_t> pos_vec(S);
+    for (size_t i = 0; i < S; ++i) pos_vec[i] = (int64_t)i;
+    model->memcpyH2D(pos_buf, pos_vec.data(), S * sizeof(int64_t));
 
-        // Embedding
-        ops::embedding(model->hidden_states, model->input_ids_buf,
-                       TO_CPP_TENSOR(model->weights.in_embed));
+    // ── 4. Embedding: [S] → [S, hs] ──
+    ops::embedding(hs_buf, ids_buf, TO_CPP_TENSOR(model->weights.in_embed));
 
-        for (size_t layer = 0; layer < meta.nlayer; ++layer) {
-            std::swap(model->residual, model->hidden_states);
+    // ── 5. Transformer Layers ──
+    for (size_t layer = 0; layer < meta.nlayer; ++layer) {
+        std::swap(res_buf, hs_buf);
 
-            // Pre-Norm
-            ops::rms_norm(model->norm_out, model->residual,
-                         TO_CPP_TENSOR(model->weights.attn_norm_w[layer]), meta.epsilon);
+        // Pre-attention Norm
+        ops::rms_norm(norm_buf, res_buf,
+                     TO_CPP_TENSOR(model->weights.attn_norm_w[layer]), meta.epsilon);
 
-            // QKV Linear
-            model->linear_maybe_dequant(model->q, model->norm_out,
-                model->weights.attn_q_w[layer], model->weights.attn_q_w_scale[layer],
-                model->weights.attn_q_b[layer], model->weights.attn_q_w_qzeros[layer]);
-            model->linear_maybe_dequant(model->k, model->norm_out,
-                model->weights.attn_k_w[layer], model->weights.attn_k_w_scale[layer],
-                model->weights.attn_k_b[layer], model->weights.attn_k_w_qzeros[layer]);
-            model->linear_maybe_dequant(model->v, model->norm_out,
-                model->weights.attn_v_w[layer], model->weights.attn_v_w_scale[layer],
-                model->weights.attn_v_b[layer], model->weights.attn_v_w_qzeros[layer]);
+        // QKV Linear
+        model->linear_maybe_dequant(q_buf, norm_buf,
+            model->weights.attn_q_w[layer], model->weights.attn_q_w_scale[layer],
+            model->weights.attn_q_b[layer], model->weights.attn_q_w_qzeros[layer]);
+        model->linear_maybe_dequant(k_buf, norm_buf,
+            model->weights.attn_k_w[layer], model->weights.attn_k_w_scale[layer],
+            model->weights.attn_k_b[layer], model->weights.attn_k_w_qzeros[layer]);
+        model->linear_maybe_dequant(v_buf, norm_buf,
+            model->weights.attn_v_w[layer], model->weights.attn_v_w_scale[layer],
+            model->weights.attn_v_b[layer], model->weights.attn_v_w_qzeros[layer]);
 
-            // RoPE
-            auto q_3d = model->q->reshape({1, model->local_nh, meta.dh});
-            auto k_3d = model->k->reshape({1, model->local_nkvh, meta.dh});
-            auto v_3d = model->v->reshape({1, model->local_nkvh, meta.dh});
-            ops::rope(q_3d, q_3d, model->pos_ids_buf, meta.theta);
-            ops::rope(k_3d, k_3d, model->pos_ids_buf, meta.theta);
+        auto q_3d = q_buf->reshape({S, nh_local, dh});
+        auto k_3d = k_buf->reshape({S, nkvh_local, dh});
+        auto v_3d = v_buf->reshape({S, nkvh_local, dh});
 
-            // Write KV directly to block pool (按字节寻址, 兼容 FP16/FP32)
-            int bid = slot.page_table.get_block_for_token(static_cast<int>(t));
-            int off = slot.page_table.get_offset_in_block(static_cast<int>(t));
-            char* k_dst = (char*)alloc.get_k_ptr(bid, layer)
-                           + (size_t)off * kv_bytes;
-            char* v_dst = (char*)alloc.get_v_ptr(bid, layer)
-                           + (size_t)off * kv_bytes;
-            model->memcpyOnDevice(k_dst, k_3d->data(), kv_bytes);
-            model->memcpyOnDevice(v_dst, v_3d->data(), kv_bytes);
+        // RoPE
+        ops::rope(q_3d, q_3d, pos_buf, meta.theta);
+        ops::rope(k_3d, k_3d, pos_buf, meta.theta);
 
-            // Paged Attention over all tokens seen so far
-            int seq_len_so_far = static_cast<int>(t + 1);
-            int num_blocks_so_far = (seq_len_so_far + ctx->block_size - 1) / ctx->block_size;
+        // ── Scatter KV to Block Pool ──
+        // 按 block 粒度拷贝: 每个 block 一次 memcpy
+        for (size_t bi = 0; bi < blocks_needed; ++bi) {
+            int block_id = slot.page_table.block_ids()[bi];
+            size_t tok_start = bi * bs;
+            size_t tok_end = std::min(tok_start + (size_t)bs, S);
+            size_t ntok = tok_end - tok_start;
 
-            std::vector<int> bt(num_blocks_so_far);
-            for (int j = 0; j < num_blocks_so_far; ++j)
-                bt[j] = slot.page_table.block_ids()[j];
-
-            llaisys::ops::paged_attention(
-                model->attn_out->data(),
-                q_3d->data(),
-                alloc.pool_k_raw(), alloc.pool_v_raw(),
-                bt.data(), &seq_len_so_far,
-                1, static_cast<int>(model->local_nh),
-                static_cast<int>(model->local_nkvh),
-                static_cast<int>(meta.dh),
-                ctx->block_size, num_blocks_so_far,
-                alloc.block_stride(), alloc.layer_stride(),
-                static_cast<int>(layer), scale,
-                model->device_type,
-                llaisys::ops::KVQuantMode::FP32,
-                model->act_dtype);
-
-            // O Projection
-            auto attn_flat = model->attn_out->reshape({1, model->local_nh * meta.dh});
-            model->linear_maybe_dequant(model->hidden_states, attn_flat,
-                model->weights.attn_o_w[layer], model->weights.attn_o_w_scale[layer],
-                nullptr, model->weights.attn_o_w_qzeros[layer]);
-            model->allReduceIfTP(model->hidden_states, meta.hs);
-
-            // Residual Add 1
-            ops::add(model->hidden_states, model->hidden_states, model->residual);
-
-            // MLP Block
-            std::swap(model->residual, model->hidden_states);
-            ops::rms_norm(model->norm_out, model->residual,
-                         TO_CPP_TENSOR(model->weights.mlp_norm_w[layer]), meta.epsilon);
-            model->linear_maybe_dequant(model->gate, model->norm_out,
-                model->weights.mlp_gate_w[layer], model->weights.mlp_gate_w_scale[layer],
-                nullptr, model->weights.mlp_gate_w_qzeros[layer]);
-            model->linear_maybe_dequant(model->up, model->norm_out,
-                model->weights.mlp_up_w[layer], model->weights.mlp_up_w_scale[layer],
-                nullptr, model->weights.mlp_up_w_qzeros[layer]);
-            ops::swiglu(model->mlp_act, model->gate, model->up);
-            model->linear_maybe_dequant(model->hidden_states, model->mlp_act,
-                model->weights.mlp_down_w[layer], model->weights.mlp_down_w_scale[layer],
-                nullptr, model->weights.mlp_down_w_qzeros[layer]);
-            model->allReduceIfTP(model->hidden_states, meta.hs);
-
-            // Residual Add 2
-            ops::add(model->hidden_states, model->hidden_states, model->residual);
+            char* k_src = (char*)k_3d->data() + tok_start * kv_bytes;
+            char* v_src = (char*)v_3d->data() + tok_start * kv_bytes;
+            char* k_dst = (char*)alloc.get_k_ptr(block_id, (int)layer);
+            char* v_dst = (char*)alloc.get_v_ptr(block_id, (int)layer);
+            model->memcpyOnDevice(k_dst, k_src, ntok * kv_bytes);
+            model->memcpyOnDevice(v_dst, v_src, ntok * kv_bytes);
         }
 
-        // Only compute logits for the last token
-        if (t == ntoken - 1) {
-            ops::rms_norm(model->hidden_states, model->hidden_states,
-                         TO_CPP_TENSOR(model->weights.out_norm_w), meta.epsilon);
-            model->linear_maybe_dequant(model->logits, model->hidden_states,
-                model->weights.out_embed, model->weights.out_embed_scale, nullptr);
+        // Self-Attention (causal mask, 使用连续 K/V 临时缓冲)
+        ops::self_attention(attn_buf, q_3d, k_3d, v_3d, scale);
 
-            auto logits_2d = model->logits->reshape({1, meta.voc});
-            if (use_greedy) {
-                ops::argmax(model->next_token, model->max_val, logits_2d);
-            } else {
-                ops::sample(model->next_token, logits_2d,
-                           temperature, top_k, top_p, model->rng_seed++);
-            }
+        // O Projection
+        auto attn_flat = attn_buf->reshape({S, nh_local * dh});
+        model->linear_maybe_dequant(hs_buf, attn_flat,
+            model->weights.attn_o_w[layer], model->weights.attn_o_w_scale[layer],
+            nullptr, model->weights.attn_o_w_qzeros[layer]);
+        model->allReduceIfTP(hs_buf, hs * S);
+        ops::add(hs_buf, hs_buf, res_buf);
 
-            int32_t host_token;
-            model->memcpyD2H(&host_token, model->next_token, sizeof(int32_t));
-            output_token = host_token;
-        }
-
-        slot.page_table.inc_num_tokens();
+        // Pre-MLP Norm + MLP
+        std::swap(res_buf, hs_buf);
+        ops::rms_norm(norm_buf, res_buf,
+                     TO_CPP_TENSOR(model->weights.mlp_norm_w[layer]), meta.epsilon);
+        model->linear_maybe_dequant(gate_buf, norm_buf,
+            model->weights.mlp_gate_w[layer], model->weights.mlp_gate_w_scale[layer],
+            nullptr, model->weights.mlp_gate_w_qzeros[layer]);
+        model->linear_maybe_dequant(up_buf, norm_buf,
+            model->weights.mlp_up_w[layer], model->weights.mlp_up_w_scale[layer],
+            nullptr, model->weights.mlp_up_w_qzeros[layer]);
+        ops::swiglu(mlp_buf, gate_buf, up_buf);
+        model->linear_maybe_dequant(hs_buf, mlp_buf,
+            model->weights.mlp_down_w[layer], model->weights.mlp_down_w_scale[layer],
+            nullptr, model->weights.mlp_down_w_qzeros[layer]);
+        model->allReduceIfTP(hs_buf, hs * S);
+        ops::add(hs_buf, hs_buf, res_buf);
     }
 
-    slot.current_pos = static_cast<int64_t>(ntoken);
+    // ── 6. 取最后一个 token → Final Norm → LM Head → Sample ──
+    size_t elem_sz = llaisys::utils::dsize(dt);
+    char* last_hs_src = (char*)hs_buf->data() + (S - 1) * hs * elem_sz;
+    model->memcpyOnDevice(model->hidden_states->data(), last_hs_src, hs * elem_sz);
+
+    ops::rms_norm(model->hidden_states, model->hidden_states,
+                 TO_CPP_TENSOR(model->weights.out_norm_w), meta.epsilon);
+    model->linear_maybe_dequant(model->logits, model->hidden_states,
+        model->weights.out_embed, model->weights.out_embed_scale, nullptr);
+
+    auto logits_2d = model->logits->reshape({1, meta.voc});
+    if (use_greedy) {
+        ops::argmax(model->next_token, model->max_val, logits_2d);
+    } else {
+        ops::sample(model->next_token, logits_2d,
+                   temperature, top_k, top_p, model->rng_seed++);
+    }
+
+    int32_t host_token;
+    model->memcpyD2H(&host_token, model->next_token, sizeof(int32_t));
+
+    // ── 7. 更新 page table 和 slot 状态 ──
+    slot.page_table.set_num_tokens(static_cast<int>(S));
+    slot.current_pos = static_cast<int64_t>(S);
     slot.active = true;
-    return output_token;
+    return (int64_t)host_token;
 }
 
 // ── 批量 Decode: B 个 slot 并行处理一步 ───────────────────────────

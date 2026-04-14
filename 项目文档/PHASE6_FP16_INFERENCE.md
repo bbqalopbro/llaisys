@@ -406,13 +406,30 @@ auto gate_buf = Tensor::create({S, di_local}, dt, dev, did);  // [S, 8960]
 
 #### KV-Cache 批量写入
 
+**单模型路径** — 写入连续 KV-Cache:
+
 ```cpp
-// 将 S 个 token 的 KV 向量一次性写入 PagedAttention 缓存
+// 将 S 个 token 的 KV 向量一次性写入连续缓存
 size_t kv_row_bytes = nkvh_local * dh * dsize(dt);  // 每个 token 的 KV 大小
 char* k_dst = (char*)model->kv_caches[layer][0]->data();  // 从 pos 0 开始
 char* v_dst = (char*)model->kv_caches[layer][1]->data();
 model->memcpyOnDevice(k_dst, k_3d->data(), S * kv_row_bytes);  // 单次拷贝
 model->memcpyOnDevice(v_dst, v_3d->data(), S * kv_row_bytes);
+```
+
+**批量上下文路径** — Scatter 到 Block Pool (PagedAttention):
+
+```cpp
+// 按 block 粒度拷贝: 每个 block 一次 memcpy
+for (size_t bi = 0; bi < blocks_needed; ++bi) {
+    int block_id = slot.page_table.block_ids()[bi];
+    size_t tok_start = bi * bs;
+    size_t ntok = std::min((size_t)bs, S - tok_start);
+
+    char* k_src = (char*)k_3d->data() + tok_start * kv_bytes;
+    char* k_dst = (char*)alloc.get_k_ptr(block_id, (int)layer);
+    model->memcpyOnDevice(k_dst, k_src, ntok * kv_bytes);  // 类似 v
+}
 ```
 
 #### 最后一个 token 提取
@@ -448,12 +465,13 @@ Test passed!
 
 ### 10.4 性能对比
 
-| 配置 | 总吞吐 (tok/s) | 显存 (MB) | 相对基线提升 |
-|------|---------------|-----------|------------|
-| FP32 权重 + 逐 token prefill | 30.1 | 7252 | 基线 |
-| FP16 权重 + 逐 token prefill | 53.9 | 3840 | +79% |
-| FP16 权重 + Batch Prefill | **55.8** | 3840 | **+85%** |
+| 配置 | 路径 | 总吞吐 (tok/s) | 显存 (MB) | 相对基线 |
+|------|------|---------------|-----------|---------|
+| FP32 权重 + 逐 token prefill | 单模型 | 30.1 | 7252 | 基线 |
+| FP16 权重 + 逐 token prefill | 单模型 | 53.9 | 3840 | +79% |
+| FP16 权重 + Batch Prefill | 单模型 | 55.8 | 3840 | +85% |
+| FP16 权重 + Batch Prefill | **BatchContext** | **59.1** | 3840 | **+96%** |
 
-> - 测试条件: 128 decode tokens, greedy sampling, 3 次取平均
-> - 输入 prompt 17 tokens（chat template 后），prefill 阶段加速效果受 prompt 长度影响
-> - Batch Prefill 相对 FP16 逐 token: +3.5%（prompt 短，优势有限；长 prompt 下提升更显著）
+> - 测试条件: 128 decode tokens, greedy sampling, 3 次取平均, prompt 17 tokens
+> - BatchContext 路径 decode 使用 PagedAttention kernel（专为单 query 优化），比标准 self_attention 更快
+> - Batch Prefill 相对逐 token: 减少 ~(S-1) × L 次 kernel launch，prompt 越长提升越显著
