@@ -39,4 +39,18 @@ void paged_attention(
     llaisysDataType_t dtype = LLAISYS_DTYPE_F32
 );
 
+// Device-pointer variant: block_tables_dev / seq_lens_dev 已在 GPU 上
+// 不做 cudaMalloc/cudaFree → 可被 CUDA Graph 捕获
+void paged_attention_device(
+    void *output, const void *query,
+    const void *k_pool, const void *v_pool,
+    const int *block_tables_dev, const int *seq_lens_dev,
+    int batch_size, int num_heads, int num_kv_heads, int head_dim,
+    int block_size, int max_blocks_per_seq,
+    size_t pool_block_stride, size_t pool_layer_stride,
+    int layer_idx, float scale,
+    llaisysDeviceType_t device_type,
+    llaisysDataType_t dtype = LLAISYS_DTYPE_F32
+);
+
 } // namespace llaisys::ops

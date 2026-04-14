@@ -149,6 +149,7 @@ target("llaisys-ops")
     add_files("src/ops/*/*.cpp")
     if has_config("nv-gpu") then
         remove_files("src/ops/self_attention/paged_attention.cpp")
+        remove_files("src/ops/cache/cache_ops.cpp")
     end
 
     on_install(function (target) end)
@@ -170,6 +171,7 @@ target("llaisys")
         set_toolset("cu", "nvcc")
         add_cuflags("-Xcompiler=-fPIC")
         add_files("src/ops/self_attention/paged_attention.cpp")
+        add_files("src/ops/cache/cache_ops.cpp")
         add_files("src/device/nvidia/*.cu")
         add_files("src/ops/*/nvidia/*.cu")
         if has_config("dist-nccl") then

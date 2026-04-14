@@ -24,6 +24,7 @@
 #include "../../ops/op.hpp"
 #include "../../ops/dequantize/op.hpp"
 #include "../../ops/self_attention/paged_attention.hpp"
+#include "../../ops/cache/cache_ops.hpp"
 #include "../../utils/types.hpp"
 #include "../../distributed/comm.hpp"
 #include "../../core/allocator/block_allocator.hpp"
@@ -144,6 +145,19 @@ struct LlaisysQwen2Model {
 
     int64_t current_pos = 0;
     uint64_t rng_seed = 42;
+
+    // ── CUDA Graph + Paged Attention (SingleModel decode) ──
+    // GPU 上使用 BlockAllocator 作为 KV-Cache 后端, 替代 per-layer kv_caches
+    // 这样 decode 的 attention 使用 paged_attention (固定 grid), 可被 CUDA Graph 捕获
+    std::unique_ptr<llaisys::core::BlockAllocator> single_allocator;
+    llaisys::core::PageTable single_page_table{16};
+    static constexpr int SINGLE_BLOCK_SIZE = 16;
+    int single_max_blocks = 0;        // = ceil(maxseq / block_size)
+    // 预分配的设备缓冲区 (稳定地址, CUDA Graph 兼容)
+    void *d_block_tables = nullptr;   // [1, max_blocks] int on device
+    void *d_seq_lens = nullptr;       // [1] int on device
+    // CUDA Graph runner
+    llaisys::core::CUDAGraphRunner decode_graph;
 
     // 设备感知内存操作辅助函数
     void memcpyH2D(tensor_t dst, const void* host_src, size_t bytes) {
@@ -285,16 +299,52 @@ struct LlaisysQwen2Model {
         delete[] weights.attn_v_w_scale; delete[] weights.attn_o_w_scale;
         delete[] weights.mlp_gate_w_scale; delete[] weights.mlp_up_w_scale;
         delete[] weights.mlp_down_w_scale;
+
+        // 释放 CUDA Graph 设备缓冲区
+        if (d_block_tables || d_seq_lens) {
+            auto *api = llaisysGetRuntimeAPI(device_type);
+            if (d_block_tables) api->free_device(d_block_tables);
+            if (d_seq_lens) api->free_device(d_seq_lens);
+        }
     }
 
     void init_cache() {
         // TP: 每个 rank 只存 local_nkvh 个 KV head
         // KV-Cache 使用 act_dtype (FP16 时显存减半)
-        std::vector<size_t> shape = {meta.maxseq, local_nkvh, meta.dh};
-        for (size_t i = 0; i < meta.nlayer; ++i) {
-            auto k_c = Tensor::create(shape, act_dtype, device_type, device_id);
-            auto v_c = Tensor::create(shape, act_dtype, device_type, device_id);
-            kv_caches.push_back({k_c, v_c});
+        if (device_type != LLAISYS_DEVICE_CPU) {
+            // GPU: 使用 BlockAllocator paged KV-Cache
+            // 支持 paged_attention (固定 grid 拓扑) + CUDA Graph
+            single_max_blocks = (int)((meta.maxseq + SINGLE_BLOCK_SIZE - 1) / SINGLE_BLOCK_SIZE);
+            llaisys::core::BlockAllocatorConfig cfg;
+            cfg.num_blocks = (size_t)single_max_blocks;
+            cfg.block_size = SINGLE_BLOCK_SIZE;
+            cfg.nlayer = meta.nlayer;
+            cfg.nkvh = local_nkvh;
+            cfg.dh = meta.dh;
+            cfg.elem_size = llaisys::utils::dsize(act_dtype);
+            auto *api = llaisysGetRuntimeAPI(device_type);
+            single_allocator = std::make_unique<llaisys::core::BlockAllocator>(cfg, api);
+            // 预分配所有 block 并填充 page table
+            single_page_table = llaisys::core::PageTable(SINGLE_BLOCK_SIZE);
+            for (int i = 0; i < single_max_blocks; ++i) {
+                int bid = single_allocator->alloc();
+                single_page_table.append_block(bid);
+            }
+            // 预分配设备缓冲区 (CUDA Graph 需要稳定地址)
+            size_t bt_bytes = (size_t)single_max_blocks * sizeof(int);
+            d_block_tables = api->malloc_device(bt_bytes);
+            d_seq_lens = api->malloc_device(sizeof(int));
+            // 上传 block_tables (不变, 预分配的顺序块)
+            const auto &bids = single_page_table.block_ids();
+            api->memcpy_async(d_block_tables, bids.data(), bt_bytes, LLAISYS_MEMCPY_H2D, nullptr);
+        } else {
+            // CPU: 保留 per-layer kv_caches (简单连续布局)
+            std::vector<size_t> shape = {meta.maxseq, local_nkvh, meta.dh};
+            for (size_t i = 0; i < meta.nlayer; ++i) {
+                auto k_c = Tensor::create(shape, act_dtype, device_type, device_id);
+                auto v_c = Tensor::create(shape, act_dtype, device_type, device_id);
+                kv_caches.push_back({k_c, v_c});
+            }
         }
     }
 
@@ -586,18 +636,33 @@ static int64_t prefill_batch(struct LlaisysQwen2Model* model,
         ops::rope(q_3d, q_3d, pos_buf, model->meta.theta);
         ops::rope(k_3d, k_3d, pos_buf, model->meta.theta);
 
-        // 写入 KV Cache: 所有 S 个 token 一次性写入
-        size_t kv_row_bytes = nkvh_local * dh * llaisys::utils::dsize(dt);
-        char* k_dst = (char*)model->kv_caches[layer][0]->data();  // pos 0 开始写
-        char* v_dst = (char*)model->kv_caches[layer][1]->data();
-        model->memcpyOnDevice(k_dst, k_3d->data(), S * kv_row_bytes);
-        model->memcpyOnDevice(v_dst, v_3d->data(), S * kv_row_bytes);
-
-        // Self-Attention (causal mask 由 kernel 内部处理)
+        // Self-Attention: 直接用 k_3d/v_3d (causal mask 由 kernel 内部处理)
         float scale = 1.0f / std::sqrt((float)dh);
-        auto k_cache_slice = model->kv_caches[layer][0]->slice(0, 0, (int64_t)S);
-        auto v_cache_slice = model->kv_caches[layer][1]->slice(0, 0, (int64_t)S);
-        ops::self_attention(attn_buf, q_3d, k_cache_slice, v_cache_slice, scale);
+        ops::self_attention(attn_buf, q_3d, k_3d, v_3d, scale);
+
+        // 写入 KV Cache: 写入 block pool 或 kv_caches (取决于后端)
+        size_t kv_row_bytes = nkvh_local * dh * llaisys::utils::dsize(dt);
+        if (model->single_allocator) {
+            // GPU: 按 block 写入 paged pool
+            auto &alloc = *model->single_allocator;
+            int bs = model->SINGLE_BLOCK_SIZE;
+            for (size_t t = 0; t < S; ) {
+                int bid = model->single_page_table.get_block_for_token((int)t);
+                int off = model->single_page_table.get_offset_in_block((int)t);
+                int cnt = std::min(bs - off, (int)(S - t));
+                char* kd = (char*)alloc.get_k_ptr(bid, (int)layer) + off * kv_row_bytes;
+                char* vd = (char*)alloc.get_v_ptr(bid, (int)layer) + off * kv_row_bytes;
+                model->memcpyOnDevice(kd, (char*)k_3d->data() + t * kv_row_bytes, cnt * kv_row_bytes);
+                model->memcpyOnDevice(vd, (char*)v_3d->data() + t * kv_row_bytes, cnt * kv_row_bytes);
+                t += cnt;
+            }
+        } else {
+            // CPU: 连续 kv_caches
+            char* k_dst = (char*)model->kv_caches[layer][0]->data();
+            char* v_dst = (char*)model->kv_caches[layer][1]->data();
+            model->memcpyOnDevice(k_dst, k_3d->data(), S * kv_row_bytes);
+            model->memcpyOnDevice(v_dst, v_3d->data(), S * kv_row_bytes);
+        }
 
         // O Projection
         auto attn_flat = attn_buf->reshape({S, nh_local * dh});
@@ -658,72 +723,197 @@ __export int64_t llaisysQwen2ModelInferSample(struct LlaisysQwen2Model * model, 
         int64_t token = token_ids[0];
         int64_t pos = model->current_pos;
 
+        // ── H2D: 上传 token / pos / seq_len (在 CUDA Graph 之外) ──
         model->memcpyH2D(model->input_ids_buf, &token, sizeof(int64_t));
         model->memcpyH2D(model->pos_ids_buf, &pos, sizeof(int64_t));
 
-        // 1. Embedding
-        ops::embedding(model->hidden_states, model->input_ids_buf, TO_CPP_TENSOR(model->weights.in_embed));
+        if (model->single_allocator) {
+            // ── GPU 路径: reshape_and_cache + paged_attention_device + CUDA Graph ──
+            int seq_len_val = (int)(pos + 1);
+            model->memcpyH2D(model->d_seq_lens, &seq_len_val, sizeof(int));
+            // d_block_tables 在 init_cache 时已上传 (预分配顺序块, 不变)
 
-        // 2. Transformer Layers
-        for (size_t i = 0; i < model->meta.nlayer; ++i) {
-            std::swap(model->residual, model->hidden_states);
-            ops::rms_norm(model->norm_out, model->residual, TO_CPP_TENSOR(model->weights.attn_norm_w[i]), model->meta.epsilon);
+            // 同步确保 H2D 完成后再执行 decode kernel
+            core::context().setDevice(model->device_type, model->device_id);
+            core::context().runtime().api()->device_synchronize();
 
-            model->linear_maybe_dequant(model->q, model->norm_out, model->weights.attn_q_w[i], model->weights.attn_q_w_scale[i], model->weights.attn_q_b[i], model->weights.attn_q_w_qzeros[i]);
-            model->linear_maybe_dequant(model->k, model->norm_out, model->weights.attn_k_w[i], model->weights.attn_k_w_scale[i], model->weights.attn_k_b[i], model->weights.attn_k_w_qzeros[i]);
-            model->linear_maybe_dequant(model->v, model->norm_out, model->weights.attn_v_w[i], model->weights.attn_v_w_scale[i], model->weights.attn_v_b[i], model->weights.attn_v_w_qzeros[i]);
+            auto decode_fn = [&]() {
+                // 1. Embedding
+                ops::embedding(model->hidden_states, model->input_ids_buf,
+                               TO_CPP_TENSOR(model->weights.in_embed));
 
-            auto q_3d = model->q->reshape({1, model->local_nh, model->meta.dh});
-            auto k_3d = model->k->reshape({1, model->local_nkvh, model->meta.dh});
-            auto v_3d = model->v->reshape({1, model->local_nkvh, model->meta.dh});
+                // 2. Transformer Layers
+                for (size_t i = 0; i < model->meta.nlayer; ++i) {
+                    std::swap(model->residual, model->hidden_states);
+                    ops::rms_norm(model->norm_out, model->residual,
+                                 TO_CPP_TENSOR(model->weights.attn_norm_w[i]), model->meta.epsilon);
 
-            ops::rope(q_3d, q_3d, model->pos_ids_buf, model->meta.theta);
-            ops::rope(k_3d, k_3d, model->pos_ids_buf, model->meta.theta);
-            
-            //kv cache (字节数根据 act_dtype 计算)
-            if (model->current_pos < (int64_t)model->meta.maxseq) {
-                size_t bytes = model->local_nkvh * model->meta.dh * llaisys::utils::dsize(model->act_dtype);
-                char* k_dst = (char*)model->kv_caches[i][0]->data() + model->current_pos * bytes;
-                char* v_dst = (char*)model->kv_caches[i][1]->data() + model->current_pos * bytes;
-                model->memcpyOnDevice(k_dst, k_3d->data(), bytes);
-                model->memcpyOnDevice(v_dst, v_3d->data(), bytes);
+                    model->linear_maybe_dequant(model->q, model->norm_out,
+                        model->weights.attn_q_w[i], model->weights.attn_q_w_scale[i],
+                        model->weights.attn_q_b[i], model->weights.attn_q_w_qzeros[i]);
+                    model->linear_maybe_dequant(model->k, model->norm_out,
+                        model->weights.attn_k_w[i], model->weights.attn_k_w_scale[i],
+                        model->weights.attn_k_b[i], model->weights.attn_k_w_qzeros[i]);
+                    model->linear_maybe_dequant(model->v, model->norm_out,
+                        model->weights.attn_v_w[i], model->weights.attn_v_w_scale[i],
+                        model->weights.attn_v_b[i], model->weights.attn_v_w_qzeros[i]);
+
+                    auto q_3d = model->q->reshape({1, model->local_nh, model->meta.dh});
+                    auto k_3d = model->k->reshape({1, model->local_nkvh, model->meta.dh});
+                    auto v_3d = model->v->reshape({1, model->local_nkvh, model->meta.dh});
+
+                    ops::rope(q_3d, q_3d, model->pos_ids_buf, model->meta.theta);
+                    ops::rope(k_3d, k_3d, model->pos_ids_buf, model->meta.theta);
+
+                    // KV 写入 block pool (GPU kernel, 读取 pos_ids_buf 确定目标位置)
+                    ops::reshape_and_cache(
+                        k_3d->data(), v_3d->data(),
+                        model->single_allocator->pool_k_raw(),
+                        model->single_allocator->pool_v_raw(),
+                        reinterpret_cast<const int*>(model->d_block_tables),
+                        reinterpret_cast<const int64_t*>(model->pos_ids_buf->data()),
+                        1, (int)model->local_nkvh, (int)model->meta.dh,
+                        model->SINGLE_BLOCK_SIZE, model->single_max_blocks,
+                        model->single_allocator->block_stride(),
+                        model->single_allocator->layer_stride(),
+                        (int)i, model->device_type, model->act_dtype);
+
+                    // Paged Attention (device 指针, 无 malloc/free, CUDA Graph 兼容)
+                    float scale = 1.0f / std::sqrt((float)model->meta.dh);
+                    ops::paged_attention_device(
+                        model->attn_out->data(), q_3d->data(),
+                        model->single_allocator->pool_k_raw(),
+                        model->single_allocator->pool_v_raw(),
+                        reinterpret_cast<const int*>(model->d_block_tables),
+                        reinterpret_cast<const int*>(model->d_seq_lens),
+                        1, (int)model->local_nh, (int)model->local_nkvh,
+                        (int)model->meta.dh,
+                        model->SINGLE_BLOCK_SIZE, model->single_max_blocks,
+                        model->single_allocator->block_stride(),
+                        model->single_allocator->layer_stride(),
+                        (int)i, scale, model->device_type, model->act_dtype);
+
+                    auto attn_flat = model->attn_out->reshape({1, model->local_nh * model->meta.dh});
+                    model->linear_maybe_dequant(model->hidden_states, attn_flat,
+                        model->weights.attn_o_w[i], model->weights.attn_o_w_scale[i],
+                        nullptr, model->weights.attn_o_w_qzeros[i]);
+                    model->allReduceIfTP(model->hidden_states, model->meta.hs);
+                    ops::add(model->hidden_states, model->hidden_states, model->residual);
+
+                    std::swap(model->residual, model->hidden_states);
+                    ops::rms_norm(model->norm_out, model->residual,
+                                 TO_CPP_TENSOR(model->weights.mlp_norm_w[i]), model->meta.epsilon);
+                    model->linear_maybe_dequant(model->gate, model->norm_out,
+                        model->weights.mlp_gate_w[i], model->weights.mlp_gate_w_scale[i],
+                        nullptr, model->weights.mlp_gate_w_qzeros[i]);
+                    model->linear_maybe_dequant(model->up, model->norm_out,
+                        model->weights.mlp_up_w[i], model->weights.mlp_up_w_scale[i],
+                        nullptr, model->weights.mlp_up_w_qzeros[i]);
+                    ops::swiglu(model->mlp_act, model->gate, model->up);
+                    model->linear_maybe_dequant(model->hidden_states, model->mlp_act,
+                        model->weights.mlp_down_w[i], model->weights.mlp_down_w_scale[i],
+                        nullptr, model->weights.mlp_down_w_qzeros[i]);
+                    model->allReduceIfTP(model->hidden_states, model->meta.hs);
+                    ops::add(model->hidden_states, model->hidden_states, model->residual);
+                }
+
+                // 4. Final Norm + LM Head
+                ops::rms_norm(model->hidden_states, model->hidden_states,
+                              TO_CPP_TENSOR(model->weights.out_norm_w), model->meta.epsilon);
+                model->linear_maybe_dequant(model->logits, model->hidden_states,
+                                            model->weights.out_embed, model->weights.out_embed_scale, nullptr);
+
+                // 5. Argmax (确定性, 可被 Graph 捕获)
+                auto logits_2d = model->logits->reshape({1, model->meta.voc});
+                ops::argmax(model->next_token, model->max_val, logits_2d);
+            };
+
+            // 直接执行 decode (不使用 CUDA Graph)
+            // 性能提升来自: paged_attention_device 消除了每步 56 次 cudaMalloc/cudaFree
+            // 以及 reshape_and_cache GPU kernel 替代了变地址 memcpyOnDevice
+            decode_fn();
+
+            // 非 greedy 采样: graph 内做了 argmax, 这里重做采样
+            if (!use_greedy) {
+                auto logits_2d = model->logits->reshape({1, model->meta.voc});
+                ops::sample(model->next_token, logits_2d, temperature, top_k, top_p, model->rng_seed++);
             }
 
-            float scale = 1.0f / std::sqrt((float)model->meta.dh);
-            auto k_slice = model->kv_caches[i][0]->slice(0, 0, model->current_pos + 1);
-            auto v_slice = model->kv_caches[i][1]->slice(0, 0, model->current_pos + 1);
-
-            ops::self_attention(model->attn_out, q_3d, k_slice, v_slice, scale);
-
-            auto attn_flat = model->attn_out->reshape({1, model->local_nh * model->meta.dh});
-            model->linear_maybe_dequant(model->hidden_states, attn_flat, model->weights.attn_o_w[i], model->weights.attn_o_w_scale[i], nullptr, model->weights.attn_o_w_qzeros[i]);
-            // TP: O proj row parallel → all-reduce
-            model->allReduceIfTP(model->hidden_states, model->meta.hs);
-            ops::add(model->hidden_states, model->hidden_states, model->residual);
-
-            std::swap(model->residual, model->hidden_states);
-            ops::rms_norm(model->norm_out, model->residual, TO_CPP_TENSOR(model->weights.mlp_norm_w[i]), model->meta.epsilon);
-            model->linear_maybe_dequant(model->gate, model->norm_out, model->weights.mlp_gate_w[i], model->weights.mlp_gate_w_scale[i], nullptr, model->weights.mlp_gate_w_qzeros[i]);
-            model->linear_maybe_dequant(model->up, model->norm_out, model->weights.mlp_up_w[i], model->weights.mlp_up_w_scale[i], nullptr, model->weights.mlp_up_w_qzeros[i]);
-            ops::swiglu(model->mlp_act, model->gate, model->up);
-            model->linear_maybe_dequant(model->hidden_states, model->mlp_act, model->weights.mlp_down_w[i], model->weights.mlp_down_w_scale[i], nullptr, model->weights.mlp_down_w_qzeros[i]);
-            // TP: down proj row parallel → all-reduce
-            model->allReduceIfTP(model->hidden_states, model->meta.hs);
-            ops::add(model->hidden_states, model->hidden_states, model->residual);
-        }
-
-        // 4. Final Norm
-        ops::rms_norm(model->hidden_states, model->hidden_states, TO_CPP_TENSOR(model->weights.out_norm_w), model->meta.epsilon);
-
-        // 5. LM Head
-        model->linear_maybe_dequant(model->logits, model->hidden_states, model->weights.out_embed, model->weights.out_embed_scale, nullptr);
-
-        // 6. Sampling or Argmax
-        auto logits_2d = model->logits->reshape({1, model->meta.voc});
-        if (use_greedy) {
-            ops::argmax(model->next_token, model->max_val, logits_2d);
         } else {
-            ops::sample(model->next_token, logits_2d, temperature, top_k, top_p, model->rng_seed++);
+            // ── CPU 路径: self_attention + kv_caches (无 CUDA Graph) ──
+            ops::embedding(model->hidden_states, model->input_ids_buf,
+                           TO_CPP_TENSOR(model->weights.in_embed));
+
+            for (size_t i = 0; i < model->meta.nlayer; ++i) {
+                std::swap(model->residual, model->hidden_states);
+                ops::rms_norm(model->norm_out, model->residual,
+                              TO_CPP_TENSOR(model->weights.attn_norm_w[i]), model->meta.epsilon);
+
+                model->linear_maybe_dequant(model->q, model->norm_out,
+                    model->weights.attn_q_w[i], model->weights.attn_q_w_scale[i],
+                    model->weights.attn_q_b[i], model->weights.attn_q_w_qzeros[i]);
+                model->linear_maybe_dequant(model->k, model->norm_out,
+                    model->weights.attn_k_w[i], model->weights.attn_k_w_scale[i],
+                    model->weights.attn_k_b[i], model->weights.attn_k_w_qzeros[i]);
+                model->linear_maybe_dequant(model->v, model->norm_out,
+                    model->weights.attn_v_w[i], model->weights.attn_v_w_scale[i],
+                    model->weights.attn_v_b[i], model->weights.attn_v_w_qzeros[i]);
+
+                auto q_3d = model->q->reshape({1, model->local_nh, model->meta.dh});
+                auto k_3d = model->k->reshape({1, model->local_nkvh, model->meta.dh});
+                auto v_3d = model->v->reshape({1, model->local_nkvh, model->meta.dh});
+
+                ops::rope(q_3d, q_3d, model->pos_ids_buf, model->meta.theta);
+                ops::rope(k_3d, k_3d, model->pos_ids_buf, model->meta.theta);
+
+                if (model->current_pos < (int64_t)model->meta.maxseq) {
+                    size_t bytes = model->local_nkvh * model->meta.dh * llaisys::utils::dsize(model->act_dtype);
+                    char* k_dst = (char*)model->kv_caches[i][0]->data() + model->current_pos * bytes;
+                    char* v_dst = (char*)model->kv_caches[i][1]->data() + model->current_pos * bytes;
+                    model->memcpyOnDevice(k_dst, k_3d->data(), bytes);
+                    model->memcpyOnDevice(v_dst, v_3d->data(), bytes);
+                }
+
+                float scale = 1.0f / std::sqrt((float)model->meta.dh);
+                auto k_slice = model->kv_caches[i][0]->slice(0, 0, model->current_pos + 1);
+                auto v_slice = model->kv_caches[i][1]->slice(0, 0, model->current_pos + 1);
+                ops::self_attention(model->attn_out, q_3d, k_slice, v_slice, scale);
+
+                auto attn_flat = model->attn_out->reshape({1, model->local_nh * model->meta.dh});
+                model->linear_maybe_dequant(model->hidden_states, attn_flat,
+                    model->weights.attn_o_w[i], model->weights.attn_o_w_scale[i],
+                    nullptr, model->weights.attn_o_w_qzeros[i]);
+                model->allReduceIfTP(model->hidden_states, model->meta.hs);
+                ops::add(model->hidden_states, model->hidden_states, model->residual);
+
+                std::swap(model->residual, model->hidden_states);
+                ops::rms_norm(model->norm_out, model->residual,
+                              TO_CPP_TENSOR(model->weights.mlp_norm_w[i]), model->meta.epsilon);
+                model->linear_maybe_dequant(model->gate, model->norm_out,
+                    model->weights.mlp_gate_w[i], model->weights.mlp_gate_w_scale[i],
+                    nullptr, model->weights.mlp_gate_w_qzeros[i]);
+                model->linear_maybe_dequant(model->up, model->norm_out,
+                    model->weights.mlp_up_w[i], model->weights.mlp_up_w_scale[i],
+                    nullptr, model->weights.mlp_up_w_qzeros[i]);
+                ops::swiglu(model->mlp_act, model->gate, model->up);
+                model->linear_maybe_dequant(model->hidden_states, model->mlp_act,
+                    model->weights.mlp_down_w[i], model->weights.mlp_down_w_scale[i],
+                    nullptr, model->weights.mlp_down_w_qzeros[i]);
+                model->allReduceIfTP(model->hidden_states, model->meta.hs);
+                ops::add(model->hidden_states, model->hidden_states, model->residual);
+            }
+
+            ops::rms_norm(model->hidden_states, model->hidden_states,
+                          TO_CPP_TENSOR(model->weights.out_norm_w), model->meta.epsilon);
+            model->linear_maybe_dequant(model->logits, model->hidden_states,
+                                        model->weights.out_embed, model->weights.out_embed_scale, nullptr);
+
+            auto logits_2d = model->logits->reshape({1, model->meta.voc});
+            if (use_greedy) {
+                ops::argmax(model->next_token, model->max_val, logits_2d);
+            } else {
+                ops::sample(model->next_token, logits_2d, temperature, top_k, top_p, model->rng_seed++);
+            }
         }
 
         int32_t host_token;
@@ -738,6 +928,7 @@ __export int64_t llaisysQwen2ModelInferSample(struct LlaisysQwen2Model * model, 
 __export void llaisysQwen2ResetCache(struct LlaisysQwen2Model * model) {
     if (!model) return;
     model->current_pos = 0;
+    // CUDA Graph 不需要 invalidate: 拓扑不变, 只是 seq_len 从 1 重新开始
 }
 
 __export void llaisysQwen2LoadWeightByName(struct LlaisysQwen2Model* model, const char* name, void* data, int ndim, int64_t* shape, int dtype) {
@@ -891,12 +1082,32 @@ __export struct LlaisysQwen2CacheSnapshot *llaisysQwen2SaveCache(struct LlaisysQ
     size_t total_bytes_per_buf = snap->pos * snap->pos_bytes;
     snap->buffers.resize(snap->nlayer * 2);
 
-    for (size_t i = 0; i < snap->nlayer; ++i) {
-        for (size_t kv = 0; kv < 2; ++kv) {
-            size_t idx = i * 2 + kv;
-            snap->buffers[idx].resize(total_bytes_per_buf);
-            // 从设备拷贝到 CPU
-            model->memcpyD2H(snap->buffers[idx].data(), model->kv_caches[i][kv], total_bytes_per_buf);
+    if (model->single_allocator) {
+        // GPU: 从 block pool 按 block 读取
+        int bs = model->SINGLE_BLOCK_SIZE;
+        size_t kv_row = snap->pos_bytes;
+        for (size_t i = 0; i < snap->nlayer; ++i) {
+            snap->buffers[i * 2 + 0].resize(total_bytes_per_buf);
+            snap->buffers[i * 2 + 1].resize(total_bytes_per_buf);
+            for (int64_t t = 0; t < snap->pos; ) {
+                int bid = model->single_page_table.get_block_for_token((int)t);
+                int off = model->single_page_table.get_offset_in_block((int)t);
+                int cnt = std::min(bs - off, (int)(snap->pos - t));
+                char* ks = (char*)model->single_allocator->get_k_ptr(bid, (int)i) + off * kv_row;
+                char* vs = (char*)model->single_allocator->get_v_ptr(bid, (int)i) + off * kv_row;
+                model->memcpyD2H(snap->buffers[i * 2 + 0].data() + t * kv_row, ks, cnt * kv_row);
+                model->memcpyD2H(snap->buffers[i * 2 + 1].data() + t * kv_row, vs, cnt * kv_row);
+                t += cnt;
+            }
+        }
+    } else {
+        // CPU: 从 kv_caches 直接拷贝
+        for (size_t i = 0; i < snap->nlayer; ++i) {
+            for (size_t kv = 0; kv < 2; ++kv) {
+                size_t idx = i * 2 + kv;
+                snap->buffers[idx].resize(total_bytes_per_buf);
+                model->memcpyD2H(snap->buffers[idx].data(), model->kv_caches[i][kv], total_bytes_per_buf);
+            }
         }
     }
 
@@ -906,7 +1117,6 @@ __export struct LlaisysQwen2CacheSnapshot *llaisysQwen2SaveCache(struct LlaisysQ
 __export void llaisysQwen2RestoreCache(struct LlaisysQwen2Model * model, struct LlaisysQwen2CacheSnapshot * snapshot) {
     if (!model || !snapshot) return;
     if (snapshot->nlayer != model->meta.nlayer) return;
-    // TP 兼容性校验: snapshot 必须与当前模型的 TP 配置匹配
     if (snapshot->tp_size != model->tp_size || snapshot->tp_rank != model->tp_rank) {
         std::cerr << "[qwen2] RestoreCache: TP mismatch (snapshot tp_size=" << snapshot->tp_size
                   << " tp_rank=" << snapshot->tp_rank << " vs model tp_size=" << model->tp_size
@@ -917,11 +1127,29 @@ __export void llaisysQwen2RestoreCache(struct LlaisysQwen2Model * model, struct 
     model->current_pos = snapshot->pos;
     size_t total_bytes = snapshot->pos * snapshot->pos_bytes;
 
-    for (size_t i = 0; i < snapshot->nlayer; ++i) {
-        for (size_t kv = 0; kv < 2; ++kv) {
-            size_t idx = i * 2 + kv;
-            // 从 CPU 拷贝回设备
-            model->memcpyH2D(model->kv_caches[i][kv], snapshot->buffers[idx].data(), total_bytes);
+    if (model->single_allocator) {
+        // GPU: 写入 block pool
+        int bs = model->SINGLE_BLOCK_SIZE;
+        size_t kv_row = snapshot->pos_bytes;
+        for (size_t i = 0; i < snapshot->nlayer; ++i) {
+            for (int64_t t = 0; t < snapshot->pos; ) {
+                int bid = model->single_page_table.get_block_for_token((int)t);
+                int off = model->single_page_table.get_offset_in_block((int)t);
+                int cnt = std::min(bs - off, (int)(snapshot->pos - t));
+                char* kd = (char*)model->single_allocator->get_k_ptr(bid, (int)i) + off * kv_row;
+                char* vd = (char*)model->single_allocator->get_v_ptr(bid, (int)i) + off * kv_row;
+                model->memcpyH2D(kd, snapshot->buffers[i * 2 + 0].data() + t * kv_row, cnt * kv_row);
+                model->memcpyH2D(vd, snapshot->buffers[i * 2 + 1].data() + t * kv_row, cnt * kv_row);
+                t += cnt;
+            }
+        }
+        // CUDA Graph 需要重新捕获 (KV 内容变了但拓扑不变, 不需要 invalidate)
+    } else {
+        for (size_t i = 0; i < snapshot->nlayer; ++i) {
+            for (size_t kv = 0; kv < 2; ++kv) {
+                size_t idx = i * 2 + kv;
+                model->memcpyH2D(model->kv_caches[i][kv], snapshot->buffers[idx].data(), total_bytes);
+            }
         }
     }
 }

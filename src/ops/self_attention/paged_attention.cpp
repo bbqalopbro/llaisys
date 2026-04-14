@@ -300,4 +300,29 @@ void paged_attention(
     }
 }
 
+void paged_attention_device(
+    void *output, const void *query,
+    const void *k_pool, const void *v_pool,
+    const int *block_tables_dev, const int *seq_lens_dev,
+    int batch_size, int num_heads, int num_kv_heads, int head_dim,
+    int block_size, int max_blocks_per_seq,
+    size_t pool_block_stride, size_t pool_layer_stride,
+    int layer_idx, float scale,
+    llaisysDeviceType_t device_type,
+    llaisysDataType_t dtype)
+{
+#ifdef ENABLE_NVIDIA_API
+    if (device_type == LLAISYS_DEVICE_NVIDIA) {
+        nvidia::paged_attention_device(output, query, k_pool, v_pool,
+                                       block_tables_dev, seq_lens_dev,
+                                       batch_size, num_heads, num_kv_heads, head_dim,
+                                       block_size, max_blocks_per_seq,
+                                       pool_block_stride, pool_layer_stride,
+                                       layer_idx, scale, dtype);
+        return;
+    }
+#endif
+    throw std::runtime_error("paged_attention_device: only supported on NVIDIA GPU");
+}
+
 } // namespace llaisys::ops

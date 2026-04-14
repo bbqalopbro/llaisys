@@ -212,6 +212,34 @@ static void paged_attention_typed(
     cudaFree(d_seq_lens);
 }
 
+// ── Device-pointer variant (CUDA Graph 兼容, 无 malloc/free) ──────
+template<typename T>
+static void paged_attention_device_typed(
+    T *output, const T *query,
+    const void *k_pool, const void *v_pool,
+    const int *d_block_tables, const int *d_seq_lens,
+    int batch_size, int num_heads, int num_kv_heads, int head_dim,
+    int block_size, int max_blocks_per_seq,
+    size_t pool_block_stride, size_t pool_layer_stride,
+    int layer_idx, float scale)
+{
+    dim3 grid(batch_size, num_heads);
+    int threads = min(128, max(WARP_SIZE, ((head_dim + WARP_SIZE - 1) / WARP_SIZE) * WARP_SIZE));
+    int num_warps = threads / WARP_SIZE;
+    size_t smem = block_size * sizeof(float) + 2 * num_warps * sizeof(float);
+
+    paged_attention_kernel<T><<<grid, threads, smem>>>(
+        output, query,
+        static_cast<const char *>(k_pool),
+        static_cast<const char *>(v_pool),
+        d_block_tables, d_seq_lens,
+        num_heads, num_kv_heads, head_dim,
+        block_size, max_blocks_per_seq,
+        pool_block_stride, pool_layer_stride,
+        layer_idx, scale);
+    CUDA_CHECK(cudaGetLastError());
+}
+
 // ── dtype 分发入口 ────────────────────────────────────────────────
 void paged_attention(
     void *output, const void *query,
@@ -253,6 +281,49 @@ void paged_attention(
         break;
     default:
         throw std::runtime_error("paged_attention: unsupported dtype");
+    }
+}
+
+void paged_attention_device(
+    void *output, const void *query,
+    const void *k_pool, const void *v_pool,
+    const int *block_tables_dev, const int *seq_lens_dev,
+    int batch_size, int num_heads, int num_kv_heads, int head_dim,
+    int block_size, int max_blocks_per_seq,
+    size_t pool_block_stride, size_t pool_layer_stride,
+    int layer_idx, float scale,
+    llaisysDataType_t dtype)
+{
+    switch (dtype) {
+    case LLAISYS_DTYPE_F32:
+        paged_attention_device_typed<float>(
+            (float*)output, (const float*)query,
+            k_pool, v_pool, block_tables_dev, seq_lens_dev,
+            batch_size, num_heads, num_kv_heads, head_dim,
+            block_size, max_blocks_per_seq,
+            pool_block_stride, pool_layer_stride,
+            layer_idx, scale);
+        break;
+    case LLAISYS_DTYPE_F16:
+        paged_attention_device_typed<__half>(
+            (__half*)output, (const __half*)query,
+            k_pool, v_pool, block_tables_dev, seq_lens_dev,
+            batch_size, num_heads, num_kv_heads, head_dim,
+            block_size, max_blocks_per_seq,
+            pool_block_stride, pool_layer_stride,
+            layer_idx, scale);
+        break;
+    case LLAISYS_DTYPE_BF16:
+        paged_attention_device_typed<__nv_bfloat16>(
+            (__nv_bfloat16*)output, (const __nv_bfloat16*)query,
+            k_pool, v_pool, block_tables_dev, seq_lens_dev,
+            batch_size, num_heads, num_kv_heads, head_dim,
+            block_size, max_blocks_per_seq,
+            pool_block_stride, pool_layer_stride,
+            layer_idx, scale);
+        break;
+    default:
+        throw std::runtime_error("paged_attention_device: unsupported dtype");
     }
 }
 

@@ -26,7 +26,8 @@ void add(tensor_t c, tensor_t a, tensor_t b) {
         return cpu::add(c->data(), a->data(), b->data(), c->dtype(), c->numel());
     }
 
-    llaisys::core::context().setDevice(c->deviceType(), c->deviceId());
+    // Note: 跳过 setDevice — 调用方 (decode / prefill) 应确保设备已设置
+    // setDevice 调用 cudaSetDevice() 不兼容 CUDA Graph capture
 
     switch (c->deviceType()) {
     case LLAISYS_DEVICE_CPU:
