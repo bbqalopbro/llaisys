@@ -494,3 +494,108 @@ __export int64_t llaisysQwen2ModelInfer(...) {
 ```
 
 修复效果: TTFT 285ms → **20.4ms** (14× 提升)。
+
+---
+
+## 11. SingleModel PagedAttention 迁移 (Decode +30%)
+
+### 11.1 问题分析
+
+SingleModel（非 batch 路径）的 decode 阶段使用 `ops::self_attention`，该函数内部每次调用都执行：
+
+1. **56 次 `cudaMalloc`** — 为 `block_tables` (int*) 和 `seq_lens` (int*) 各分配 28 层 × 1 次
+2. **56 次 `cudaMemcpy` (H2D)** — 拷贝上述数据到 GPU
+3. **56 次 `cudaFree`** — 释放临时 GPU 内存
+
+每个 decode token 都重复此开销。在 RTX 4060 上，`cudaMalloc/cudaFree` 单次约 5-10μs，56 次累积 ~0.5ms/step，对短序列推理瓶颈显著。
+
+### 11.2 解决方案
+
+#### (a) `paged_attention_device` — 零 malloc 变体
+
+新增 `paged_attention_device()` 函数，接受**已在 GPU 上的** `block_tables` 和 `seq_lens` 指针，跳过所有 `cudaMalloc/cudaMemcpy/cudaFree`：
+
+```cpp
+// src/ops/self_attention/nvidia/paged_attention_nvidia.cu
+template<typename T>
+void paged_attention_device_typed(
+    void* out, void* q, void* k_pool, void* v_pool,
+    void* block_tables_dev, void* seq_lens_dev,  // 已在 GPU 上
+    int batch, int nhead, int nkvh, int dh, int block_size,
+    int max_blocks_per_seq, int max_ctx_len, cudaStream_t stream)
+{
+    // 直接 reinterpret_cast，不分配/释放任何 GPU 内存
+    // 与 paged_attention_typed<T> 使用相同 kernel launch
+}
+```
+
+#### (b) `reshape_and_cache` — GPU KV 写入 kernel
+
+新增 CUDA kernel 将 K/V 数据写入 paged block pool：
+
+```cpp
+// src/ops/cache/nvidia/cache_kernels.cu
+template<typename T>
+__global__ void reshape_and_cache_kernel(
+    const T* __restrict__ key,      // [B, kv_dim]
+    const T* __restrict__ value,    // [B, kv_dim]
+    T* __restrict__ k_pool,         // block pool
+    T* __restrict__ v_pool,
+    const int64_t* __restrict__ positions,      // [B]
+    const int* __restrict__ block_tables,       // [B, max_blocks]
+    int kv_dim, int block_size, int max_blocks_per_seq)
+```
+
+Grid: `(batch_size, ceil(kv_dim/256))`，每个 thread 写一个 K+V 元素。利用 `positions` 计算目标 block ID 和 block-offset。
+
+#### (c) SingleModel 集成
+
+`qwen2.cpp` 修改：
+
+| 组件 | 变更 |
+|------|------|
+| `BlockAllocator` | 在 `init_cache()` 创建，pool shape=`[num_blocks, nlayer, block_size, nkvh, dh]` |
+| `PageTable` | block_size=16，预分配所有 blocks（单序列不需要动态分配） |
+| `d_block_tables` | GPU 上的 block table，init 时一次上传 |
+| `d_seq_lens` | GPU 上的 seq_lens buffer，decode 前更新 |
+| decode 路径 | `reshape_and_cache` → `paged_attention_device` (GPU) |
+| prefill 路径 | self_attention 不变 → KV 按 block 写入 pool (GPU) |
+| SaveCache | 从 block pool 按 block 拷贝到 CPU |
+| RestoreCache | 从 CPU 按 block 写回 block pool |
+
+### 11.3 CUDA Graph 尝试与放弃
+
+初始目标是用 CUDA Graph 捕获 decode 路径，消除 kernel launch 开销。但发现三个障碍：
+
+1. **`ops::add` 调用 `cudaSetDevice()`** — 不可在 stream capture 中执行（已修复：移除 setDevice 调用）
+2. **`linear_nvidia.cu` 中的 lazy `cudaMalloc`** — 混合精度路径首次执行时分配临时 buffer
+3. **`seq_lens`/`positions` 每步变化** — Graph 捕获的是固定参数，需要 `cudaGraphExecKernelNodeSetParams` 逐节点更新，实现复杂度高
+
+**决策**：暂不使用 CUDA Graph。仅通过 `paged_attention_device` 消除 malloc 开销已获得显著收益。
+
+### 11.4 性能对比
+
+**测试环境**: RTX 4060 Laptop 8GB, Qwen2-1.5B FP16, max_tokens=128
+
+| 指标 | Before (self_attention) | After (paged_attention) | 变化 |
+|------|------------------------|------------------------|------|
+| TTFT | 20.4 ms | **18.2 ms** | -11% |
+| Decode | 50.8 tok/s | **65.8 tok/s** | **+30%** |
+| Total | 57.6 tok/s | **65.7 tok/s** | +14% |
+| vs HuggingFace | 1.6× | **1.8×** | — |
+
+### 11.5 修改文件清单
+
+| 文件 | 状态 | 说明 |
+|------|------|------|
+| `src/ops/cache/nvidia/cache_kernels.cu` | **新增** | `reshape_and_cache` CUDA kernel |
+| `src/ops/cache/nvidia/cache_kernels.cuh` | **新增** | kernel 声明 |
+| `src/ops/cache/cache_ops.hpp` | **新增** | 高层 `reshape_and_cache` 声明 |
+| `src/ops/cache/cache_ops.cpp` | **新增** | 设备类型分发 |
+| `src/ops/self_attention/nvidia/paged_attention_nvidia.cu` | 修改 | `paged_attention_device_typed` |
+| `src/ops/self_attention/nvidia/paged_attention_nvidia.cuh` | 修改 | `paged_attention_device` 声明 |
+| `src/ops/self_attention/paged_attention.hpp` | 修改 | 高层 `paged_attention_device` 声明 |
+| `src/ops/self_attention/paged_attention.cpp` | 修改 | 分发到 nvidia 后端 |
+| `src/ops/add/op.cpp` | 修改 | 移除 `setDevice` (CUDA Graph 兼容) |
+| `src/llaisys/models/qwen2.cpp` | 修改 | 集成 BlockAllocator、PageTable、paged_attention |
+| `xmake.lua` | 修改 | cache_ops.cpp 编译到 llaisys target |
