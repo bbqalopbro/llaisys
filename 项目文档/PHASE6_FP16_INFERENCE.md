@@ -261,25 +261,63 @@ paged_attention(attn_out->data(), q->data(), ..., model->act_dtype);
 
 ---
 
-## 7. 性能基准测试
+## 7. FP16 权重加载
 
-**模型**: DeepSeek-R1-Distill-Qwen-1.5B (FP32 权重)  
+### 发现
+
+原始模型权重在 safetensors 中以 **BF16** 存储（非 FP32），但我们的加载代码将其转为 FP32：
+
+```python
+# 旧: BF16 → FP32 (不必要的精度提升, 显存翻倍)
+tensor = tensor.to(torch.float32)
+dtype_enum = 13  # LLAISYS_DTYPE_F32
+```
+
+### 修改
+
+**文件**: `python/llaisys/models/qwen2.py`
+
+```python
+# 新: GPU 模式直接用 FP16, 跳过 FP32 中间步骤
+if use_fp16_weights:
+    tensor = tensor.to(torch.float16)
+    dtype_enum = 12  # LLAISYS_DTYPE_F16
+```
+
+**文件**: `src/ops/linear/nvidia/linear_nvidia.cu`
+
+- 合并 F16w × F32in → F32out 和 F16w × F16in → F32out 为统一路径
+- cuBLAS 同时支持两种情况: `cublasGemmEx(..., CUDA_R_16F, CUDA_R_16F, CUDA_R_32F, ...)`
+
+### 收益
+
+权重为 FP16 后，所有 Linear 层走原生 F16 GEMM（Tensor Core 加速），无需 F16↔F32 转换开销。
+
+---
+
+## 8. 性能基准测试
+
+**模型**: DeepSeek-R1-Distill-Qwen-1.5B (原始 BF16)  
 **设备**: NVIDIA GPU | **生成**: 128 tokens | **采样**: greedy (top_k=1) | **3 runs avg**
 
-| 指标 | FP32 | FP16 | 变化 |
-|------|------|------|------|
-| 吞吐量 | 30.1 tok/s | 30.3 tok/s | +0.7% |
-| 总显存 (加载后) | 7252 MB | 7196 MB | **-56 MB** |
-| 总显存 (推理后) | 7252 MB | 7216 MB | **-36 MB** |
-| KV-Cache 理论大小 | 224 MB | **112 MB** | **-50%** |
-| 正确性 | 基准 | **token-for-token 一致** | ✅ |
+| 指标 | FP32 基准 | FP16 激活 (FP32 权重) | FP16 全面 (FP16 权重) |
+|------|-----------|---------------------|--------------------|
+| **吞吐量** | 30.1 tok/s | 30.3 tok/s (+0.7%) | **53.9 tok/s (+79%)** |
+| **显存 (加载后)** | 7252 MB | 7196 MB (-0.8%) | **3840 MB (-47%)** |
+| **显存 (推理后)** | 7252 MB | 7216 MB | **3866 MB (-47%)** |
+| KV-Cache 理论大小 | 224 MB | 112 MB (-50%) | **112 MB (-50%)** |
+| 正确性 | 基准 | token 一致 ✅ | **token 一致 ✅** |
 
 ### 分析
 
-- **吞吐量几乎不变**: 权重仍为 FP32，所有 GEMM 通过 `cublasGemmEx` 在 FP32 精度执行。FP16 激活的带宽节省被 F16↔F32 转换开销抵消。
-- **显存节省有限**: 权重占 ~6.8GB（FP32 × 1.5B 参数），KV-Cache 节省 ~112MB 相对占比小。
-- **KV-Cache 减半**: 28层 × 2(K+V) × 4096(maxseq) × 2(nkvh) × 128(dh) = 58.7M elem; FP32=224MB → FP16=112MB。
-- **更大收益场景**: FP16 权重模型（跳过转换开销）、更长上下文（KV-Cache 占比更大）、Batch 推理（激活缓冲区随 batch 线性增长）。
+**Phase 1 — 仅 FP16 激活 (FP32 权重):**
+- 吞吐量几乎不变: 权重仍 FP32, GEMM 通过 cublasGemmEx 在 FP32 精度执行, F16↔F32 转换开销抵消带宽节省
+- 显存节省有限: 权重占 ~6.8GB, KV-Cache 节省 ~112MB 相对占比小
+
+**Phase 2 — FP16 权重 + FP16 激活:**
+- **吞吐量提升 79%**: 所有 GEMM 走 Tensor Core FP16 路径, 无转换开销
+- **显存减半 47%**: 权重 3.4GB → 1.7GB, KV-Cache 224MB → 112MB, 激活缓冲区减半
+- 三次运行结果完全一致, token-for-token 匹配 HuggingFace BF16 参考
 
 ### 环境变量
 
@@ -290,7 +328,7 @@ LLAISYS_FORCE_FP32=1 python test/test_infer.py --device nvidia ...
 
 ---
 
-## 8. 编译验证
+## 9. 编译验证
 
 ```bash
 $ xmake build

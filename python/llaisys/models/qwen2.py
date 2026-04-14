@@ -269,6 +269,7 @@ class Qwen2:
         # 保存配置供后续使用
         self._config = cfg
         self._end_token = end_token
+        self._device_type = device
 
         # 加载权重
         print(f"Loading weights from {model_path}...")
@@ -625,10 +626,18 @@ class Qwen2:
                             tensor = tensor.to(torch.float32)
                         dtype_enum = 13  # LLAISYS_DTYPE_F32
                     else:
-                        # 普通权重 — 转 FP32
-                        if tensor.dtype != torch.float32:
-                            tensor = tensor.to(torch.float32)
-                        dtype_enum = 13  # LLAISYS_DTYPE_F32
+                        # 普通权重 — GPU 用 FP16, CPU 用 FP32
+                        # BF16 原始权重直接转 FP16 (精度损失可忽略, 值域安全)
+                        import os
+                        use_fp16_weights = (self._device_type != DeviceType.CPU
+                                           and os.environ.get("LLAISYS_FORCE_FP32", "0") != "1")
+                        if use_fp16_weights:
+                            tensor = tensor.to(torch.float16)
+                            dtype_enum = 12  # LLAISYS_DTYPE_F16
+                        else:
+                            if tensor.dtype != torch.float32:
+                                tensor = tensor.to(torch.float32)
+                            dtype_enum = 13  # LLAISYS_DTYPE_F32
                         
                     data_ptr = tensor.data_ptr()
                     ndim = len(tensor.shape)

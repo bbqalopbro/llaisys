@@ -102,32 +102,35 @@ void linear(tensor_t out, tensor_t in, tensor_t weight, tensor_t bias) {
     float alpha = 1.0f;
     float beta  = 0.0f;
 
-    // ---- Mixed precision path: FP16 weight + FP32 input → FP32 output ----
-    // cuBLAS requires A and B to have the same dtype, so we convert the input
-    // (which is typically small: [1, K]) to FP16 on-the-fly.
-    if (w_dtype == LLAISYS_DTYPE_F16 && in_dtype == LLAISYS_DTYPE_F32 && out_dtype == LLAISYS_DTYPE_F32) {
-        // Use a thread-local cached FP16 buffer to avoid cudaMalloc/Free per call
+    // ---- Mixed precision path: FP16 weight → FP32 output ----
+    // 情况1: F16w × F32in → F32out (BF16 模型 + FP32 激活)
+    // 情况2: F16w × F16in → F32out (LM Head: FP16 权重/激活, FP32 logits)
+    if (w_dtype == LLAISYS_DTYPE_F16 && out_dtype == LLAISYS_DTYPE_F32) {
+        const void *in_gemm_ptr = in->data();
+
+        // If input is F32, convert to F16 first (cuBLAS requires A/B same type)
         static thread_local __half *in_f16_buf = nullptr;
         static thread_local int64_t in_f16_cap = 0;
-
-        int64_t in_elems = M * K;
-        if (in_elems > in_f16_cap) {
-            if (in_f16_buf) cudaFree(in_f16_buf);
-            cudaMalloc(&in_f16_buf, in_elems * sizeof(__half));
-            in_f16_cap = in_elems;
+        if (in_dtype == LLAISYS_DTYPE_F32) {
+            int64_t in_elems = M * K;
+            if (in_elems > in_f16_cap) {
+                if (in_f16_buf) cudaFree(in_f16_buf);
+                cudaMalloc(&in_f16_buf, in_elems * sizeof(__half));
+                in_f16_cap = in_elems;
+            }
+            int thr = 256, blk = ((int)in_elems + thr - 1) / thr;
+            convert_f32_to_f16_kernel<<<blk, thr>>>(in_f16_buf, (const float*)in->data(), in_elems);
+            in_gemm_ptr = in_f16_buf;
         }
+        // else: input is already F16, use directly
 
-        // Convert input F32 → F16
-        int thr = 256, blk = ((int)in_elems + thr - 1) / thr;
-        convert_f32_to_f16_kernel<<<blk, thr>>>(in_f16_buf, (const float*)in->data(), in_elems);
-
-        // cuBLAS: A=F16 (weight), B=F16 (input_f16), C=F32 (output)
+        // cuBLAS: A=F16 (weight), B=F16 (input), C=F32 (output)
         CUBLAS_CHECK(cublasGemmEx(handle,
                                   CUBLAS_OP_T, CUBLAS_OP_N,
                                   (int)N, (int)M, (int)K,
                                   &alpha,
                                   weight->data(), CUDA_R_16F, (int)K,
-                                  in_f16_buf,     CUDA_R_16F, (int)K,
+                                  in_gemm_ptr,    CUDA_R_16F, (int)K,
                                   &beta,
                                   out->data(),    CUDA_R_32F, (int)N,
                                   CUBLAS_COMPUTE_32F,
@@ -136,7 +139,7 @@ void linear(tensor_t out, tensor_t in, tensor_t weight, tensor_t bias) {
         // Add FP16 bias to FP32 output
         if (bias && bias->data()) {
             int64_t total = M * N;
-            thr = 256; blk = ((int)total + thr - 1) / thr;
+            int thr = 256, blk = ((int)total + thr - 1) / thr;
             if (bias->dtype() == LLAISYS_DTYPE_F16) {
                 add_bias_f16_to_f32_kernel<<<blk, thr>>>(
                     (float*)out->data(), (const __half*)bias->data(), M, N);
