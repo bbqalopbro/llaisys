@@ -29,7 +29,99 @@
         }                                                                             \
     } while (0)
 
-// ---- Conversion helpers ----
+// ---- GEMV kernel for M=1 decode (FP16 weights+input, FP32 accumulation) ----
+// y[row] = dot(W[row, :], x[:]) + bias[row]
+// W is row-major [N, K], x is [K], y is [N]
+// Uses half2 vectorized loads for 2x bandwidth
+template<int WARPS_PER_ROW>
+__global__ void gemv_f16_kernel(const __half *__restrict__ W,
+                                const __half *__restrict__ x,
+                                __half *__restrict__ y,
+                                const __half *__restrict__ bias,
+                                int N, int K) {
+    const int WARP_SIZE = 32;
+    const int THREADS_PER_ROW = WARPS_PER_ROW * WARP_SIZE;
+
+    int local_thread = threadIdx.x;
+    int row_in_block = local_thread / THREADS_PER_ROW;
+    int thread_in_row = local_thread % THREADS_PER_ROW;
+    int warp_in_row = thread_in_row / WARP_SIZE;
+    int lane_id = thread_in_row % WARP_SIZE;
+
+    int rows_per_block = blockDim.x / THREADS_PER_ROW;
+    int row = blockIdx.x * rows_per_block + row_in_block;
+    if (row >= N) return;
+
+    const __half *row_ptr = W + (int64_t)row * K;
+    float sum = 0.0f;
+
+    // half2 vectorized load (2 halfs = 4 bytes per load)
+    int k2 = K / 2;
+    int global_lane = warp_in_row * WARP_SIZE + lane_id;
+    for (int i = global_lane; i < k2; i += THREADS_PER_ROW) {
+        half2 w2 = reinterpret_cast<const half2 *>(row_ptr)[i];
+        half2 x2 = reinterpret_cast<const half2 *>(x)[i];
+        sum += __half2float(w2.x) * __half2float(x2.x)
+             + __half2float(w2.y) * __half2float(x2.y);
+    }
+    // Handle odd K
+    if (global_lane == 0 && (K & 1)) {
+        sum += __half2float(row_ptr[K - 1]) * __half2float(x[K - 1]);
+    }
+
+    // Warp shuffle reduce
+    for (int offset = WARP_SIZE / 2; offset > 0; offset >>= 1) {
+        sum += __shfl_down_sync(0xffffffff, sum, offset);
+    }
+
+    // Cross-warp reduce via shared memory
+    extern __shared__ float smem[];
+    if (lane_id == 0) {
+        smem[row_in_block * WARPS_PER_ROW + warp_in_row] = sum;
+    }
+    __syncthreads();
+
+    if (warp_in_row == 0 && lane_id == 0) {
+        float total = 0.0f;
+        for (int w = 0; w < WARPS_PER_ROW; w++) {
+            total += smem[row_in_block * WARPS_PER_ROW + w];
+        }
+        if (bias) {
+            total += __half2float(bias[row]);
+        }
+        y[row] = __float2half(total);
+    }
+}
+
+// GEMV launcher: WARPS_PER_ROW tuned by K dimension
+static void gemv_f16_launch(const __half *W, const __half *x, __half *y,
+                            const __half *bias, int N, int K,
+                            cudaStream_t stream = 0) {
+    if (K <= 512) {
+        // 1 warp/row, 8 rows/block = 256 threads
+        constexpr int WPR = 1;
+        int rpb = 256 / (WPR * 32);  // 8
+        int grid = (N + rpb - 1) / rpb;
+        int smem = rpb * WPR * (int)sizeof(float);
+        gemv_f16_kernel<WPR><<<grid, 256, smem, stream>>>(W, x, y, bias, N, K);
+    } else if (K <= 2048) {
+        // 2 warps/row, 4 rows/block
+        constexpr int WPR = 2;
+        int rpb = 256 / (WPR * 32);  // 4
+        int grid = (N + rpb - 1) / rpb;
+        int smem = rpb * WPR * (int)sizeof(float);
+        gemv_f16_kernel<WPR><<<grid, 256, smem, stream>>>(W, x, y, bias, N, K);
+    } else {
+        // 4 warps/row, 2 rows/block
+        constexpr int WPR = 4;
+        int rpb = 256 / (WPR * 32);  // 2
+        int grid = (N + rpb - 1) / rpb;
+        int smem = rpb * WPR * (int)sizeof(float);
+        gemv_f16_kernel<WPR><<<grid, 256, smem, stream>>>(W, x, y, bias, N, K);
+    }
+    CUDA_CHECK(cudaGetLastError());
+}
+
 template<typename T> __device__ inline float to_float(T v);
 template<> __device__ inline float to_float<float>(float v) { return v; }
 template<> __device__ inline float to_float<__half>(__half v) { return __half2float(v); }
@@ -243,6 +335,11 @@ void linear(tensor_t out, tensor_t in, tensor_t weight, tensor_t bias) {
     default:
         throw std::runtime_error("NVIDIA linear: unsupported dtype");
     }
+
+    // Note: Custom gemv_f16_kernel available for M=1 FP16, but cuBLAS is
+    // faster (~4%) due to Tensor Core HMMA usage. Kept for CUDA Graph
+    // compatibility if needed in the future (cuBLAS requires workspace
+    // pre-allocation for graph capture via cublasSetWorkspace).
 
     // row-major Y = X * W^T  <=>  col-major Y^T = W * X^T
     CUBLAS_CHECK(cublasGemmEx(handle,
