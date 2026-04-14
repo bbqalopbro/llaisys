@@ -465,13 +465,32 @@ Test passed!
 
 ### 10.4 性能对比
 
-| 配置 | 路径 | 总吞吐 (tok/s) | 显存 (MB) | 相对基线 |
-|------|------|---------------|-----------|---------|
-| FP32 权重 + 逐 token prefill | 单模型 | 30.1 | 7252 | 基线 |
-| FP16 权重 + 逐 token prefill | 单模型 | 53.9 | 3840 | +79% |
-| FP16 权重 + Batch Prefill | 单模型 | 55.8 | 3840 | +85% |
-| FP16 权重 + Batch Prefill | **BatchContext** | **59.1** | 3840 | **+96%** |
+| 配置 | 路径 | TTFT (ms) | Decode (tok/s) | Total (tok/s) | 峰值显存 (MB) |
+|------|------|-----------|---------------|---------------|-------------|
+| FP32 + 逐token | SingleModel | 640 | 22.7 | 25.3 | 6974 |
+| FP32 + Batch Prefill | BatchCtx | 147 | 24.4 | 27.0 | 6974 |
+| **FP16 + Batch Prefill** | **SingleModel** | **20.4** | **50.8** | **57.6** | **3865** |
+| **FP16 + Batch Prefill** | **BatchCtx** | **20.3** | **49.5** | **56.0** | **3865** |
 
-> - 测试条件: 128 decode tokens, greedy sampling, 3 次取平均, prompt 17 tokens
-> - BatchContext 路径 decode 使用 PagedAttention kernel（专为单 query 优化），比标准 self_attention 更快
-> - Batch Prefill 相对逐 token: 减少 ~(S-1) × L 次 kernel launch，prompt 越长提升越显著
+> - 测试条件: prompt 17 tokens, decode 128 tokens, greedy, 3 次取平均
+> - TTFT = Time To First Token (首 token 延迟, 即 prefill 耗时)
+> - FP16 vs FP32 TTFT: 20.4ms vs 640ms → **31× 加速** (batch prefill + FP16 GEMM)
+> - FP16 vs FP32 Decode: 50.8 vs 22.7 → **2.2× 加速**
+> - 显存: 3865 vs 6974 → **-45%**
+
+### 10.5 Bug 修复: `llaisysQwen2ModelInfer` 未使用 Batch Prefill
+
+**问题**: `llaisysQwen2ModelInfer`（greedy argmax 路径）仍保留逐 token for 循环，
+未调用 `prefill_batch()`，导致 `model.generate(top_k=1)` 的 TTFT 高达 285ms。
+
+**修复**: 将 `llaisysQwen2ModelInfer` 改为委托调用 `llaisysQwen2ModelInferSample`：
+
+```cpp
+__export int64_t llaisysQwen2ModelInfer(...) {
+    // 委托给 InferSample, 使用 greedy 参数 (top_k=1)
+    return llaisysQwen2ModelInferSample(model, token_ids, ntoken,
+                                        0.0f, 1, 1.0f);
+}
+```
+
+修复效果: TTFT 285ms → **20.4ms** (14× 提升)。
