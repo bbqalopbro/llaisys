@@ -340,3 +340,63 @@ $ xmake build
 - `llaisys-test-paged-attention`（PA 单元测试）
 - `llaisys-bench-paged-attention`（PA 基准测试）
 - `llaisys-test-block-allocator`、`llaisys-test-paged-batch` 等
+
+---
+
+## 10. Batch Prefill 优化
+
+### 10.1 问题背景
+
+原始推理路径中，prefill 阶段采用**逐 token 串行**方式：
+
+```cpp
+for (size_t t = 0; t < ntoken; ++t) {
+    // 每次只处理 1 个 token，循环 ntoken 次
+}
+```
+
+这导致 prefill 阶段需要多次 kernel launch，每次仅处理 1 个 token 的矩阵运算，GPU 利用率极低。
+
+### 10.2 实现方案
+
+新增 `prefill_batch()` 静态函数，将所有输入 token **一次性**送入各层计算：
+
+```
+输入: [S] token_ids  →  Embedding → [S, hidden]
+      [S] pos_ids     →  每层:  RMSNorm → QKV → RoPE → Attention → FFN
+                       →  一次性写入 S 个 KV 到 cache
+                       →  取最后一个 token → LM Head → Sample
+```
+
+**关键实现细节：**
+
+1. **临时缓冲区**: 所有中间张量形状从 `[1, ...]` 变为 `[S, ...]`
+2. **位置编码**: `pos_ids = [0, 1, 2, ..., S-1]`，一次性计算所有 RoPE
+3. **Self-Attention**: prefill 阶段仍使用标准 `ops::self_attention`（非 PagedAttention），可并行处理 S 个 query
+4. **KV-Cache 写入**: 单次 `cudaMemcpy` 将 S 个 KV 向量写入 block 0 起始的连续缓存
+5. **输出提取**: 仅取最后一个 token 的 hidden state 送入 LM Head
+
+**修改文件：** `src/llaisys/models/qwen2.cpp`
+
+### 10.3 正确性验证
+
+```
+$ python test/test_infer.py --device nvidia \
+    --model models/DeepSeek-R1-Distill-Qwen-1.5B \
+    --prompt "What is 2+3?" --max_steps 32 --test
+Test passed!
+```
+
+输出与 HuggingFace BF16 参考完全一致。
+
+### 10.4 性能对比
+
+| 配置 | 总吞吐 (tok/s) | 显存 (MB) | 相对基线提升 |
+|------|---------------|-----------|------------|
+| FP32 权重 + 逐 token prefill | 30.1 | 7252 | 基线 |
+| FP16 权重 + 逐 token prefill | 53.9 | 3840 | +79% |
+| FP16 权重 + Batch Prefill | **55.8** | 3840 | **+85%** |
+
+> - 测试条件: 128 decode tokens, greedy sampling, 3 次取平均
+> - 输入 prompt 17 tokens（chat template 后），prefill 阶段加速效果受 prompt 长度影响
+> - Batch Prefill 相对 FP16 逐 token: +3.5%（prompt 短，优势有限；长 prompt 下提升更显著）

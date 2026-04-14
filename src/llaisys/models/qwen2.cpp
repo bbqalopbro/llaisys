@@ -620,19 +620,139 @@ __export int64_t llaisysQwen2ModelInfer(struct LlaisysQwen2Model * model, int64_
     return output_token;
 }
 
+// ── Batch Prefill: 一次性处理所有 prefill tokens ──────────────────
+// 所有 token 并行通过每层 transformer，显著减少 kernel launch 次数
+// 返回最后一个 token 对应的 output_token
+static int64_t prefill_batch(struct LlaisysQwen2Model* model,
+                             int64_t* token_ids, size_t ntoken,
+                             float temperature, int top_k, float top_p) {
+    using Tensor = llaisys::Tensor;
+
+    size_t S = ntoken;
+    auto dt = model->act_dtype;
+    auto dev = model->device_type;
+    auto did = model->device_id;
+    size_t hs = model->meta.hs;
+    size_t dh = model->meta.dh;
+    size_t di_local = model->local_di;
+    size_t nh_local = model->local_nh;
+    size_t nkvh_local = model->local_nkvh;
+    size_t q_dim = nh_local * dh;
+    size_t kv_dim = nkvh_local * dh;
+
+    // ── 创建 prefill 临时缓冲区 [S, ...] ──
+    auto ids_buf  = Tensor::create({(size_t)S}, LLAISYS_DTYPE_I64, dev, did);
+    auto pos_buf  = Tensor::create({(size_t)S}, LLAISYS_DTYPE_I64, dev, did);
+    auto hs_buf   = Tensor::create({S, hs}, dt, dev, did);
+    auto res_buf  = Tensor::create({S, hs}, dt, dev, did);
+    auto norm_buf = Tensor::create({S, hs}, dt, dev, did);
+    auto q_buf    = Tensor::create({S, q_dim}, dt, dev, did);
+    auto k_buf    = Tensor::create({S, kv_dim}, dt, dev, did);
+    auto v_buf    = Tensor::create({S, kv_dim}, dt, dev, did);
+    auto attn_buf = Tensor::create({S, nh_local, dh}, dt, dev, did);
+    auto gate_buf = Tensor::create({S, di_local}, dt, dev, did);
+    auto up_buf   = Tensor::create({S, di_local}, dt, dev, did);
+    auto mlp_buf  = Tensor::create({S, di_local}, dt, dev, did);
+
+    // ── 上传 token_ids 和 pos_ids ──
+    model->memcpyH2D(ids_buf, token_ids, S * sizeof(int64_t));
+    std::vector<int64_t> pos_vec(S);
+    for (size_t i = 0; i < S; ++i) pos_vec[i] = (int64_t)i;
+    model->memcpyH2D(pos_buf, pos_vec.data(), S * sizeof(int64_t));
+
+    // ── 1. Embedding: [S] → [S, hs] ──
+    ops::embedding(hs_buf, ids_buf, TO_CPP_TENSOR(model->weights.in_embed));
+
+    // ── 2. Transformer Layers ──
+    for (size_t layer = 0; layer < model->meta.nlayer; ++layer) {
+        std::swap(res_buf, hs_buf);
+
+        // Pre-attention Norm
+        ops::rms_norm(norm_buf, res_buf, TO_CPP_TENSOR(model->weights.attn_norm_w[layer]), model->meta.epsilon);
+
+        // QKV Linear
+        model->linear_maybe_dequant(q_buf, norm_buf, model->weights.attn_q_w[layer], model->weights.attn_q_w_scale[layer], model->weights.attn_q_b[layer], model->weights.attn_q_w_qzeros[layer]);
+        model->linear_maybe_dequant(k_buf, norm_buf, model->weights.attn_k_w[layer], model->weights.attn_k_w_scale[layer], model->weights.attn_k_b[layer], model->weights.attn_k_w_qzeros[layer]);
+        model->linear_maybe_dequant(v_buf, norm_buf, model->weights.attn_v_w[layer], model->weights.attn_v_w_scale[layer], model->weights.attn_v_b[layer], model->weights.attn_v_w_qzeros[layer]);
+
+        auto q_3d = q_buf->reshape({S, nh_local, dh});
+        auto k_3d = k_buf->reshape({S, nkvh_local, dh});
+        auto v_3d = v_buf->reshape({S, nkvh_local, dh});
+
+        // RoPE
+        ops::rope(q_3d, q_3d, pos_buf, model->meta.theta);
+        ops::rope(k_3d, k_3d, pos_buf, model->meta.theta);
+
+        // 写入 KV Cache: 所有 S 个 token 一次性写入
+        size_t kv_row_bytes = nkvh_local * dh * llaisys::utils::dsize(dt);
+        char* k_dst = (char*)model->kv_caches[layer][0]->data();  // pos 0 开始写
+        char* v_dst = (char*)model->kv_caches[layer][1]->data();
+        model->memcpyOnDevice(k_dst, k_3d->data(), S * kv_row_bytes);
+        model->memcpyOnDevice(v_dst, v_3d->data(), S * kv_row_bytes);
+
+        // Self-Attention (causal mask 由 kernel 内部处理)
+        float scale = 1.0f / std::sqrt((float)dh);
+        auto k_cache_slice = model->kv_caches[layer][0]->slice(0, 0, (int64_t)S);
+        auto v_cache_slice = model->kv_caches[layer][1]->slice(0, 0, (int64_t)S);
+        ops::self_attention(attn_buf, q_3d, k_cache_slice, v_cache_slice, scale);
+
+        // O Projection
+        auto attn_flat = attn_buf->reshape({S, nh_local * dh});
+        model->linear_maybe_dequant(hs_buf, attn_flat, model->weights.attn_o_w[layer], model->weights.attn_o_w_scale[layer], nullptr, model->weights.attn_o_w_qzeros[layer]);
+        model->allReduceIfTP(hs_buf, hs * S);
+        ops::add(hs_buf, hs_buf, res_buf);
+
+        // Pre-MLP Norm + MLP
+        std::swap(res_buf, hs_buf);
+        ops::rms_norm(norm_buf, res_buf, TO_CPP_TENSOR(model->weights.mlp_norm_w[layer]), model->meta.epsilon);
+        model->linear_maybe_dequant(gate_buf, norm_buf, model->weights.mlp_gate_w[layer], model->weights.mlp_gate_w_scale[layer], nullptr, model->weights.mlp_gate_w_qzeros[layer]);
+        model->linear_maybe_dequant(up_buf, norm_buf, model->weights.mlp_up_w[layer], model->weights.mlp_up_w_scale[layer], nullptr, model->weights.mlp_up_w_qzeros[layer]);
+        ops::swiglu(mlp_buf, gate_buf, up_buf);
+        model->linear_maybe_dequant(hs_buf, mlp_buf, model->weights.mlp_down_w[layer], model->weights.mlp_down_w_scale[layer], nullptr, model->weights.mlp_down_w_qzeros[layer]);
+        model->allReduceIfTP(hs_buf, hs * S);
+        ops::add(hs_buf, hs_buf, res_buf);
+    }
+
+    // ── 3. 取最后一个 token 的 hidden state ──
+    // hs_buf: [S, hs] → 取 [S-1, :] → copy 到 model->hidden_states [1, hs]
+    size_t elem_sz = llaisys::utils::dsize(dt);
+    char* last_hs_src = (char*)hs_buf->data() + (S - 1) * hs * elem_sz;
+    model->memcpyOnDevice(model->hidden_states->data(), last_hs_src, hs * elem_sz);
+
+    // ── 4. Final Norm + LM Head + Sample ──
+    ops::rms_norm(model->hidden_states, model->hidden_states, TO_CPP_TENSOR(model->weights.out_norm_w), model->meta.epsilon);
+    model->linear_maybe_dequant(model->logits, model->hidden_states, model->weights.out_embed, model->weights.out_embed_scale, nullptr);
+
+    auto logits_2d = model->logits->reshape({1, model->meta.voc});
+    bool use_greedy = (top_k == 1) || (temperature <= 0.0f);
+    if (use_greedy) {
+        ops::argmax(model->next_token, model->max_val, logits_2d);
+    } else {
+        ops::sample(model->next_token, logits_2d, temperature, top_k, top_p, model->rng_seed++);
+    }
+
+    int32_t host_token;
+    model->memcpyD2H(&host_token, model->next_token, sizeof(int32_t));
+
+    model->current_pos = (int64_t)S;
+    return (int64_t)host_token;
+}
+
 __export int64_t llaisysQwen2ModelInferSample(struct LlaisysQwen2Model * model, int64_t * token_ids, size_t ntoken,
                                               float temperature, int top_k, float top_p) {
     if (!model || !token_ids || ntoken == 0) return -1;
 
     if (ntoken > 1) {
-        model->current_pos = 0;
+        // Batch Prefill: 所有 token 一次性通过 transformer
+        return prefill_batch(model, token_ids, ntoken, temperature, top_k, top_p);
     }
 
+    // Decode path: 单 token (ntoken == 1)
     int64_t output_token = 0;
     bool use_greedy = (top_k == 1) || (temperature <= 0.0f);
 
-    for (size_t t = 0; t < ntoken; ++t) {
-        int64_t token = token_ids[t];
+    {
+        int64_t token = token_ids[0];
         int64_t pos = model->current_pos;
 
         model->memcpyH2D(model->input_ids_buf, &token, sizeof(int64_t));
