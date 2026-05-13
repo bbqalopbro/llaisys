@@ -8,7 +8,9 @@
 #include "llaisys/distributed.h"
 
 #include "../distributed/comm.hpp"
+#include "../distributed/tp_sync.hpp"
 
+#include <cstdlib>
 #include <memory>
 #include <stdexcept>
 
@@ -28,6 +30,20 @@ static llaisys::distributed::Backend _to_backend(llaisysDistBackend_t backend) {
             return llaisys::distributed::Backend::Mpi;
         default:
             throw std::invalid_argument("unknown dist backend");
+    }
+}
+
+// C 数据类型枚举 → C++ CommDataType 转换 (Phase 1 新增)
+static llaisys::distributed::CommDataType _to_comm_dtype(llaisysDistDataType_t dtype) {
+    switch (dtype) {
+        case LLAISYS_DIST_DTYPE_F32:
+            return llaisys::distributed::CommDataType::F32;
+        case LLAISYS_DIST_DTYPE_F16:
+            return llaisys::distributed::CommDataType::F16;
+        case LLAISYS_DIST_DTYPE_BF16:
+            return llaisys::distributed::CommDataType::BF16;
+        default:
+            throw std::invalid_argument("unknown dist data type");
     }
 }
 
@@ -53,6 +69,28 @@ __C llaisysDistComm_t llaisysDistCommCreate(struct LlaisysDistConfig config) {
     cfg.world_size = config.world_size;
     cfg.rank = config.rank;
     cfg.local_device = config.local_device;
+
+    // Phase 4: 多节点配置
+    // 优先使用 C API 传入的地址; 若为空, 回退到环境变量 MASTER_ADDR/MASTER_PORT
+    if (config.master_addr && config.master_addr[0] != '\0') {
+        cfg.master_addr = config.master_addr;
+    } else {
+        const char *env_addr = std::getenv("MASTER_ADDR");
+        if (env_addr && env_addr[0] != '\0') {
+            cfg.master_addr = env_addr;
+        }
+        // 否则 master_addr 为空, 走单机文件模式
+    }
+    if (config.master_port > 0) {
+        cfg.master_port = config.master_port;
+    } else {
+        const char *env_port = std::getenv("MASTER_PORT");
+        if (env_port && env_port[0] != '\0') {
+            cfg.master_port = std::atoi(env_port);
+        }
+        // 否则使用 Config 默认值 29400
+    }
+
     handle->impl = llaisys::distributed::createComm(cfg);
     return handle;
 }
@@ -100,6 +138,15 @@ __C void llaisysDistAllReduceSumF32(llaisysDistComm_t comm, float *data, size_t 
     comm->impl->allReduceSum(data, count);
 }
 
+// Phase 1 新增: 多数据类型 AllReduce
+// 支持 F32/F16/BF16, NCCL 后端直接映射, MPI 后端走 FP32 中转
+__C void llaisysDistAllReduceSum(llaisysDistComm_t comm, void *data, size_t count, llaisysDistDataType_t dtype) {
+    if (comm == nullptr) {
+        throw std::invalid_argument("comm is null");
+    }
+    comm->impl->allReduceSum(data, count, _to_comm_dtype(dtype));
+}
+
 // 路障同步
 __C void llaisysDistBarrier(llaisysDistComm_t comm) {
     if (comm == nullptr) {
@@ -108,8 +155,139 @@ __C void llaisysDistBarrier(llaisysDistComm_t comm) {
     comm->impl->barrier();
 }
 
+// ══════════════════════════════════════════════════════════════
+// Phase 2 新增: 通信原语 C API 实现
+// ══════════════════════════════════════════════════════════════
+
+// AllGather: 全收集
+__C void llaisysDistAllGather(llaisysDistComm_t comm, const void *sendbuf, void *recvbuf,
+                               size_t sendcount, llaisysDistDataType_t dtype) {
+    if (comm == nullptr) throw std::invalid_argument("comm is null");
+    comm->impl->allGather(sendbuf, recvbuf, sendcount, _to_comm_dtype(dtype));
+}
+
+// ReduceScatter: 归约后分发
+__C void llaisysDistReduceScatter(llaisysDistComm_t comm, const void *sendbuf, void *recvbuf,
+                                    size_t recvcount, llaisysDistDataType_t dtype) {
+    if (comm == nullptr) throw std::invalid_argument("comm is null");
+    comm->impl->reduceScatter(sendbuf, recvbuf, recvcount, _to_comm_dtype(dtype));
+}
+
+// Broadcast: 广播
+__C void llaisysDistBroadcast(llaisysDistComm_t comm, void *data, size_t count,
+                               llaisysDistDataType_t dtype, int root) {
+    if (comm == nullptr) throw std::invalid_argument("comm is null");
+    comm->impl->broadcast(data, count, _to_comm_dtype(dtype), root);
+}
+
+// Send: 点对点发送
+__C void llaisysDistSend(llaisysDistComm_t comm, const void *data, size_t count,
+                           llaisysDistDataType_t dtype, int dst) {
+    if (comm == nullptr) throw std::invalid_argument("comm is null");
+    comm->impl->send(data, count, _to_comm_dtype(dtype), dst);
+}
+
+// Recv: 点对点接收
+__C void llaisysDistRecv(llaisysDistComm_t comm, void *data, size_t count,
+                           llaisysDistDataType_t dtype, int src) {
+    if (comm == nullptr) throw std::invalid_argument("comm is null");
+    comm->impl->recv(data, count, _to_comm_dtype(dtype), src);
+}
+
 // 获取内部 Comm 指针 (高级用法: C++ 内部跨模块传递 shared_ptr)
 __C void *llaisysDistCommGetImplPtr(llaisysDistComm_t comm) {
     if (comm == nullptr) return nullptr;
     return &comm->impl;
+}
+
+// ══════════════════════════════════════════════════════════════
+// Phase 3: TP 同步控制器 C API
+// ══════════════════════════════════════════════════════════════
+
+// TPSync 不透明句柄
+struct LlaisysTPSync {
+    std::unique_ptr<llaisys::distributed::TPSyncController> impl;
+};
+
+__C llaisysTPSync_t llaisysTPSyncCreate(llaisysDistComm_t comm, size_t max_payload) {
+    if (comm == nullptr) throw std::invalid_argument("comm is null");
+    auto handle = new LlaisysTPSync;
+    handle->impl = std::make_unique<llaisys::distributed::TPSyncController>(
+        comm->impl, max_payload > 0 ? max_payload : 8192
+    );
+    return handle;
+}
+
+__C void llaisysTPSyncDestroy(llaisysTPSync_t sync) {
+    if (sync) delete sync;
+}
+
+__C void llaisysTPSyncFillPrefill(llaisysTPSync_t sync, int slot_id,
+                                    const int *token_ids, size_t n_tokens,
+                                    float temperature, int top_k, float top_p) {
+    if (!sync) throw std::invalid_argument("sync is null");
+    sync->impl->fillPrefillCommand(slot_id, token_ids, n_tokens, temperature, top_k, top_p);
+}
+
+__C void llaisysTPSyncFillDecode(llaisysTPSync_t sync,
+                                   const int *active_slots, const int *current_tokens,
+                                   int batch_size,
+                                   float temperature, int top_k, float top_p) {
+    if (!sync) throw std::invalid_argument("sync is null");
+    sync->impl->fillDecodeCommand(active_slots, current_tokens, batch_size, temperature, top_k, top_p);
+}
+
+__C void llaisysTPSyncFillSlotReset(llaisysTPSync_t sync, int slot_id) {
+    if (!sync) throw std::invalid_argument("sync is null");
+    sync->impl->fillSlotResetCommand(slot_id);
+}
+
+__C void llaisysTPSyncFillShutdown(llaisysTPSync_t sync) {
+    if (!sync) throw std::invalid_argument("sync is null");
+    sync->impl->fillShutdownCommand();
+}
+
+__C void llaisysTPSyncBroadcast(llaisysTPSync_t sync) {
+    if (!sync) throw std::invalid_argument("sync is null");
+    sync->impl->broadcastSync();
+}
+
+__C int llaisysTPSyncGetCmd(llaisysTPSync_t sync) {
+    if (!sync) throw std::invalid_argument("sync is null");
+    return static_cast<int>(sync->impl->cmd());
+}
+
+__C int llaisysTPSyncGetSlotId(llaisysTPSync_t sync) {
+    if (!sync) return -1;
+    return sync->impl->slotId();
+}
+
+__C int llaisysTPSyncGetBatchSize(llaisysTPSync_t sync) {
+    if (!sync) return 0;
+    return sync->impl->batchSize();
+}
+
+__C int llaisysTPSyncGetPayloadCount(llaisysTPSync_t sync) {
+    if (!sync) return 0;
+    return sync->impl->payloadCount();
+}
+
+__C float llaisysTPSyncGetTemperature(llaisysTPSync_t sync) {
+    if (!sync) return 0.0f;
+    return sync->impl->temperature();
+}
+
+__C int llaisysTPSyncGetTopK(llaisysTPSync_t sync) {
+    if (!sync) return 0;
+    return sync->impl->topK();
+}
+
+__C float llaisysTPSyncGetTopP(llaisysTPSync_t sync) {
+    if (!sync) return 0.0f;
+    return sync->impl->topP();
+}
+
+__C const int *llaisysTPSyncGetPayload(llaisysTPSync_t sync) {
+    if (!sync) return nullptr;
+    return sync->impl->payload();
 }

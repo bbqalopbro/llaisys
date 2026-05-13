@@ -16,6 +16,9 @@ __C {
     __export void llaisysSample(llaisysTensor_t out_idx, llaisysTensor_t logits, float temperature, int top_k, float top_p, uint64_t seed);
     __export void llaisysDequantize(llaisysTensor_t out, llaisysTensor_t weight, llaisysTensor_t scale);
     __export void llaisysDequantizeInt4(llaisysTensor_t out, llaisysTensor_t weight, llaisysTensor_t scale, int group_size);
+    __export void llaisysLinearInt4(llaisysTensor_t out, llaisysTensor_t in, llaisysTensor_t weight,
+                                    llaisysTensor_t scale, llaisysTensor_t bias,
+                                    int group_size, llaisysTensor_t residual);
 
     // Paged Attention: Q·K^T→softmax→·V with block-pooled KV-Cache
     // block_tables: [batch_size, max_blocks_per_seq] CPU-side int array

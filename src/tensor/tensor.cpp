@@ -163,6 +163,7 @@ void Tensor::debug() const {
     }
 }
 
+//判断连续：通过从最后一维往前检查，步长是否满足维度末尾乘法规则----view和load只能在连续tensor上操作
 bool Tensor::isContiguous() const {
     size_t z = 1;
     for (size_t i = _meta.shape.size(); i-- > 0;) {
@@ -174,6 +175,7 @@ bool Tensor::isContiguous() const {
     return true;
 }
 
+//要求连续，只是重新解释形状
 tensor_t Tensor::permute(const std::vector<size_t> &order) const {
     if (order.size() != this->ndim()) {
         throw std::runtime_error("order不合法");
@@ -187,7 +189,7 @@ tensor_t Tensor::permute(const std::vector<size_t> &order) const {
     TensorMeta new_meta{_meta.dtype, new_shape, new_strides};
     return std::shared_ptr<Tensor>(new Tensor(new_meta, _storage, _offset));
 }
-
+//交换维度=交换 stride，数据不动
 tensor_t Tensor::view(const std::vector<size_t> &shape) const {
     if (!isContiguous()) {
         throw std::runtime_error("tensor不连续");
@@ -209,7 +211,7 @@ tensor_t Tensor::view(const std::vector<size_t> &shape) const {
     TensorMeta new_meta = {_meta.dtype, shape, new_strides}; //保留了原数据_meta.dtype的情况下，使用新shape和new_strides
     return std::shared_ptr<Tensor>(new Tensor(new_meta, _storage, _offset));
 }
-
+//移动起始指针，缩小某一维的长度
 tensor_t Tensor::slice(size_t dim, size_t start, size_t end) const {
     if (dim >= ndim()) {
         throw std::runtime_error("维度超过");
@@ -219,10 +221,10 @@ tensor_t Tensor::slice(size_t dim, size_t start, size_t end) const {
     }
     TensorMeta new_meta = _meta;
     new_meta.shape[dim] = end - start;
-    size_t added_offset = start * _meta.strides[dim] * elementSize();
+    size_t added_offset = start * _meta.strides[dim] * elementSize(); //跳过 start 个位置 × 步长 × 字节数
     return std::shared_ptr<Tensor>(new Tensor(new_meta, _storage, _offset + added_offset));
 }
-
+// 从 CPU 加载数据，这是权重加载的底层入口——Python 侧读 safetensors 文件到 CPU 内存，然后调 load() 传到 GPU
 void Tensor::load(const void *src_) {
     if(!isContiguous()){
         throw std::runtime_error("tensor不连续");
@@ -258,15 +260,16 @@ namespace{
         }
     }
 }
+//把不连续的变连续
 tensor_t Tensor::contiguous() const {
     if(isContiguous()) return std::shared_ptr<Tensor>(new Tensor(_meta, _storage, _offset));
 
     auto res = create(_meta.shape, _meta.dtype, deviceType(), deviceId());
-    if(deviceType() == LLAISYS_DEVICE_CPU){
+    if(deviceType() == LLAISYS_DEVICE_CPU){ //cpu上用按 stride 逐元素拷贝到新的连续内存
         size_t dst_offset = 0; //游标从0开始
         copy_strided_cpu(this->data(), res->data(), _meta.shape, _meta.strides, elementSize(), 0, dst_offset); //这里dim用的0，是因为copy_strided_cpu是个递归函数，从 0 递归到 shape.size() - 1
     }else {
-        
+        //先 D2H 拷到 CPU → CPU 上做一次 contiguous → 再 H2D 传回 GPU
         size_t raw_size = _storage->size();
         auto cpu_storage = core::context().runtime().allocateHostStorage(raw_size);
         core::context().setDevice(deviceType(), deviceId());
@@ -276,7 +279,6 @@ tensor_t Tensor::contiguous() const {
             raw_size, 
             LLAISYS_MEMCPY_D2H
         );
-
         auto cpu_mirror = std::shared_ptr<Tensor>(new Tensor(_meta, cpu_storage, _offset));
         auto cpu_contig = cpu_mirror->contiguous();
         res = cpu_contig->to(deviceType(), deviceId());

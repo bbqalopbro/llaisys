@@ -26,8 +26,11 @@
 | `src/ops/self_attention/paged_attention.hpp` | 平台无关接口 `void*` + dtype |
 | `src/ops/self_attention/paged_attention.cpp` | 转发 dtype 到 GPU 后端 |
 | `src/ops/self_attention/nvidia/flashinfer_adapter.cuh` | FlashInfer 签名 `void*` |
+| `src/ops/self_attention/nvidia/flashinfer_adapter.cu` | 适配新版 FlashInfer public batch decode API（F16 paged decode） |
 | `src/ops/linear/nvidia/linear_nvidia.cu` | 新增混合精度路径（F32 权重 × F16 激活） |
 | `src/llaisys/models/qwen2.cpp` | `act_dtype` 字段 + 全流程 FP16 集成 |
+| `xmake.lua`, `xmake/nvidia.lua` | FlashInfer 编译链、CUDA devlink、测试/benchmark CUDA include |
+| `third_party/flashinfer/flashinfer/page.cuh` | 本地 overlay，修复 FlashInfer 头文件在 `-Werror` 下的 member-init-order 编译问题 |
 
 ---
 
@@ -319,6 +322,78 @@ if use_fp16_weights:
 - **显存减半 47%**: 权重 3.4GB → 1.7GB, KV-Cache 224MB → 112MB, 激活缓冲区减半
 - 三次运行结果完全一致, token-for-token 匹配 HuggingFace BF16 参考
 
+### 8.1 FlashInfer F16 Decode 补充
+
+本次补充了 `flashinfer_adapter.cu`，将 LLAISYS 的 paged KV block pool 对接到 FlashInfer 当前公开的 batch decode API，并将 F16 decode 路径接入 `ops::paged_attention(...)` 的 NVIDIA 分发。
+
+#### 启用条件
+
+当前 FlashInfer 路径只在以下条件同时满足时启用：
+
+- `dtype == F16`
+- `head_dim ∈ {64, 128, 256}`
+- `group_size = num_heads / num_kv_heads ∈ {1, 2, 4, 8}`
+- `kv_quant == FP32`
+- 编译时开启 `--flashinfer=y`
+
+其余情况统一自动回退到项目自带的 `paged_attention_nvidia.cu`，不会影响原有功能正确性。
+
+#### 与当前项目模型的关系
+
+这点需要特别说明：
+
+- 当前项目默认 Qwen2 单卡本地 head 配置通常是 `local_nh=12, local_nkvh=2`
+- 因此 `group_size = 12 / 2 = 6`
+- **6 不在 FlashInfer 当前 decode kernel 支持集合中**
+
+所以对当前默认 Qwen2 配置，系统会**自动回退到自研 paged attention kernel**。  
+换句话说：这次接入让 FlashInfer 路径“可用且受保护”，但**默认 Qwen2-1.5B 配置本身不会直接吃到 FlashInfer 加速**。
+
+#### 正确性验证
+
+新增 GPU F16 correctness case，配置为支持 FlashInfer 的：
+
+- `batch_size=2`
+- `num_heads=8`
+- `num_kv_heads=2`
+- `head_dim=128`
+- `block_size=16`
+
+执行：
+
+```bash
+xmake run llaisys-test-paged-attention
+```
+
+结果：
+
+- CPU 全部已有测试通过
+- GPU F16 paged attention 通过
+- 最大绝对误差：`7.33137e-05`
+
+#### 性能对比（RTX 4060 Laptop, GPU F16 decode synthetic bench）
+
+说明：
+
+- 基线：`xmake f -c --nv-gpu=y`
+- FlashInfer：`xmake f -c --nv-gpu=y --flashinfer=y --flashinfer-include=/home/bbq/.local/lib/python3.10/site-packages/flashinfer/data/include`
+- benchmark 稳定使用 FlashInfer 支持的配置：`num_heads=8, num_kv_heads=2, head_dim=128`
+
+| 配置 | 原始 F16 内建 kernel | FlashInfer F16 | 加速比 | 延迟下降 |
+|------|----------------------|----------------|--------|----------|
+| `B=1, seq=64`  | 0.136 ms | **0.110 ms** | **1.24x** | 19.1% |
+| `B=1, seq=256` | 0.282 ms | **0.113 ms** | **2.50x** | 59.9% |
+| `B=4, seq=64`  | 0.117 ms | **0.103 ms** | **1.14x** | 12.0% |
+| `B=4, seq=256` | 0.269 ms | **0.099 ms** | **2.72x** | 63.2% |
+| `B=8, seq=64`  | 0.137 ms | **0.093 ms** | **1.47x** | 32.1% |
+| `B=8, seq=256` | 0.239 ms | **0.112 ms** | **2.13x** | 53.1% |
+
+结论：
+
+- 对 **support matrix 内** 的 F16 decode 场景，FlashInfer 在中长上下文上带来明显收益
+- `seq=256` 时收益最明显，约 **2.1x ~ 2.7x**
+- 短上下文 `seq=64` 也有收益，但提升更温和
+
 ### 环境变量
 
 ```bash
@@ -343,7 +418,16 @@ $ xmake build
 
 ---
 
-## 10. Batch Prefill 优化
+## 10. Batch Prefill 优化（非 Chunked Prefill）
+
+> 纠正说明：当前代码实现的是 **Batch Prefill**，不是严格意义上的
+> **Chunked Prefill**。它会把整个 prompt 的 `S` 个 token 一次性送入模型计算，
+> 并把生成的 K/V 按 block 粒度写入 Paged KV block pool；但 prefill 阶段的
+> attention 仍然调用标准 `ops::self_attention`，没有使用 `paged_attention(...)`。
+>
+> 因此，当前实现没有做到“将长 prompt 切成多个 chunk，并在 chunk 之间与
+> decode 请求交错调度”。它主要解决的是逐 token prefill 的低 GPU 利用率和
+> 多次 kernel launch 问题。
 
 ### 10.1 问题背景
 
@@ -373,12 +457,38 @@ for (size_t t = 0; t < ntoken; ++t) {
 1. **临时缓冲区**: 所有中间张量形状从 `[1, ...]` 变为 `[S, ...]`
 2. **位置编码**: `pos_ids = [0, 1, 2, ..., S-1]`，一次性计算所有 RoPE
 3. **Self-Attention**: prefill 阶段仍使用标准 `ops::self_attention`（非 PagedAttention），可并行处理 S 个 query
-4. **KV-Cache 写入**: 单次 `cudaMemcpy` 将 S 个 KV 向量写入 block 0 起始的连续缓存
+4. **KV-Cache 写入**:
+   - SingleModel 路径写入连续 KV-Cache
+   - BatchContext 路径按 block 粒度写入 Paged KV block pool
 5. **输出提取**: 仅取最后一个 token 的 hidden state 送入 LM Head
+
+### 10.2.1 与真正 Chunked Prefill 的区别
+
+真正的 Chunked Prefill 通常指：
+
+```
+长 prompt S tokens
+→ 切成 chunk_0, chunk_1, ...
+→ 每次只处理一个 chunk
+→ chunk 之间允许插入 decode step
+```
+
+它的主要目标是避免长 prompt 长时间独占 GPU，提高在线服务中的 TTFT/TPOT
+平衡和调度公平性。
+
+当前实现没有 chunk 级调度，也没有在 prefill 阶段通过 `paged_attention(...)`
+读取历史 paged KV。当前实现更准确地说是：
+
+```
+Batch Prefill:
+  一次性处理完整 prompt
+  attention 使用连续临时 K/V + self_attention
+  K/V 结果同步写入连续 cache 或 Paged KV block pool
+```
 
 **修改文件：** `src/llaisys/models/qwen2.cpp`
 
-### 10.2.1 核心代码
+### 10.2.2 核心代码
 
 #### 入口路由
 
@@ -417,7 +527,7 @@ model->memcpyOnDevice(k_dst, k_3d->data(), S * kv_row_bytes);  // 单次拷贝
 model->memcpyOnDevice(v_dst, v_3d->data(), S * kv_row_bytes);
 ```
 
-**批量上下文路径** — Scatter 到 Block Pool (PagedAttention):
+**批量上下文路径** — Scatter 到 Paged KV Block Pool（注意：不是 PagedAttention）:
 
 ```cpp
 // 按 block 粒度拷贝: 每个 block 一次 memcpy
@@ -451,6 +561,9 @@ model->memcpyOnDevice(model->hidden_states->data(), last_hs_src, hs * elem_sz);
 | GPU 利用率 | 低 (大量 launch overhead) | 高 (矩阵运算并行) |
 
 > L = 28 (Qwen2-1.5B 层数), S = prefill token 数
+> 当前 BatchContext 路径按 block 粒度拷贝 K/V，因此拷贝次数约为
+> `L × ceil(S / block_size)`，而不是严格的 `L` 次；表格中的 `L 次`
+> 更适用于 SingleModel 连续 KV 写入路径。
 
 ### 10.3 正确性验证
 

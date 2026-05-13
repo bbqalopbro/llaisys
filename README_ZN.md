@@ -391,6 +391,39 @@ python test/test_runtime.py --device nvidia
 python test/test_infer.py --model [dir_path/to/model] --test --device nvidia
 ```
 
+### 离线推理与服务器运行示例
+
+FP16/原始权重离线推理：
+
+```bash
+python test/test_infer.py \
+  --model models/DeepSeek-R1-Distill-Qwen-1.5B \
+  --device nvidia \
+  --prompt "Hello, briefly introduce yourself." \
+  --max_steps 32
+```
+
+INT4 量化模型离线推理：
+
+```bash
+python test/test_infer.py \
+  --model quantized_model_int4 \
+  --device nvidia \
+  --prompt "Explain paged attention in one sentence." \
+  --max_steps 32
+```
+
+启动 INT4 量化模型聊天服务器：
+
+```bash
+cd python
+python -m server.app \
+  --model ../quantized_model_int4 \
+  --device nvidia \
+  --host 0.0.0.0 \
+  --port 8000
+```
+
 ## 项目#3：构建 AI 聊天机器人
 
 本项目中，你将用 LLAISYS 构建一个能与单用户实时对话的聊天机器人。

@@ -52,6 +52,13 @@ __C {
     void llaisysDequantizeInt4(llaisysTensor_t out, llaisysTensor_t weight, llaisysTensor_t scale, int group_size) {
         llaisys::ops::dequantize_int4(out->tensor, weight->tensor, scale->tensor, group_size);
     }
+    void llaisysLinearInt4(llaisysTensor_t out, llaisysTensor_t in, llaisysTensor_t weight,
+                           llaisysTensor_t scale, llaisysTensor_t bias,
+                           int group_size, llaisysTensor_t residual) {
+        llaisys::ops::linear_int4(out->tensor, in->tensor, weight->tensor, scale->tensor,
+                                  bias ? bias->tensor : nullptr, group_size,
+                                  residual ? residual->tensor : nullptr);
+    }
     void llaisysPagedAttention(
         float *output, const float *query,
         void *k_pool, void *v_pool,

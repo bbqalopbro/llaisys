@@ -1,4 +1,5 @@
 #include "op.hpp"
+#include "../dequantize/op.hpp"
 
 #ifdef ENABLE_NVIDIA_API
 #include "nvidia/linear_nvidia.cuh"
@@ -144,6 +145,33 @@ void linear_add(tensor_t out, tensor_t in, tensor_t weight, tensor_t bias,
                 float v = llaisys::utils::cast<float>(o[i]) + llaisys::utils::cast<float>(r[i]);
                 o[i] = llaisys::utils::cast<llaisys::fp16_t>(v);
             }
+        }
+    }
+}
+
+void linear_int4(tensor_t out, tensor_t in, tensor_t weight, tensor_t scale,
+                 tensor_t bias, int group_size, tensor_t residual) {
+#ifdef ENABLE_NVIDIA_API
+    if (out->deviceType() == LLAISYS_DEVICE_NVIDIA) {
+        return nvidia::linear_int4(out, in, weight, scale, bias, group_size, residual);
+    }
+#endif
+
+    // CPU fallback: dequantize + linear (NOT fused, 仅用于测试)
+    int64_t rows = weight->shape()[0];
+    int64_t packed_cols = weight->shape()[1];
+    int64_t cols = packed_cols * 2;
+    auto dq = llaisys::Tensor::create({(size_t)rows, (size_t)cols}, LLAISYS_DTYPE_F32,
+                                       LLAISYS_DEVICE_CPU, 0);
+    dequantize_int4(dq, weight, scale, group_size);
+    linear(out, in, dq, bias);
+    if (residual && residual->data()) {
+        auto dt = out->dtype();
+        int64_t n = out->numel();
+        if (dt == LLAISYS_DTYPE_F32) {
+            float *o = reinterpret_cast<float *>(out->data());
+            const float *r = reinterpret_cast<const float *>(residual->data());
+            for (int64_t i = 0; i < n; i++) o[i] += r[i];
         }
     }
 }

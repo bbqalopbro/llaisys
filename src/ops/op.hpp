@@ -46,5 +46,11 @@ void dequantize_int4(tensor_t out, tensor_t weight, tensor_t scale, int group_si
 //     out: [out_features, in_features] transposed for linear
 void dequantize_awq_int4(tensor_t out, tensor_t qweight, tensor_t qzeros, tensor_t scales, int group_size);
 
+// 12. Fused W4A16 Linear (INT4 packed weight × FP16 input, fused dequant+GEMV)
+//     M=1: fused GEMV kernel, 直接读 INT4 权重无中间缓冲区
+//     M>1: 回退到 dequantize_int4 + cuBLAS
+void linear_int4(tensor_t out, tensor_t in, tensor_t weight, tensor_t scale,
+                tensor_t bias, int group_size, tensor_t residual = nullptr);
+
 } // namespace ops
 } // namespace llaisys

@@ -103,3 +103,4 @@ quantized_model_int4/
 # Temp files
 nohup.out
 test_awq_native.py
+项目文档/

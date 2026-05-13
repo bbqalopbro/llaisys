@@ -71,7 +71,7 @@ __global__ void paged_attention_kernel(
 {
     int batch_idx = blockIdx.x;
     int head_idx = blockIdx.y;
-    int group_size = num_heads / num_kv_heads;
+    int group_size = num_heads / num_kv_heads; //GQA适配
     int kv_head_idx = head_idx / group_size;
 
     int seq_len = seq_lens[batch_idx];
@@ -102,10 +102,10 @@ __global__ void paged_attention_kernel(
 
     for (int bi = 0; bi < num_blocks; ++bi) {
         int block_id = block_tables[batch_idx * max_blocks_per_seq + bi];
-        int tokens_in_block = min(block_size, seq_len - bi * block_size);
+        int tokens_in_block = min(block_size, seq_len - bi * block_size); //最后一个 block 可能不满，所以要算真实 token 数。
 
         // KV pool 按字节寻址，reinterpret_cast 到实际 I/O 类型 T
-        const T *k_base = reinterpret_cast<const T *>(
+        const T *k_base = reinterpret_cast<const T *>( //k_base = K pool 里第 block_id 个物理 block第 layer_idx 层的起始地址
             k_pool + (size_t)block_id * pool_block_stride +
             (size_t)layer_idx * pool_layer_stride);
         const T *v_base = reinterpret_cast<const T *>(
@@ -190,7 +190,7 @@ static void paged_attention_typed(
     CUDA_CHECK(cudaMemcpy(d_block_tables, block_tables_host, bt_bytes, cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(d_seq_lens, seq_lens_host, sl_bytes, cudaMemcpyHostToDevice));
 
-    dim3 grid(batch_size, num_heads);
+    dim3 grid(batch_size, num_heads); //当前 CUDA block 负责：第 batch_idx 个 sequence、 第 head_idx 个 Q head
     // Use WARP_SIZE threads per block (sufficient for head_dim=128)
     // For head_dim > WARP_SIZE, use multiple warps
     int threads = min(128, max(WARP_SIZE, ((head_dim + WARP_SIZE - 1) / WARP_SIZE) * WARP_SIZE));

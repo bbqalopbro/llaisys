@@ -30,6 +30,9 @@ class LlaisysDistConfig(ctypes.Structure):
         ("world_size",   ctypes.c_int),
         ("rank",         ctypes.c_int),
         ("local_device", ctypes.c_int),
+        # Phase 4: 多节点 NCCL 支持
+        ("master_addr",  ctypes.c_char_p),   # rank 0 IP (NULL = 单机文件模式)
+        ("master_port",  ctypes.c_int),      # rank 0 TCP 端口 (0 = 默认 29400)
     ]
 
 

@@ -5,11 +5,18 @@
 //   1. ncclUniqueId 通过文件系统共享 (rank 0 写, 其他 rank 轮询读)
 //   2. 专用 CUDA stream 避免与计算 stream 冲突
 //   3. barrier 用单元素 allReduce 模拟 (NCCL 无原生 barrier)
+//
+// Phase 1 改造: 新增 CommDataType → ncclDataType_t 映射
+//   - allReduceSum(void*, count, CommDataType) 直接调用 ncclAllReduce
+//   - FP16 使用 ncclFloat16, BF16 使用 ncclBfloat16
+//   - 无需任何数据拷贝或类型转换, NCCL 原生支持这些精度
 // ============================================================================
 
 #include "comm.hpp"
 
 #ifdef ENABLE_DIST_NCCL
+
+#include "tcp_id_store.hpp"
 
 #include <nccl.h>
 #include <cuda_runtime.h>
@@ -24,6 +31,18 @@
 #include <chrono>
 
 namespace llaisys::distributed {
+
+// CommDataType → ncclDataType_t 映射
+// NCCL 原生支持 FP32/FP16/BF16, 无需任何手动转换
+static ncclDataType_t toNcclDataType(CommDataType dtype) {
+    switch (dtype) {
+        case CommDataType::F32:  return ncclFloat32;
+        case CommDataType::F16:  return ncclFloat16;
+        case CommDataType::BF16: return ncclBfloat16;
+        default:
+            throw std::runtime_error("Unsupported CommDataType for NCCL");
+    }
+}
 
 // NCCL 错误检查宏
 #define NCCL_CHECK(cmd) do {                                               \
@@ -114,10 +133,29 @@ public:
         ncclUniqueId nccl_id;
 
         if (_world_size == 1) {
-            // 单卡模式: 直接初始化
+            // 单卡模式: 直接初始化, 无需跨进程同步
             NCCL_CHECK(ncclGetUniqueId(&nccl_id));
+        } else if (!config.master_addr.empty()) {
+            // ── Phase 4: 多节点 TCP 模式 ──────────────────────────
+            // 通过 TCP socket 分发 ncclUniqueId, 支持跨机器
+            // 兼容 PyTorch Distributed 模式 (MASTER_ADDR/MASTER_PORT)
+            if (_rank == 0) {
+                NCCL_CHECK(ncclGetUniqueId(&nccl_id));
+                fprintf(stderr, "[NCCL] rank 0: generated unique ID, "
+                                "distributing via TCP %s:%d\n",
+                        config.master_addr.c_str(), config.master_port);
+            }
+            // rank 0 分发, 其他 rank 接收
+            tcpExchangeNcclId(nccl_id.internal, _rank, _world_size,
+                              config.master_addr, config.master_port);
+            if (_rank != 0) {
+                fprintf(stderr, "[NCCL] rank %d: received unique ID via TCP "
+                                "from %s:%d\n",
+                        _rank, config.master_addr.c_str(), config.master_port);
+            }
         } else {
-            // 多卡模式: rank 0 生成并写文件, 其他 rank 从文件读取
+            // ── 传统单机文件模式 ──────────────────────────────────
+            // rank 0 写文件, 其他 rank 轮询读取 (仅限共享文件系统)
             std::string id_file = getNcclIdFilePath();
             if (_rank == 0) {
                 NCCL_CHECK(ncclGetUniqueId(&nccl_id));
@@ -149,16 +187,28 @@ public:
     int worldSize() const override { return _world_size; }
     int rank() const override { return _rank; }
 
-    void allReduceSum(float *data, size_t count) override {
+    // 多数据类型就地全归约求和 (Phase 1 核心改造)
+    // data: GPU 显存上的缓冲区指针 (类型由 dtype 指定)
+    // count: 元素个数 (不是字节数)
+    // dtype: F32/F16/BF16 → 映射到 ncclFloat32/ncclFloat16/ncclBfloat16
+    //
+    // FP16 AllReduce 相比 FP32:
+    //   - 传输数据量减半 → NVLink/PCIe 带宽利用率翻倍
+    //   - NCCL 内部 ring/tree reduce 开销也减半
+    //   - 精度损失在推理场景可忽略 (FP16 已是标准推理精度)
+    void allReduceSum(void *data, size_t count, CommDataType dtype) override {
         if (count == 0) return;
 
         // 确保在正确的设备上操作
         CUDA_CHECK(cudaSetDevice(_device));
 
+        // 转换数据类型枚举
+        ncclDataType_t nccl_dtype = toNcclDataType(dtype);
+
         // 就地 allReduce (sendbuf == recvbuf)
         NCCL_CHECK(ncclAllReduce(
             data, data, count,
-            ncclFloat32, ncclSum,
+            nccl_dtype, ncclSum,
             _nccl_comm, _stream));
 
         // 同步等待完成 (当前架构是同步调用)
@@ -180,6 +230,108 @@ public:
 
         CUDA_CHECK(cudaStreamSynchronize(_stream));
         CUDA_CHECK(cudaFree(dummy));
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // AllGather: 全收集 (Phase 2 新增)
+    // ══════════════════════════════════════════════════════════════
+    // NCCL ncclAllGather:
+    //   每个 rank 的 sendbuf[0..sendcount-1] → recvbuf 中按 rank 顺序拼接
+    //   recvbuf 大小 = sendcount * world_size
+    //   数据始终在 GPU 显存上, 零 CPU 拷贝
+    void allGather(const void *sendbuf, void *recvbuf, size_t sendcount,
+                   CommDataType dtype) override {
+        if (sendcount == 0) return;
+        CUDA_CHECK(cudaSetDevice(_device));
+        ncclDataType_t nccl_dtype = toNcclDataType(dtype);
+
+        NCCL_CHECK(ncclAllGather(
+            sendbuf, recvbuf, sendcount,
+            nccl_dtype,
+            _nccl_comm, _stream));
+
+        CUDA_CHECK(cudaStreamSynchronize(_stream));
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // ReduceScatter: 归约后分发 (Phase 2 新增)
+    // ══════════════════════════════════════════════════════════════
+    // NCCL ncclReduceScatter:
+    //   所有 rank 的 sendbuf 逐元素求和, 结果均分给各 rank
+    //   sendbuf 大小 = recvcount * world_size
+    //   每个 rank 的 recvbuf 获得总和的第 rank 个分片
+    //
+    // Sequence Parallel 用法:
+    //   AllReduce 可拆分为 ReduceScatter + AllGather
+    //   SP 在 ReduceScatter 后各 rank 独立做 LayerNorm/Dropout
+    //   最后再 AllGather 拼接 → 激活显存降为 1/tp_size
+    void reduceScatter(const void *sendbuf, void *recvbuf, size_t recvcount,
+                       CommDataType dtype) override {
+        if (recvcount == 0) return;
+        CUDA_CHECK(cudaSetDevice(_device));
+        ncclDataType_t nccl_dtype = toNcclDataType(dtype);
+
+        NCCL_CHECK(ncclReduceScatter(
+            sendbuf, recvbuf, recvcount,
+            nccl_dtype, ncclSum,
+            _nccl_comm, _stream));
+
+        CUDA_CHECK(cudaStreamSynchronize(_stream));
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // Broadcast: 广播 (Phase 2 新增)
+    // ══════════════════════════════════════════════════════════════
+    // NCCL ncclBroadcast (等价于旧版 ncclBcast):
+    //   root rank 的 data → 所有 rank 的 data (就地覆盖)
+    //   NVLink 上延迟极低 (~5μs), 可替代 TCP 同步控制信号
+    void broadcast(void *data, size_t count, CommDataType dtype, int root) override {
+        if (count == 0) return;
+        CUDA_CHECK(cudaSetDevice(_device));
+        ncclDataType_t nccl_dtype = toNcclDataType(dtype);
+
+        // ncclBroadcast: sendbuf=recvbuf 时为就地操作
+        NCCL_CHECK(ncclBroadcast(
+            data, data, count,
+            nccl_dtype, root,
+            _nccl_comm, _stream));
+
+        CUDA_CHECK(cudaStreamSynchronize(_stream));
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // Send/Recv: 点对点通信 (Phase 2 新增, 为 PP 预留)
+    // ══════════════════════════════════════════════════════════════
+    // NCCL ncclSend/ncclRecv:
+    //   GPU-Direct P2P 传输, 同一 NVLink 域内延迟极低
+    //   必须成对调用: rank A 调 send(dst=B) 同时 rank B 调 recv(src=A)
+    //   否则会死锁 (NCCL 的 P2P 语义要求配对)
+    //
+    // PP 用法:
+    //   stage i: send(hidden_states, count, F16, next_stage_rank)
+    //   stage i+1: recv(hidden_states, count, F16, prev_stage_rank)
+    void send(const void *data, size_t count, CommDataType dtype, int dst) override {
+        if (count == 0) return;
+        CUDA_CHECK(cudaSetDevice(_device));
+        ncclDataType_t nccl_dtype = toNcclDataType(dtype);
+
+        NCCL_CHECK(ncclSend(
+            data, count, nccl_dtype,
+            dst, _nccl_comm, _stream));
+
+        CUDA_CHECK(cudaStreamSynchronize(_stream));
+    }
+
+    void recv(void *data, size_t count, CommDataType dtype, int src) override {
+        if (count == 0) return;
+        CUDA_CHECK(cudaSetDevice(_device));
+        ncclDataType_t nccl_dtype = toNcclDataType(dtype);
+
+        NCCL_CHECK(ncclRecv(
+            data, count, nccl_dtype,
+            src, _nccl_comm, _stream));
+
+        CUDA_CHECK(cudaStreamSynchronize(_stream));
     }
 };
 

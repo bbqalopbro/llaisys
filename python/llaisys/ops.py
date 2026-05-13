@@ -72,3 +72,13 @@ class Ops:
         LIB_LLAISYS.llaisysDequantizeInt4(
             out.lib_tensor(), weight.lib_tensor(), scale.lib_tensor(), c_int(group_size)
         )
+
+    @staticmethod
+    def linear_int4(out: Tensor, inp: Tensor, weight: Tensor, scale: Tensor,
+                    bias: Tensor, group_size: int, residual: Tensor = None):
+        LIB_LLAISYS.llaisysLinearInt4(
+            out.lib_tensor(), inp.lib_tensor(), weight.lib_tensor(), scale.lib_tensor(),
+            bias.lib_tensor() if bias is not None else None,
+            c_int(group_size),
+            residual.lib_tensor() if residual is not None else None,
+        )

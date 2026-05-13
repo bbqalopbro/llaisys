@@ -51,3 +51,14 @@ def load_ops(lib):
 
     lib.llaisysDequantizeInt4.argtypes = [llaisysTensor_t, llaisysTensor_t, llaisysTensor_t, ctypes.c_int]
     lib.llaisysDequantizeInt4.restype = None
+
+    lib.llaisysLinearInt4.argtypes = [
+        llaisysTensor_t,  # out
+        llaisysTensor_t,  # in
+        llaisysTensor_t,  # weight packed U8
+        llaisysTensor_t,  # scale
+        llaisysTensor_t,  # bias or None
+        ctypes.c_int,     # group_size
+        llaisysTensor_t,  # residual or None
+    ]
+    lib.llaisysLinearInt4.restype = None

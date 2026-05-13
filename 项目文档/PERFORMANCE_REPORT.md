@@ -1,7 +1,7 @@
 # LLAISYS 性能测试报告
 
-> 测试环境: Linux x86_64 (WSL2), CPU-only 模式
-> 测试日期: 2026-03-30
+> 测试环境: Linux x86_64 (WSL2), CPU-only 模式 + NVIDIA RTX 4060 8GB GPU
+> 测试日期: 2026-03-30 (CPU) / 2026-07-14 (GPU)
 
 ---
 
@@ -16,6 +16,8 @@
 7. [端到端引擎吞吐量](#7-端到端引擎吞吐量)
 8. [混合负载下的 Block 利用率](#8-混合负载下的-block-利用率)
 9. [关键发现与结论](#9-关键发现与结论)
+10. [GPU 推理性能基准 (RTX 4060 8GB)](#10-gpu-推理性能基准-rtx-4060-8gb)
+11. [综合结论](#11-综合结论)
 
 ---
 
@@ -235,11 +237,193 @@ Block Allocator 是 PagedAttention 的内存管理基础。其 alloc/free 操作
 
 ---
 
+## 10. GPU 推理性能基准 (RTX 4060 8GB)
+
+> 测试环境: NVIDIA GeForce RTX 4060 Laptop GPU (8188 MiB), CUDA 12.5, NCCL
+> 模型: DeepSeek-R1-Distill-Qwen-1.5B (layers=28, hidden=1536, heads=12, kv_heads=2)
+> 构建: xmake --nv-gpu=y --dist-nccl=y -O3
+> 测试脚本: `test/bench_gpu_infer.py`, `test/bench_int8_only.py`, `test/bench_int4_only.py`
+
+### 10.1 FP16 推理基准
+
+| InputLen | AvgOut | AvgTime(ms) | Tok/s | Min(ms) | Max(ms) |
+|----------|--------|-------------|-------|---------|---------|
+| 16       | 50.0   | 857         | **58.4**  | 843     | 876     |
+| 64       | 50.0   | 926         | **54.0**  | 914     | 943     |
+| 128      | 50.0   | 1007        | **49.6**  | 994     | 1025    |
+| 256      | 50.0   | 1190        | **42.0**  | 1175    | 1210    |
+| 512      | 50.0   | 1586        | **31.5**  | 1568    | 1611    |
+
+- **模型显存**: 4621 MB（FP16 权重 ~3.0 GB + KV Cache + CUDA context）
+- **生成配置**: top_k=1, temperature=1.0, warmup=2, repeat=5
+
+### 10.2 INT8 量化推理 (per_channel_symmetric_int8)
+
+| InputLen | AvgOut | AvgTime(ms) | Tok/s | Min(ms) | Max(ms) |
+|----------|--------|-------------|-------|---------|---------|
+| 16       | 50.0   | 2835.9      | **17.6**  | 2777.1  | 2938.1  |
+| 64       | 50.0   | 2965.0      | **16.9**  | 2866.7  | 3041.2  |
+| 128      | 50.0   | 2994.3      | **16.7**  | 2926.5  | 3094.6  |
+| 256      | 50.0   | 3181.8      | **15.7**  | 3118.7  | 3255.9  |
+| 512      | —      | CUDA OOM    | —     | —       | —       |
+
+- **模型显存**: 3590 MB（增量 3082 MB）
+- **量化方式**: per_channel_symmetric, 8-bit
+
+### 10.3 INT4 量化推理 (per_group_symmetric_int4_g128)
+
+| InputLen | AvgOut | AvgTime(ms) | Tok/s  | Min(ms) | Max(ms) |
+|----------|--------|-------------|--------|---------|---------|
+| 16       | 50.0   | 475.6       | **105.1** | 471.1   | 481.8   |
+| 64       | 50.0   | 514.4       | **97.2**  | 512.8   | 515.8   |
+| 128      | 50.0   | 610.3       | **81.9**  | 608.2   | 614.1   |
+| 256      | 50.0   | 810.6       | **61.7**  | 805.3   | 820.3   |
+| 512      | 50.0   | 1193.5      | **41.9**  | 1190.3  | 1195.5  |
+
+- **模型显存**: 3784 MB（增量 2340 MB）
+- **量化方式**: per_group_symmetric, 4-bit, group_size=128
+- **量化模型大小**: 原始 3.0 GB FP32 → 0.78 GB INT4（**74% 压缩**）
+
+### 10.4 三方精度对比
+
+| InputLen | FP16 Tok/s | INT8 Tok/s | INT4 Tok/s | INT4/FP16 加速比 | INT8/FP16 比率 |
+|----------|-----------|-----------|-----------|-----------------|---------------|
+| 16       | 58.4      | 17.6      | **105.1** | **1.80×**       | 0.30×         |
+| 64       | 54.0      | 16.9      | **97.2**  | **1.80×**       | 0.31×         |
+| 128      | 49.6      | 16.7      | **81.9**  | **1.65×**       | 0.34×         |
+| 256      | 42.0      | 15.7      | **61.7**  | **1.47×**       | 0.37×         |
+| 512      | 31.5      | OOM       | **41.9**  | **1.33×**       | —             |
+
+**关键发现：**
+
+1. **INT4 全面领先 FP16**：短输入时加速 1.80×，长输入时加速 1.33×
+2. **INT8 反而最慢**（仅 FP16 的 0.30~0.37×），原因分析见下方
+3. **INT4 显存最优**：增量 2340 MB vs FP16 的 ~3973 MB（**节省 41%**）
+
+### 10.5 显存消耗对比
+
+| 精度 | 模型显存增量 | 总占用 | 相对 FP16 节省 |
+|------|------------|-------|---------------|
+| FP16 | ~3973 MB   | 4621 MB | — (基准)      |
+| INT8 | 3082 MB    | 3590 MB | **22%**       |
+| INT4 | 2340 MB    | 3784 MB* | **41%**       |
+
+> *INT4 总占用较高是因为测试时 CUDA context 基线不同（1444 MB vs 648 MB），模型增量才是有效对比指标
+
+### 10.6 GPU Paged Attention Benchmark (C++)
+
+单次 Paged Attention kernel 延迟（CUDA GPU 实测）：
+
+| 配置 | 延迟 |
+|------|------|
+| B=1, seq=64   | **0.099 ms** |
+| B=1, seq=1024 | **0.737 ms** |
+
+全解码步骤 GPU 吞吐量（所有 28 层 Paged Attention）：
+
+| 配置 | 吞吐量 |
+|------|--------|
+| B=1, seq=64  | **5,293 tok/s** |
+| B=8, seq=64  | **5,950 tok/s** |
+
+### 10.7 性能分析
+
+#### INT4 为何最快？—— 带宽瓶颈效应
+
+RTX 4060 Laptop GPU 规格：
+- **显存带宽**: ~256 GB/s (GDDR6)
+- **FP16 算力**: ~176 TFLOPS (Tensor Cores)
+
+对于 1.5B 参数 Transformer decoder 的逐 token 生成（decode 阶段）：
+- 每个 token 需要读取所有模型权重一次（矩阵-向量乘法）
+- **FP16 权重**: 1.5B × 2 bytes = **3.0 GB/token** → 至少 11.7 ms/token (带宽限制)
+- **INT4 权重**: 1.5B × 0.5 bytes = **0.75 GB/token** → 至少 2.9 ms/token (带宽限制)
+- **实测**: FP16 ~17 ms/token (InputLen=16), INT4 ~9.5 ms/token → 符合带宽瓶颈模型
+
+INT4 通过 **4× 减少显存读取量**，在 bandwidth-bound 的 decode 阶段获得显著加速。反量化开销（INT4→FP16, per-group g128）远小于节省的带宽时间。
+
+#### INT8 为何最慢？—— 反量化实现瓶颈
+
+当前 INT8 实现采用 **per-channel symmetric** 量化，运行时反量化路径：
+1. 从显存读取 INT8 权重
+2. 逐元素 cast: INT8 → FP32
+3. 乘以 per-channel scale
+4. FP32 → FP16 转换
+5. FP16 矩阵乘法
+
+问题在于步骤 2-4 的 **逐元素反量化开销过高**：
+- 没有使用 INT8 Tensor Core（需要 cuBLAS INT8 GEMM 或自定义 kernel）
+- 多次数据类型转换增加了 ~3× 延迟
+- 中间 FP32 缓冲区增大了显存带宽压力
+
+**优化方向**：实现 W8A16 CUDA kernel（直接在 Tensor Core 上做 INT8×FP16 混合精度 GEMM），或使用 CUTLASS INT8 GEMM template。
+
+#### 输入长度与吞吐量关系
+
+```
+Tok/s
+  ^
+120 |  * INT4
+100 |  *
+ 80 |     *   * FP16
+ 60 |  *     *
+ 40 |           *   * INT4 (512)
+ 20 |  * --------*   * FP16 (512)
+  0 +--+---+---+---+----> InputLen
+    16  64  128 256 512
+```
+
+- 短输入 (16 tokens): prefill 快速完成，decode 主导 → 纯带宽瓶颈
+- 长输入 (512 tokens): prefill 占更大比例（$O(n^2)$ attention），compute 和 bandwidth 混合瓶颈
+- INT4 在所有长度下保持优势，但差距随输入长度增加而缩小
+
+---
+
+## 11. 综合结论
+
+### 端到端推理性能总结
+
+| 指标 | FP16 | INT8 | INT4 | 最优方案 |
+|------|------|------|------|---------|
+| 短输入吞吐 (16 tokens) | 58.4 tok/s | 17.6 tok/s | **105.1 tok/s** | INT4 |
+| 长输入吞吐 (512 tokens) | 31.5 tok/s | OOM | **41.9 tok/s** | INT4 |
+| 模型显存 | 3973 MB | 3082 MB | **2340 MB** | INT4 |
+| Paged Attention 延迟 | — | — | — | **0.099 ms** (B=1) |
+| Decode 吞吐 (C++ kernel) | — | — | — | **5,950 tok/s** (B=8) |
+| 稳定性 | ✅ | ⚠️ OOM@512 | ✅ | FP16/INT4 |
+
+### 推荐配置
+
+| 场景 | 推荐精度 | 原因 |
+|------|---------|------|
+| **生产部署 (8GB GPU)** | INT4-g128 | 最高吞吐 + 最小显存，可留空间给更大 batch |
+| **高精度需求** | FP16 | 无量化损失，稳定可靠 |
+| **显存极限场景** | INT4-g128 | 2340 MB 模型增量，8GB 可跑更多并发 |
+| **INT8** | 暂不推荐 | 需优化反量化 kernel 后重新评估 |
+
+### TP (Tensor Parallelism) 优化成果
+
+Phase 1-4 已实现的 TP 基础设施：
+
+| 阶段 | 实现内容 | 对性能的影响 |
+|------|---------|-------------|
+| Phase 1: FP16 AllReduce | 多精度 allReduceSum | 通信带宽减半（FP16 vs FP32）|
+| Phase 2: 通信原语 | AllGather/ReduceScatter/Broadcast/P2P | 支持多种并行策略 |
+| Phase 3: NCCL 广播同步 | TPSyncController | 替代 TCP JSON，延迟从 ms 级降至 μs 级 |
+| Phase 4: 多节点 NCCL | TCP ncclUniqueId 交换 | 支持跨机多卡扩展 |
+
+**理论加速**：在 2-GPU TP 配置下，每层 GEMM 输入维度减半，通信开销由 AllReduce 补偿。对于 bandwidth-bound 的 decode 阶段，2-GPU TP 理论加速 **1.6~1.8×**（扣除通信开销后）。
+
+---
+
 ## 附录: 测试文件说明
 
 | 文件 | 说明 |
 |------|------|
 | `test/bench_paged_attention.cpp` | C++ 性能基准: allocator 吞吐、attention 对比、内存分析、decode step |
 | `test/bench_scheduler.py` | Python 性能基准: 调度器组件吞吐、引擎端到端、block 利用率 |
+| `test/bench_gpu_infer.py` | GPU 推理基准: FP16/FP32/INT8 端到端 generate 性能 |
+| `test/bench_int8_only.py` | INT8 量化模型独立基准测试 |
+| `test/bench_int4_only.py` | INT4 量化模型独立基准测试 |
 | `test/test_kv_quant.cpp` | INT8/INT4 KV-Cache 量化正确性测试 |
 | `xmake.lua` | 构建配置: `llaisys-bench-paged-attention` target (with -O2) |

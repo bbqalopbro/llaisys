@@ -9,16 +9,16 @@
 namespace llaisys::core {
 
 struct BlockAllocatorConfig {
-    size_t num_blocks;
-    size_t block_size;    // tokens per block (e.g. 16)
+    size_t num_blocks;      //总共有多少个物理块
+    size_t block_size;    // 每块能装多少个 token
     size_t nlayer;
-    size_t nkvh;          // local KV heads (already divided by tp_size)
-    size_t dh;            // head dimension
-    size_t elem_size;     // bytes per element (e.g. 4 for FP32)
+    size_t nkvh;          // KV head 数
+    size_t dh;            // 每个 head 的维度
+    size_t elem_size;     // 单元素字节数。比如 FP32 是 4，FP16 是 2
 };
 
 // Pool-based allocator for paged KV-Cache blocks.
-// Memory layout (flat): [num_blocks, nlayer, block_size, nkvh, dh]
+//内存不是按“每个请求一整段连续 cache”分配，而是扁平化成：: [num_blocks, nlayer, block_size, nkvh, dh]
 // Each (block_id, layer) pair maps to a contiguous [block_size, nkvh, dh] region.
 class BlockAllocator {
 private:

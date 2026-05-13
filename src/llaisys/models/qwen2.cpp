@@ -211,10 +211,19 @@ struct LlaisysQwen2Model {
     }
 
     // TP: 若 tp_size>1 且有 comm, 对 tensor 执行 all-reduce sum
-    // TP: 若 tp_size>1 且有 comm, 对 tensor 执行 all-reduce sum
+    // Phase 1 改造: 根据 act_dtype 自动选择通信精度
+    //   FP16 激活 → CommDataType::F16 → NCCL 用 ncclFloat16, 带宽翻倍
+    //   FP32 激活 → CommDataType::F32 → 与改造前行为一致
     void allReduceIfTP(tensor_t t, size_t count) {
         if (tp_size > 1 && comm) {
-            comm->allReduceSum((float*)t->data(), count);
+            // 根据当前激活精度选择通信数据类型
+            auto comm_dtype = llaisys::distributed::CommDataType::F32;
+            if (act_dtype == LLAISYS_DTYPE_F16) {
+                comm_dtype = llaisys::distributed::CommDataType::F16;
+            } else if (act_dtype == LLAISYS_DTYPE_BF16) {
+                comm_dtype = llaisys::distributed::CommDataType::BF16;
+            }
+            comm->allReduceSum(t->data(), count, comm_dtype);
         }
     }
 
@@ -223,12 +232,15 @@ struct LlaisysQwen2Model {
         : meta(*m), device_type(dev), device_id(dev_id >= 0 ? dev_id : 0),
           tp_size(tp_sz), tp_rank(tp_rk) {
         // GPU 默认 FP16 激活, CPU 只支持 FP32
-        // TP 模式 (tp_size>1) 暂不支持 FP16 allReduce, 强制 FP32
+        // Phase 1 改造: TP 模式也支持 FP16 激活 (allReduceSum 已支持多精度)
+        //   旧行为: tp_size>1 时强制 FP32 → 浪费 50% 通信带宽
+        //   新行为: TP 模式也使用 FP16 → allReduceSum 自动用 ncclFloat16
         // 环境变量 LLAISYS_FORCE_FP32=1 可强制 FP32 (用于 benchmark 对比)
         const char* force_fp32 = std::getenv("LLAISYS_FORCE_FP32");
         if (force_fp32 && std::string(force_fp32) == "1") {
             act_dtype = LLAISYS_DTYPE_F32;
-        } else if (dev != LLAISYS_DEVICE_CPU && tp_sz <= 1) {
+        } else if (dev != LLAISYS_DEVICE_CPU) {
+            // GPU: 无论单卡还是 TP 多卡, 都使用 FP16 激活
             act_dtype = LLAISYS_DTYPE_F16;
         } else {
             act_dtype = LLAISYS_DTYPE_F32;
@@ -412,7 +424,7 @@ struct LlaisysQwen2Model {
             // qweight: [in_features, out_packed], out is [out_features, in_features]
             size_t in_features = w->shape()[0];
             size_t out_packed  = w->shape()[1];
-            size_t out_features = out_packed * 8;
+            size_t out_features = out_packed * 8; //int32存八个int4
             size_t num_groups = sc->shape()[0];
             int group_size = (int)(in_features / num_groups);
             auto dq_buf = get_dequant_buf(out_features, in_features);
@@ -427,16 +439,25 @@ struct LlaisysQwen2Model {
             ops::dequantize(dq_buf, w, sc);
             ops::linear(out, in, dq_buf, b);
         } else if (w->dtype() == LLAISYS_DTYPE_U8 && scale_handle) {
-            // INT4 packed 路径: dequantize_int4 → FP32 → linear
+            // INT4 packed 路径
             auto sc = TO_CPP_TENSOR(scale_handle);
             size_t rows = w->shape()[0];
             size_t packed_cols = w->shape()[1];
-            size_t cols = packed_cols * 2;       // 原始列数
+            size_t cols = packed_cols * 2;       // 原始列数 uint存两个int4
             size_t num_groups = sc->shape()[1];  // scale 是 2D: [rows, num_groups]
             int group_size = (int)(cols / num_groups);
-            auto dq_buf = get_dequant_buf(rows, cols);
-            ops::dequantize_int4(dq_buf, w, sc, group_size);
-            ops::linear(out, in, dq_buf, b);
+
+            int64_t M = in->shape()[0];
+            if (M == 1 && in->dtype() == LLAISYS_DTYPE_F16) {
+                // Fused W4A16 GEMV: 直接读 INT4 权重, 寄存器内解量化, 无中间缓冲区
+                // 支持 FP16 输出 (层间激活) 和 FP32 输出 (lm_head logits)
+                ops::linear_int4(out, in, w, sc, b, group_size, residual);
+            } else {
+                // Fallback: dequantize_int4 → FP32 → cuBLAS GEMM (prefill 或非 FP16)
+                auto dq_buf = get_dequant_buf(rows, cols);
+                ops::dequantize_int4(dq_buf, w, sc, group_size);
+                ops::linear(out, in, dq_buf, b);
+            }
         } else {
             // FP32 / FP16 / BF16 原始路径
             // 如果 weight 是 FP16 而 input 是 FP32, ops::linear 内部
@@ -528,28 +549,37 @@ static std::vector<uint8_t> slice1D(const void* data, size_t size,
 
 extern "C" {
 
+// 创建普通模型实例，返回给 Python/C 调用方一个不透明的 model handle。
+// 后续加载权重、推理、释放资源都会把这个指针再传回 C++。
 __export struct LlaisysQwen2Model *llaisysQwen2ModelCreate(const LlaisysQwen2Meta *meta, llaisysDeviceType_t device, int *device_ids, int ndevice) {
     if (!meta) return nullptr;
     int dev_id = (device_ids && ndevice > 0) ? device_ids[0] : 0;
     return new LlaisysQwen2Model(meta, device, dev_id);
 }
 
+// 创建 TP 张量并行模型实例。
+// 每个 rank 会记录自己的 tp_size/tp_rank/device_id，加载权重时只保留本 rank 的分片。
 __export struct LlaisysQwen2Model *llaisysQwen2ModelCreateTP(const LlaisysQwen2Meta *meta, llaisysDeviceType_t device,
                                                              int device_id, int tp_size, int tp_rank) {
     if (!meta) return nullptr;
     return new LlaisysQwen2Model(meta, device, device_id >= 0 ? device_id : 0, tp_size, tp_rank);
 }
 
+// 查询当前模型的 TP world size；普通单卡模型返回 1。
 __export int llaisysQwen2GetTpSize(struct LlaisysQwen2Model * model) {
     if (!model) return 1;
     return model->tp_size;
 }
 
+// 查询当前模型在 TP group 内的 rank；普通单卡模型返回 0。
 __export int llaisysQwen2GetTpRank(struct LlaisysQwen2Model * model) {
     if (!model) return 0;
     return model->tp_rank;
 }
 
+// 绑定 TP 通信句柄。
+// Python 侧创建 comm_handle 后传入这里，C++ 取出内部 comm_t，
+// 后续 row-parallel 层通过 allReduceIfTP() 做 AllReduce。
 __export void llaisysQwen2SetComm(struct LlaisysQwen2Model * model, llaisysDistComm_t comm_handle) {
     if (!model) return;
     if (comm_handle) {
@@ -561,10 +591,12 @@ __export void llaisysQwen2SetComm(struct LlaisysQwen2Model * model, llaisysDistC
     }
 }
 
+// 销毁模型实例，释放 C++ 侧持有的权重、KV cache 和临时 buffer。
 __export void llaisysQwen2ModelDestroy(struct LlaisysQwen2Model * model) {
     if (model) delete model;
 }
 
+// 返回模型内部的权重句柄表，主要给 C++ 测试或调试代码检查加载结果。
 __export struct LlaisysQwen2Weights *llaisysQwen2ModelWeights(struct LlaisysQwen2Model * model) {
     if (!model) return nullptr;
     return &model->weights;
@@ -737,10 +769,7 @@ __export int64_t llaisysQwen2ModelInferSample(struct LlaisysQwen2Model * model, 
             int seq_len_val = (int)(pos + 1);
             model->memcpyH2D(model->d_seq_lens, &seq_len_val, sizeof(int));
             // d_block_tables 在 init_cache 时已上传 (预分配顺序块, 不变)
-
-            // 同步确保 H2D 完成后再执行 decode kernel
-            core::context().setDevice(model->device_type, model->device_id);
-            core::context().runtime().api()->device_synchronize();
+            // H2D 和 Graph 都在 per-thread default stream 上, 串行, 无需额外同步
 
             auto decode_fn = [&]() {
                 // 1. Embedding
@@ -847,10 +876,8 @@ __export int64_t llaisysQwen2ModelInferSample(struct LlaisysQwen2Model * model, 
                 ops::argmax(model->next_token, model->max_val, logits_2d);
             };
 
-            // 直接执行 decode (不使用 CUDA Graph)
-            // 性能提升来自: paged_attention_device 消除了每步 56 次 cudaMalloc/cudaFree
-            // 以及 reshape_and_cache GPU kernel 替代了变地址 memcpyOnDevice
-            decode_fn();
+            // ── CUDA Graph: 第一次 capture, 之后 replay ──
+            model->decode_graph.launch(decode_fn);
 
             // 非 greedy 采样: graph 内做了 argmax, 这里重做采样
             if (!use_greedy) {

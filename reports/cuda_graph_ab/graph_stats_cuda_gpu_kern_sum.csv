@@ -1,0 +1,23 @@
+Time (%),Total Time (ns),Instances,Avg (ns),Med (ns),Min (ns),Max (ns),StdDev (ns),Name
+38.1,45933643,392,117177.7,32604.0,5976,535623,115875.7,"llaisys::ops::nvidia::dequantize_int4_f32_kernel(float *, const unsigned char *, const float *, long, long, long, long, int)"
+31.1,37510661,224,167458.3,69290.5,2526,830619,211297.5,"void gemmSN_TN_kernel<float, (int)128, (int)16, (int)2, (int)4, (int)8, (int)9, (bool)0, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>>(cublasGemmSmallNParams<T9, T10, T11, T1>)"
+24.6,29717523,112,265335.0,255029.0,247559,494502,26696.4,ampere_sgemm_64x32_sliced1x4_tn
+1.6,1924629,2,962314.5,962314.5,928355,996274,48026.0,"void gemv_w4a16_kernel<(int)2, float>(const unsigned char *, const __half *, T2 *, const float *, const __half *, const __half *, int, int, int, int)"
+0.9,1032619,224,4609.9,4297.0,1386,10226,3160.8,"void cublasLt::splitKreduce_kernel<(int)32, (int)16, int, float, float, float, float, (bool)1, (bool)0, (bool)0>(cublasLt::cublasSplitKParams<T6>, const T4 *, const T5 *, T5 *, const T6 *, const T6 *, const T7 *, const T4 *, T7 *, void *, long, T6 *, int *)"
+0.8,915145,112,8170.9,8224.0,7577,8532,232.4,ampere_sgemm_32x32_sliced1x4_tn
+0.8,905541,392,2310.1,1079.0,985,9056,1950.4,"convert_f16_to_f32_kernel(float *, const __half *, long)"
+0.5,563065,392,1436.4,1108.5,862,2465,550.8,"convert_f32_to_f16_kernel(__half *, const float *, long)"
+0.3,363527,114,3188.8,3203.5,2988,3419,103.8,"void rms_norm_kernel<__half>(T1 *, const T1 *, const T1 *, long, long, float, long, long, long, long, long)"
+0.2,293239,2,146619.5,146619.5,142184,151055,6272.7,"void argmax_kernel<float>(int *, T1 *, const T1 *, long, long)"
+0.2,252581,56,4510.4,4497.0,4159,5206,252.7,"void swiglu_kernel<__half>(T1 *, const T1 *, const T1 *, long, long, long, long, long, long, long, long)"
+0.2,237482,112,2120.4,2048.0,1755,2741,303.8,"void rope_kernel<__half>(T1 *, const T1 *, const long *, long, long, long, float, long, long, long, long, long, long, long)"
+0.2,203665,168,1212.3,1171.0,1078,1663,122.7,"add_bias_f16_to_f32_kernel(float *, const __half *, long, long)"
+0.2,188570,112,1683.7,1694.0,1571,1756,50.3,"void gather_expand_kv_kernel<__half>(float *, const T1 *, long, long, long, long, long, long, long, long)"
+0.1,143666,56,2565.5,2572.0,2434,2680,73.4,"void gemmSN_NN_kernel<float, (int)256, (int)4, (int)2, (int)8, (int)4, (int)4, (bool)0, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>>(cublasGemmSmallNParams<T9, T10, T11, T1>)"
+0.1,134973,112,1205.1,1201.0,1016,1694,148.9,"void add_kernel<__half>(T1 *, const T1 *, const T1 *, unsigned long)"
+0.1,95360,56,1702.9,1724.0,1602,1756,46.6,"softmax_row_kernel(float *, long, long)"
+0.1,88712,56,1584.1,1571.0,1479,1818,65.2,"void scatter_all_heads_kernel<__half>(T1 *, const float *, long, long, long, long, long, long)"
+0.1,88310,56,1577.0,1571.0,1479,1694,46.0,"void gather_all_q_kernel<__half>(float *, const T1 *, long, long, long, long, long, long)"
+0.0,56429,56,1007.7,1016.0,954,1079,33.1,"causal_mask_batched_kernel(float *, long, long, long)"
+0.0,53475,56,954.9,955.0,893,1017,32.3,"scale_kernel(float *, float, long)"
+0.0,4189,2,2094.5,2094.5,1848,2341,348.6,"void embedding_kernel<__half>(T1 *, const long *, const T1 *, long, long, long, long, long, long, long)"

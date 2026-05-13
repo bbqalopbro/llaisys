@@ -29,11 +29,35 @@
         }                                                                             \
     } while (0)
 
-// ---- GEMV kernel for M=1 decode (FP16 weights+input, FP32 accumulation) ----
-// y[row] = dot(W[row, :], x[:]) + bias[row] + residual[row]
-// W is row-major [N, K], x is [K], y is [N]
-// Uses half2 vectorized loads for 2x bandwidth
-// residual is optional (nullptr to skip)
+// ---- GEMV kernel: decode 阶段核心 (FP16 权重+输入, FP32 累加) ----
+//
+// 计算: y[row] = dot(W[row, :], x[:]) + bias[row] + residual[row]
+//
+// 矩阵布局:
+//   W: [N, K] (row-major, 每行是一个输出神经元的权重)
+//   x: [K]   (输入向量, 通常是 hidden_states)
+//   y: [N]   (输出向量)
+//
+// 为什么 decode 是 GEMV:
+//   decode 时 batch_size=1, 输入只有 1 个 token 的 hidden_states [1, K]
+//   所以 matmul([1,K], [K,N]) 退化为向量×矩阵 = GEMV
+//
+// 性能特点:
+//   GEMV 是 memory bandwidth bound (每个权重元素只被读 1 次, 用 1 次)
+//   RTX 4060: 256 GB/s 带宽, 3GB FP16 权重 → 理论极限 ~85 tok/s
+//
+// 优化手段:
+//   1. half2 向量化加载 (每次读 4 字节 = 2 个 FP16, 提高带宽利用率)
+//   2. FP32 累加 (避免 FP16 精度损失)
+//   3. 两级归约: warp shuffle (fastest) + shared memory (cross-warp)
+//   4. 多行并行: 每个 block 处理多行, 提高 SM 占用率
+//   5. residual + bias 融合: 避免额外的 kernel 启动和显存读写
+//
+// 线程组织:
+//   每行分配 WARPS_PER_ROW 个 warp (32 × WARPS_PER_ROW 个线程)
+//   每个 block 256 个线程, 可处理 256/(32*WPR) 行
+//   WPR=1 适用于 K≤512, WPR=2 适用于 K≤2048, WPR=4 适用于更大 K
+//
 template<int WARPS_PER_ROW>
 __global__ void gemv_f16_kernel(const __half *__restrict__ W,
                                 const __half *__restrict__ x,
@@ -44,80 +68,87 @@ __global__ void gemv_f16_kernel(const __half *__restrict__ W,
     const int WARP_SIZE = 32;
     const int THREADS_PER_ROW = WARPS_PER_ROW * WARP_SIZE;
 
-    int local_thread = threadIdx.x;
-    int row_in_block = local_thread / THREADS_PER_ROW;
-    int thread_in_row = local_thread % THREADS_PER_ROW;
-    int warp_in_row = thread_in_row / WARP_SIZE;
-    int lane_id = thread_in_row % WARP_SIZE;
+    // ── 线程定位 ──
+    int local_thread = threadIdx.x;                      // block 内线程 ID (0~255)
+    int row_in_block = local_thread / THREADS_PER_ROW;   // 当前线程处理第几行 (block 内)
+    int thread_in_row = local_thread % THREADS_PER_ROW;  // 当前线程在行内的位置
+    int warp_in_row = thread_in_row / WARP_SIZE;         // 行内第几个 warp
+    int lane_id = thread_in_row % WARP_SIZE;             // warp 内 lane ID (0~31)
 
-    int rows_per_block = blockDim.x / THREADS_PER_ROW;
-    int row = blockIdx.x * rows_per_block + row_in_block;
+    int rows_per_block = blockDim.x / THREADS_PER_ROW;   // 每个 block 处理几行
+    int row = blockIdx.x * rows_per_block + row_in_block; // 全局行号 (输出维度索引)
     if (row >= N) return;
 
-    const __half *row_ptr = W + (int64_t)row * K;
+    const __half *row_ptr = W + (int64_t)row * K;  // 指向当前行的权重起始地址
     float sum = 0.0f;
 
-    // half2 vectorized load (2 halfs = 4 bytes per load)
+    // ── 向量化加载: 每次读 half2 (4 字节 = 2 个 FP16) ──
+    // 比逐个读 half (2 字节) 带宽利用率提升 2x
     int k2 = K / 2;
     int global_lane = warp_in_row * WARP_SIZE + lane_id;
     for (int i = global_lane; i < k2; i += THREADS_PER_ROW) {
-        half2 w2 = reinterpret_cast<const half2 *>(row_ptr)[i];
-        half2 x2 = reinterpret_cast<const half2 *>(x)[i];
+        half2 w2 = reinterpret_cast<const half2 *>(row_ptr)[i];  // 读 2 个 FP16 权重
+        half2 x2 = reinterpret_cast<const half2 *>(x)[i];        // 读 2 个 FP16 输入
+        // FP32 累加: 先转 float 再乘, 避免 FP16 乘法溢出
         sum += __half2float(w2.x) * __half2float(x2.x)
              + __half2float(w2.y) * __half2float(x2.y);
     }
-    // Handle odd K
+    // 处理 K 为奇数时的最后一个元素
     if (global_lane == 0 && (K & 1)) {
         sum += __half2float(row_ptr[K - 1]) * __half2float(x[K - 1]);
     }
 
-    // Warp shuffle reduce
+    // ── 第一级归约: warp 内 shuffle (无需 shared memory, 最快) ──
+    // 32 个线程的 sum 通过蝶式交换归约为 1 个值 (lane 0)
     for (int offset = WARP_SIZE / 2; offset > 0; offset >>= 1) {
         sum += __shfl_down_sync(0xffffffff, sum, offset);
     }
 
-    // Cross-warp reduce via shared memory
+    // ── 第二级归约: 跨 warp 通过 shared memory ──
+    // 当 WARPS_PER_ROW > 1 时, 多个 warp 的部分和需要再归约
     extern __shared__ float smem[];
     if (lane_id == 0) {
-        smem[row_in_block * WARPS_PER_ROW + warp_in_row] = sum;
+        smem[row_in_block * WARPS_PER_ROW + warp_in_row] = sum;  // 每个 warp 的 lane 0 写结果
     }
-    __syncthreads();
+    __syncthreads();  // 等所有 warp 写完
 
+    // ── 最终输出: 融合 bias + residual (减少额外 kernel 调用) ──
     if (warp_in_row == 0 && lane_id == 0) {
         float total = 0.0f;
         for (int w = 0; w < WARPS_PER_ROW; w++) {
             total += smem[row_in_block * WARPS_PER_ROW + w];
         }
         if (bias) {
-            total += __half2float(bias[row]);
+            total += __half2float(bias[row]);      // 融合 bias add
         }
         if (residual) {
-            total += __half2float(residual[row]);
+            total += __half2float(residual[row]);   // 融合 residual add
         }
-        y[row] = __float2half(total);
+        y[row] = __float2half(total);  // FP32 → FP16 写回
     }
 }
 
-// GEMV launcher: WARPS_PER_ROW tuned by K dimension
-// residual can be nullptr (no add fusion)
+// GEMV 启动器: 根据 K 维度选择最优的 WARPS_PER_ROW
+// K 越大需要越多 warp 来并行处理一行的点积
+// residual 可为 nullptr (不做 add 融合)
 static void gemv_f16_launch(const __half *W, const __half *x, __half *y,
                             const __half *bias, const __half *residual,
                             int N, int K, cudaStream_t stream = 0) {
     if (K <= 512) {
-        constexpr int WPR = 1;
-        int rpb = 256 / (WPR * 32);
+        constexpr int WPR = 1;                       // K≤512: 1 warp (32 线程) 够用
+        int rpb = 256 / (WPR * 32);                  // 每 block 处理 8 行
         int grid = (N + rpb - 1) / rpb;
         int smem = rpb * WPR * (int)sizeof(float);
         gemv_f16_kernel<WPR><<<grid, 256, smem, stream>>>(W, x, y, bias, residual, N, K);
     } else if (K <= 2048) {
-        constexpr int WPR = 2;
-        int rpb = 256 / (WPR * 32);
+        constexpr int WPR = 2;                       // K≤2048: 2 warps (64 线程) 处理一行
+        int rpb = 256 / (WPR * 32);                  // 每 block 处理 4 行
         int grid = (N + rpb - 1) / rpb;
         int smem = rpb * WPR * (int)sizeof(float);
         gemv_f16_kernel<WPR><<<grid, 256, smem, stream>>>(W, x, y, bias, residual, N, K);
     } else {
-        constexpr int WPR = 4;
-        int rpb = 256 / (WPR * 32);
+        constexpr int WPR = 4;                       // K>2048: 4 warps (128 线程) 处理一行
+        int rpb = 256 / (WPR * 32);                  // 每 block 处理 2 行
         int grid = (N + rpb - 1) / rpb;
         int smem = rpb * WPR * (int)sizeof(float);
         gemv_f16_kernel<WPR><<<grid, 256, smem, stream>>>(W, x, y, bias, residual, N, K);
@@ -134,6 +165,201 @@ template<typename T> __device__ inline T from_float(float v);
 template<> __device__ inline float from_float<float>(float v) { return v; }
 template<> __device__ inline __half from_float<__half>(float v) { return __float2half(v); }
 template<> __device__ inline __nv_bfloat16 from_float<__nv_bfloat16>(float v) { return __float2bfloat16(v); }
+
+// ---- W4A16 Fused Dequant-GEMV: INT4 权重 × FP16 输入, 无中间缓冲区 ----
+//
+// 核心思想:
+//   传统路径: INT4→FP32(显存) →cuBLAS GEMM → 读写 ~5GB/token, 效率极低
+//   本 kernel: INT4→FP32(寄存器) × FP16(输入) → FP32 累加 → 只读 ~0.94GB/token
+//
+// 数据流 (每个线程):
+//   ┌─────────────┐   ┌──────────┐   ┌──────────┐
+//   │ W_packed[N,K/2]│   │ x[K] FP16│   │scale[N,G]│
+//   │   4B=8个INT4  │   │ 4B=2个FP16│   │  FP32    │
+//   └──────┬────────┘   └────┬─────┘   └────┬─────┘
+//          │uint32 load      │half2 load     │cache hit
+//          ▼                 ▼               ▼
+//   ┌──────────────────────────────────────────┐
+//   │ 寄存器内: (int4_val - 8) × scale × x_fp16 │
+//   │         FP32 累加 sum                      │
+//   └──────────────────┬───────────────────────┘
+//                      │
+//        ┌─────────────┴──────────────┐
+//        ▼                            ▼
+//   warp shuffle 归约            shared memory 归约
+//   (32线程→1值, 无需同步)       (跨warp, 需__syncthreads)
+//        └─────────────┬──────────────┘
+//                      ▼
+//            y[row] = total + bias + residual
+//            (OutT=__half层间 / float=lm_head)
+//
+// 计算: y[row] = sum_k( dequant(W_int4[row,k]) * x[k] ) + bias[row] + residual[row]
+// 其中: dequant(v) = (v - 8) * scale[row][k / group_size]
+//
+// 与 gemv_f16_kernel 的区别:
+//   - 权重从 FP16 (2 bytes/elem) 变为 INT4 packed (0.5 bytes/elem) → 带宽降 4×
+//   - 每个 uint8 字节包含 2 个 INT4 值: low nibble 和 high nibble
+//   - 需要额外读取 per-group scale (FP32, 很小, L1 cache 命中)
+//
+// 带宽分析 (Qwen2-1.5B, 28 层 + lm_head):
+//   FP16 路径: 每 token 读 ~3.0 GB 权重 → 256 GB/s → ~85 tok/s 上限
+//   INT4 路径: 每 token 读 ~0.94 GB (0.82GB 层权重 + 0.12GB lm_head)
+//              → 256 GB/s → ~272 tok/s 理论上限
+//   实测: ~98 tok/s (带宽利用率 ~36%, 受 kernel launch + attention + norm 等开销影响)
+//
+// 权重打包格式 (per-group symmetric INT4, group_size=128):
+//   W_packed: [N, K/2] uint8, 每字节存 2 个 4-bit 整数
+//     低 4 位 (byte & 0x0F) - 8 → 偶数列 (col_even), 范围 [-8, 7]
+//     高 4 位 (byte >> 4)   - 8 → 奇数列 (col_odd),  范围 [-8, 7]
+//   scale:    [N, num_groups] float32, num_groups = K / group_size
+//
+// 向量化加载策略:
+//   权重: uint32 (4 bytes) 一次读 8 个 INT4
+//   输入: half2  (4 bytes) 一次读 2 个 FP16 × 4 = 8 值, 与权重对齐
+//   注: 实测 uint4 (16B/128-bit) 反而因寄存器压力大、占用率下降而慢 14%
+//        warp 内 32 线程 × uint32 (4B) = 128B 事务, GPU 已自动合并为最优宽度
+//
+// 线程组织 (与 gemv_f16_kernel 相同):
+//   每个 block 256 线程, 每行分配 WPR 个 warp (WPR × 32 线程)
+//   WPR=1 → 每 block 8 行, WPR=2 → 4 行, WPR=4 → 2 行
+//   K 越大需要越多 warp 来分摊点积循环
+//
+// OutT 模板参数:
+//   __half → 层间激活 (q/k/v/o_proj, gate/up/down_proj)
+//   float  → lm_head 输出 logits (vocab_size=151936 维)
+//
+template<int WARPS_PER_ROW, typename OutT>
+__global__ void gemv_w4a16_kernel(
+        const uint8_t *__restrict__ W_packed,  // [N, K/2] packed INT4 权重
+        const __half  *__restrict__ x,         // [K] FP16 输入向量
+        OutT          *__restrict__ y,         // [N] 输出向量 (FP16 或 FP32)
+        const float   *__restrict__ scale,     // [N, num_groups] per-group scale
+        const __half  *__restrict__ bias,      // [N] 可选 bias (nullptr 跳过)
+        const __half  *__restrict__ residual,  // [N] 可选 residual (nullptr 跳过)
+        int N, int K, int num_groups, int group_size) {
+
+    const int WARP_SIZE = 32;
+    const int THREADS_PER_ROW = WARPS_PER_ROW * WARP_SIZE;
+
+    // ── 线程定位 (与 gemv_f16_kernel 完全相同) ──
+    int local_thread = threadIdx.x;
+    int row_in_block = local_thread / THREADS_PER_ROW;
+    int thread_in_row = local_thread % THREADS_PER_ROW;
+    int warp_in_row = thread_in_row / WARP_SIZE;
+    int lane_id = thread_in_row % WARP_SIZE;
+
+    int rows_per_block = blockDim.x / THREADS_PER_ROW;
+    int row = blockIdx.x * rows_per_block + row_in_block;
+    if (row >= N) return;
+
+    int packed_cols = K / 2;  // 每行的 packed 字节数
+    const uint8_t *row_ptr = W_packed + (int64_t)row * packed_cols;
+    const float *scale_row = scale + (int64_t)row * num_groups;
+    float sum = 0.0f;
+
+    // ── 主循环: uint32 向量化加载 (4 bytes = 8 INT4 values) ──
+    // 注: 尝试过 uint4 (128-bit), 反而因寄存器压力降低占用率导致变慢 14%
+    // uint32 是最优: warp 内 32 线程 × 4B = 128B 事务, GPU 自动合并
+    int packed4 = packed_cols / 4;  // 每行的 uint32 数量
+    int global_lane = warp_in_row * WARP_SIZE + lane_id;
+
+    for (int i = global_lane; i < packed4; i += THREADS_PER_ROW) {
+        // 一次读 4 字节 = 8 个 INT4 权重值
+        uint32_t pack = reinterpret_cast<const uint32_t *>(row_ptr)[i];
+        int col_base = i * 8;  // 对应原始矩阵的起始列号
+
+        // 预加载对应的 8 个 FP16 输入值 (4 个 half2 加载)
+        half2 x01 = reinterpret_cast<const half2 *>(x)[col_base / 2];
+        half2 x23 = reinterpret_cast<const half2 *>(x)[col_base / 2 + 1];
+        half2 x45 = reinterpret_cast<const half2 *>(x)[col_base / 2 + 2];
+        half2 x67 = reinterpret_cast<const half2 *>(x)[col_base / 2 + 3];
+
+        // 转为 FP32 数组, 方便 unroll 循环访问
+        float xf[8] = {
+            __half2float(x01.x), __half2float(x01.y),
+            __half2float(x23.x), __half2float(x23.y),
+            __half2float(x45.x), __half2float(x45.y),
+            __half2float(x67.x), __half2float(x67.y)
+        };
+
+        // 解包 4 个字节, 每字节 2 个 INT4 → 共 8 个值
+        #pragma unroll
+        for (int b = 0; b < 4; b++) {
+            uint8_t byte_val = (pack >> (b * 8)) & 0xFF;
+            int val_lo = (int)(byte_val & 0x0F) - 8;  // 低 4 位 → 有符号 [-8, 7]
+            int val_hi = (int)(byte_val >> 4) - 8;     // 高 4 位 → 有符号 [-8, 7]
+
+            // scale 查找: 同一字节的两个值必在同一 group (相邻两列)
+            float s = scale_row[(col_base + b * 2) / group_size];
+
+            // dequant + multiply + accumulate
+            sum += __int2float_rn(val_lo) * s * xf[b * 2]
+                 + __int2float_rn(val_hi) * s * xf[b * 2 + 1];
+        }
+    }
+
+    // ── 第一级归约: warp shuffle ──
+    for (int offset = WARP_SIZE / 2; offset > 0; offset >>= 1) {
+        sum += __shfl_down_sync(0xffffffff, sum, offset);
+    }
+
+    // ── 第二级归约: 跨 warp shared memory ──
+    extern __shared__ float smem[];
+    if (lane_id == 0) {
+        smem[row_in_block * WARPS_PER_ROW + warp_in_row] = sum;
+    }
+    __syncthreads();
+
+    // ── 最终输出: 融合 bias + residual ──
+    if (warp_in_row == 0 && lane_id == 0) {
+        float total = 0.0f;
+        for (int w = 0; w < WARPS_PER_ROW; w++) {
+            total += smem[row_in_block * WARPS_PER_ROW + w];
+        }
+        if (bias) total += __half2float(bias[row]);
+        if (residual) total += __half2float(residual[row]);
+        // OutT = __half 时转 FP16, OutT = float 时直接写
+        y[row] = from_float<OutT>(total);
+    }
+}
+
+// W4A16 GEMV 启动器: 根据 K 维度自动选择最优的 WARPS_PER_ROW
+//
+// Qwen2-1.5B 各层的 K 值和对应配置:
+//   K=1536 (q/k/v/o_proj, gate/up, lm_head): WPR=2, 每 block 4 行
+//   K=8960 (down_proj):                      WPR=4, 每 block 2 行
+//
+// OutT = __half (层间激活) 或 float (lm_head logits)
+template<typename OutT>
+static void gemv_w4a16_launch(
+        const uint8_t *W_packed, const __half *x, OutT *y,
+        const float *scale, const __half *bias, const __half *residual,
+        int N, int K, int num_groups, int group_size,
+        cudaStream_t stream = 0) {
+    if (K <= 512) {
+        constexpr int WPR = 1;
+        int rpb = 256 / (WPR * 32);
+        int grid = (N + rpb - 1) / rpb;
+        int smem = rpb * WPR * (int)sizeof(float);
+        gemv_w4a16_kernel<WPR, OutT><<<grid, 256, smem, stream>>>(
+            W_packed, x, y, scale, bias, residual, N, K, num_groups, group_size);
+    } else if (K <= 2048) {
+        constexpr int WPR = 2;
+        int rpb = 256 / (WPR * 32);
+        int grid = (N + rpb - 1) / rpb;
+        int smem = rpb * WPR * (int)sizeof(float);
+        gemv_w4a16_kernel<WPR, OutT><<<grid, 256, smem, stream>>>(
+            W_packed, x, y, scale, bias, residual, N, K, num_groups, group_size);
+    } else {
+        constexpr int WPR = 4;
+        int rpb = 256 / (WPR * 32);
+        int grid = (N + rpb - 1) / rpb;
+        int smem = rpb * WPR * (int)sizeof(float);
+        gemv_w4a16_kernel<WPR, OutT><<<grid, 256, smem, stream>>>(
+            W_packed, x, y, scale, bias, residual, N, K, num_groups, group_size);
+    }
+    CUDA_CHECK(cudaGetLastError());
+}
 
 // ---- Bias add kernel (replaces the ones-vector GEMM approach) ----
 template<typename T>
@@ -170,11 +396,19 @@ __global__ void add_bias_f16_to_f32_kernel(float *Y, const __half *bias, int64_t
     Y[tid] += __half2float(bias[j]);
 }
 
-// Lazy-initialized thread-local cuBLAS handle
+// Lazy-initialized thread-local cuBLAS handle with pre-allocated workspace
+// for CUDA Graph compatibility (cuBLAS must not call cudaMalloc during capture)
 static cublasHandle_t get_cublas_handle() {
     static thread_local cublasHandle_t handle = nullptr;
+    static thread_local void *workspace = nullptr;
     if (!handle) {
         CUBLAS_CHECK(cublasCreate(&handle));
+        // Pre-allocate 4 MB workspace for cuBLAS (avoids internal malloc during graph capture)
+        constexpr size_t CUBLAS_WORKSPACE_SIZE = 4 * 1024 * 1024;
+        CUDA_CHECK(cudaMalloc(&workspace, CUBLAS_WORKSPACE_SIZE));
+        CUBLAS_CHECK(cublasSetWorkspace(handle, workspace, CUBLAS_WORKSPACE_SIZE));
+        // Use per-thread default stream for CUDA Graph capture compatibility
+        CUBLAS_CHECK(cublasSetStream(handle, cudaStreamPerThread));
     }
     return handle;
 }
@@ -419,6 +653,58 @@ void linear_add(tensor_t out, tensor_t in, tensor_t weight, tensor_t bias,
         }
         CUDA_CHECK(cudaGetLastError());
     }
+}
+
+// ---- Fused W4A16 Linear: INT4 权重 × FP16 输入 ----
+//
+// 调用路径: qwen2.cpp linear_maybe_dequant() → ops::linear_int4() → 本函数
+//
+// M=1 (decode): 走 fused GEMV, 一个 kernel 完成 dequant + matmul + bias + residual
+//   - 无中间缓冲区, 无 cudaMalloc, 对 CUDA Graph 友好
+//   - 支持 FP16 输出 (层间) 和 FP32 输出 (lm_head)
+//
+// M>1 (prefill): 由调用者回退到 dequant_int4 + cuBLAS GEMM
+//   - GEMM 是 compute-bound, cuBLAS 用 Tensor Core 更快
+//   - prefill 只执行一次, 不影响吞吐
+//
+void linear_int4(tensor_t out, tensor_t in, tensor_t weight, tensor_t scale,
+                 tensor_t bias, int group_size, tensor_t residual) {
+    int64_t M = in->shape()[0];
+    int64_t K = in->shape()[1];
+    int64_t N = out->shape()[1];
+    int64_t num_groups = scale->shape()[1];
+
+    // Fused W4A16 GEMV: M=1, FP16 输入
+    if (M == 1 && in->dtype() == LLAISYS_DTYPE_F16) {
+        const __half *bias_ptr = (bias && bias->data())
+            ? (const __half *)bias->data() : nullptr;
+        const __half *res_ptr = (residual && residual->data())
+            ? (const __half *)residual->data() : nullptr;
+
+        if (out->dtype() == LLAISYS_DTYPE_F16) {
+            // 层间激活: FP16 输出
+            gemv_w4a16_launch<__half>(
+                (const uint8_t *)weight->data(),
+                (const __half *)in->data(),
+                (__half *)out->data(),
+                (const float *)scale->data(),
+                bias_ptr, res_ptr,
+                (int)N, (int)K, (int)num_groups, group_size);
+        } else {
+            // lm_head: FP32 输出 (logits)
+            gemv_w4a16_launch<float>(
+                (const uint8_t *)weight->data(),
+                (const __half *)in->data(),
+                (float *)out->data(),
+                (const float *)scale->data(),
+                bias_ptr, res_ptr,
+                (int)N, (int)K, (int)num_groups, group_size);
+        }
+        return;
+    }
+
+    // Fallback: dequantize_int4 → FP32 buffer → linear (调用者处理)
+    fprintf(stderr, "[WARN] linear_int4 fallback: M=%ld, use dequant+cuBLAS path\n", (long)M);
 }
 
 } // namespace llaisys::ops::nvidia

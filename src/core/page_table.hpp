@@ -19,19 +19,19 @@ public:
     explicit PageTable(int block_size = 16)
         : _num_tokens(0), _block_size(block_size) {}
 
-    void append_block(int block_id) {
+    void append_block(int block_id) { //把新申请到的物理块号记进_block_ids
         _block_ids.push_back(block_id);
     }
 
     int get_block_for_token(int token_pos) const {
-        int block_idx = token_pos / _block_size;
+        int block_idx = token_pos / _block_size; //这个 token 属于第几个逻辑块
         if (block_idx < 0 || block_idx >= static_cast<int>(_block_ids.size()))
             return -1;
         return _block_ids[block_idx];
     }
 
     int get_offset_in_block(int token_pos) const {
-        return token_pos % _block_size;
+        return token_pos % _block_size; //它在逻辑块块内第几个位置
     }
 
     void release_all(BlockAllocator &allocator) {

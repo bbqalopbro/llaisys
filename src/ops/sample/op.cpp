@@ -48,7 +48,7 @@ static void sample_cpu_kernel(tensor_t out_idx, tensor_t logits,
         }
     }
 
-    // --- 1. Temperature ---
+    // --- 1.temperature 缩放 ：logits[i] /= temperature
     if (temperature > 0.0f && temperature != 1.0f) {
         float inv_t = 1.0f / temperature;
         for (size_t i = 0; i < vocab; ++i) {
@@ -64,10 +64,10 @@ static void sample_cpu_kernel(tensor_t out_idx, tensor_t logits,
                       indices.end(),
                       [&](int a, int b) { return logit_vec[a] > logit_vec[b]; });
 
-    // --- 2. Top-K ---
+    // --- 2. Top-K：只保留概率最高的 k 个候选词
     size_t k = (top_k > 0 && (size_t)top_k < vocab) ? (size_t)top_k : vocab;
 
-    // --- 3. Softmax over top-k candidates ---
+    // --- 3. Softmax：对 top-k 个候选做 softmax → 概率分布
     float max_logit = logit_vec[indices[0]];
     std::vector<float> probs(k);
     float sum = 0.0f;
@@ -79,7 +79,9 @@ static void sample_cpu_kernel(tensor_t out_idx, tensor_t logits,
         probs[i] /= sum;
     }
 
-    // --- 4. Top-P (nucleus sampling) ---
+    // --- 4. Top-P ：从概率最高的开始累加，直到累积概率 ≥ p 时截止
+    // 例：p=0.9 → 保留概率累积到 90% 的最少候选集
+    // 然后重新归一化
     size_t cutoff = k;
     if (top_p > 0.0f && top_p < 1.0f) {
         float cumsum = 0.0f;

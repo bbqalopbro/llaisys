@@ -177,8 +177,8 @@ for (int b = 0; b < batch_size; ++b) {
 ### 5.1 线程映射
 
 - **Grid**: `dim3(batch_size, num_heads)` — 每个 (batch, head) 对一个 thread block
-- **Block**: 1 线程（decode 路径优化版，适合 seq_len=1 场景）
-- **Shared Memory**: `block_size * sizeof(float)` 用于暂存 QK^T scores
+- **Block**: 根据 `head_dim` 选择 32~128 个线程，多个线程协作完成一个 head 的 QK 点积和 V 累加
+- **Shared Memory**: `block_size * sizeof(float) + 2 * num_warps * sizeof(float)`，前半部分暂存当前 block 内 QK scores，后半部分做跨 warp reduction
 
 ### 5.2 Kernel 结构
 
@@ -187,17 +187,17 @@ __global__ void paged_attention_kernel(...) {
     int batch_idx = blockIdx.x;
     int head_idx = blockIdx.y;
     int kv_head_idx = head_idx / group_size;
-    
+
     float m = -1e30f, l = 0.0f;
-    float acc[HEAD_DIM] = {0};
-    
+    float acc[dims_per_thread] = {0};  // 每个线程负责若干 head_dim 维度
+
     for (int bi = 0; bi < num_blocks; ++bi) {
         int block_id = block_tables[batch_idx * max_blocks + bi];
-        // 从 Block Pool 加载 K/V
-        // 计算 QK^T scores → shared memory
-        // Online softmax 更新 m, l, acc
+        // 从 Block Pool 定位当前 physical block + 当前 layer
+        // 多线程协作计算当前 block 内每个 token 的 QK score -> shared memory
+        // Online softmax 更新 m, l, acc，并累加 V
     }
-    
+
     // 归一化输出
     output[batch_idx, head_idx, :] = acc / l;
 }
@@ -244,7 +244,224 @@ kv_head_idx = query_head_idx / group_size
 
 实现中只需一行映射：`int kv_h = h / group_size;`
 
-## 7. 测试结果
+## 7. FlashInfer Adapter
+
+### 7.1 FlashInfer 路径什么时候启用
+
+`paged_attention.cpp` 是 paged attention 的总分发入口。当前实现中，只有满足以下条件时才会走 FlashInfer：
+
+```cpp
+device_type == LLAISYS_DEVICE_NVIDIA
+kv_quant == KVQuantMode::FP32
+dtype == LLAISYS_DTYPE_F16
+head_dim in {64, 128, 256}
+group_size in {1, 2, 4, 8}
+flashinfer_available()
+```
+
+否则会 fallback 到本项目自己的 CUDA kernel。
+
+注意这里的 `KVQuantMode::FP32` 表示 KV cache 没有走 INT8/INT4 量化路径；`dtype == F16` 表示实际 K/V/Q/O 的 I/O 类型是 FP16。
+
+### 7.2 Dense block_tables 到 CSR 页表
+
+LLAISYS 自己的页表格式是 dense 二维表：
+
+```cpp
+block_tables[b * max_blocks_per_seq + bi]
+```
+
+逻辑含义：
+
+```cpp
+第 b 个 sequence 的第 bi 个逻辑 block -> 物理 block_id
+```
+
+FlashInfer 更喜欢 CSR 风格的分页表：
+
+```cpp
+indices       // 所有有效物理 block_id 连续拼接
+indptr        // 每个 sequence 在 indices 里的起止位置
+last_page_len // 每个 sequence 最后一个 page 的有效 token 数
+```
+
+假设：
+
+```cpp
+block_size = 16
+max_blocks_per_seq = 4
+seq_lens = [37, 9, 32]
+```
+
+每个 sequence 的物理 block 映射是：
+
+```cpp
+seq0: [5, 8, 2]
+seq1: [7]
+seq2: [4, 9]
+```
+
+那么 dense `block_tables` 会被 padding 成：
+
+```cpp
+block_tables = [
+  [5, 8, 2, 0],
+  [7, 0, 0, 0],
+  [4, 9, 0, 0]
+]
+```
+
+实际一维内存是：
+
+```cpp
+[5, 8, 2, 0, 7, 0, 0, 0, 4, 9, 0, 0]
+```
+
+FlashInfer adapter 会只收集有效 block：
+
+```cpp
+indices = [5, 8, 2, 7, 4, 9]
+```
+
+再计算每个 sequence 的 block 数：
+
+```cpp
+seq0 num_blocks = ceil(37 / 16) = 3
+seq1 num_blocks = ceil(9  / 16) = 1
+seq2 num_blocks = ceil(32 / 16) = 2
+```
+
+于是：
+
+```cpp
+indptr[0] = 0
+indptr[1] = 0 + 3 = 3
+indptr[2] = 3 + 1 = 4
+indptr[3] = 4 + 2 = 6
+
+indptr = [0, 3, 4, 6]
+```
+
+含义：
+
+```cpp
+seq0 的 blocks 在 indices[0:3] = [5, 8, 2]
+seq1 的 blocks 在 indices[3:4] = [7]
+seq2 的 blocks 在 indices[4:6] = [4, 9]
+```
+
+最后计算 `last_page_len`：
+
+```cpp
+last_page_len[b] = (seq_len > 0) ? ((seq_len - 1) % block_size + 1) : 0;
+```
+
+手算：
+
+```cpp
+seq0: 37 = 16 + 16 + 5  -> last_page_len = 5
+seq1: 9                 -> last_page_len = 9
+seq2: 32 = 16 + 16      -> last_page_len = 16
+
+last_page_len = [5, 9, 16]
+```
+
+这里 `seq2=32` 刚好整除 `block_size=16`，最后一页是满的，所以最后一页长度是 16，而不是 0。公式写成 `(seq_len - 1) % block_size + 1` 就是为了处理这个边界。
+
+FlashInfer 内部使用这三张表时，可以理解成：
+
+```cpp
+start = indptr[b];
+end   = indptr[b + 1];
+
+for p in [start, end):
+    physical_block_id = indices[p];
+    tokens = (p 是最后一页) ? last_page_len[b] : block_size;
+    读取 physical_block_id 里的 tokens 个 KV
+```
+
+对应到 naive kernel：
+
+```cpp
+// naive dense 表
+block_id = block_tables[b * max_blocks_per_seq + bi];
+
+// FlashInfer CSR 表
+block_id = indices[indptr[b] + bi];
+```
+
+所以 adapter 的核心职责就是：
+
+```cpp
+LLAISYS dense page table
+        ↓
+FlashInfer CSR page table
+```
+
+### 7.3 FlashInfer 如何理解 KV Pool
+
+LLAISYS 的 KV pool layout 是：
+
+```cpp
+[num_blocks, nlayer, block_size, num_kv_heads, head_dim]
+```
+
+FlashInfer 每次 attention 只处理一个 layer，所以 adapter 先把 base pointer 偏移到当前 layer：
+
+```cpp
+k_layer = (char*)k_pool + layer_idx * pool_layer_stride;
+v_layer = (char*)v_pool + layer_idx * pool_layer_stride;
+```
+
+此时 FlashInfer 看到的 layout 可以理解为：
+
+```cpp
+[num_blocks, block_size, num_kv_heads, head_dim]
+```
+
+然后通过 `kv_strides` 描述寻址方式：
+
+```cpp
+kv_strides[0] = pool_block_stride / sizeof(T); // page/block stride，单位是元素
+kv_strides[1] = num_kv_heads * HEAD_DIM;       // token stride
+kv_strides[2] = HEAD_DIM;                      // kv head stride
+kv_strides[3] = 1;                             // dim stride
+```
+
+FlashInfer 访问：
+
+```cpp
+K[page_id][token_offset][kv_head][dim]
+```
+
+等价地址是：
+
+```cpp
+k_layer
++ page_id      * pool_block_stride
++ token_offset * num_kv_heads * HEAD_DIM * sizeof(T)
++ kv_head      * HEAD_DIM * sizeof(T)
++ dim          * sizeof(T)
+```
+
+这和 naive kernel 的地址公式一致，只是 FlashInfer 把查表和计算封装进库内部。
+
+### 7.4 paged_kv_t 的含义
+
+`flashinfer::paged_kv_t<T, int32_t>` 可以理解为 FlashInfer 眼里的 paged KV cache 描述符，里面包含：
+
+- 当前 layer 的 K/V base pointer
+- `num_kv_heads`
+- `block_size`
+- `HEAD_DIM`
+- `kv_strides`
+- `indices`
+- `indptr`
+- `last_page_len`
+
+所以 FlashInfer 没有替代 `BlockAllocator` 或 `PageTable`。它只是接管了 paged attention kernel 的计算部分；本项目仍然负责维护 block pool 和页表。
+
+## 8. 测试结果
 
 ```
 === Paged Attention Correctness Tests ===
@@ -265,18 +482,18 @@ kv_head_idx = query_head_idx / group_size
 
 所有测试通过参考实现（标准连续 KV attention）对比验证，最大绝对误差为 0。
 
-## 8. 与 vLLM 的对比
+## 9. 与 vLLM 的对比
 
 | 方面 | vLLM | llaisys (本实现) |
 |------|------|-----------------|
-| Kernel 来源 | 自研 + FlashInfer | 自研 CPU + CUDA |
-| Decode 优化 | 高度优化 (warp-level, vectorized) | 基础版本 (单线程/block) |
+| Kernel 来源 | 自研 + FlashInfer | 自研 CPU + CUDA + FlashInfer adapter |
+| Decode 优化 | 高度优化 (warp-level, vectorized) | naive CUDA 路径较基础；满足条件时可走 FlashInfer |
 | Prefill | FlashAttention (无分页) | 暂用现有 attention |
 | GQA | 完整支持 | 完整支持 |
-| Block Table 位置 | GPU tensor | CPU→GPU 按需拷贝 |
-| FP16/BF16 | 原生支持 | FP32 (可扩展) |
+| Block Table 位置 | GPU tensor | 普通路径 CPU→GPU 按需拷贝；device variant 可直接用 GPU 表 |
+| FP16/BF16 | 原生支持 | naive kernel 支持 FP32/FP16/BF16；FlashInfer adapter 当前启用 FP16 |
 
-## 9. 文件清单
+## 10. 文件清单
 
 | 文件 | 类型 | 说明 |
 |------|------|------|
@@ -284,12 +501,14 @@ kv_head_idx = query_head_idx / group_size
 | `src/ops/self_attention/paged_attention.cpp` | 新建 | CPU 实现 + 设备分发 |
 | `src/ops/self_attention/nvidia/paged_attention_nvidia.cuh` | 新建 | CUDA 头文件 |
 | `src/ops/self_attention/nvidia/paged_attention_nvidia.cu` | 新建 | CUDA kernel |
+| `src/ops/self_attention/nvidia/flashinfer_adapter.cuh` | 新建 | FlashInfer adapter 声明 |
+| `src/ops/self_attention/nvidia/flashinfer_adapter.cu` | 新建 | FlashInfer paged KV decode 适配 |
 | `include/llaisys/ops.h` | 修改 | 新增 `llaisysPagedAttention` C API |
 | `src/llaisys/ops.cc` | 修改 | C API wrapper 实现 |
 | `test/test_paged_attention.cpp` | 新建 | 数值正确性测试 (4 个用例) |
 | `xmake.lua` | 修改 | 新增测试目标 |
 
-## 10. 下一步
+## 11. 下一步
 
 Phase 3 将在模型层接入 Paged Attention：
 - 改造 `BatchSlot` 使用 `PageTable` 替代独立 KV-Cache

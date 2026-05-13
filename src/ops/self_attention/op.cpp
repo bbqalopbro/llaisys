@@ -42,30 +42,30 @@ void self_attention_cpu_kernel(tensor_t attn_val, tensor_t q, tensor_t k, tensor
     ptrdiff_t o_s1 = attn_val->strides()[1];
     ptrdiff_t o_s2 = attn_val->strides()[2];
 
-    int64_t group_size = n_head / n_kv_head;
+    int64_t group_size = n_head / n_kv_head; //GQA的存在，要让Q头共享KV头
 
     std::vector<float> A(total_len);
-    for(int64_t i = 0; i < seq_len; i++){
+    for(int64_t i = 0; i < seq_len; i++){ //遍历token
         int64_t current_pos = total_len - seq_len + i;
-        for (int64_t h = 0; h < n_head; ++h){
+        for (int64_t h = 0; h < n_head; ++h){ //遍历Q头
 
-            int64_t kv_h = h / group_size;
-            float max_score = -std::numeric_limits<float>::infinity();
+            int64_t kv_h = h / group_size; //对应kv头
+            float max_score = -std::numeric_limits<float>::infinity(); 
             for(int64_t j = 0; j < total_len; j++){
                 if (j > current_pos) {
-                    A[j] = -std::numeric_limits<float>::infinity();
+                    A[j] = -std::numeric_limits<float>::infinity(); //mask
                     continue;
                 }
                 double sum = 0.0;
-                for(int64_t k = 0; k < head_dim; k++){
+                for(int64_t k = 0; k < head_dim; k++){ //点积
                     int64_t q_idx = i * q_s0 + h * q_s1 + k * q_s2;
                     int64_t k_idx = j * k_s0 + kv_h * k_s1 + k * k_s2;
                     double Q_val = static_cast<double>(llaisys::utils::cast<float>(q_ptr[q_idx]));
-                    double K_val = static_cast<double>(llaisys::utils::cast<float>(k_ptr[k_idx]));
+                    double K_val = static_cast<double>(llaisys::utils::cast<float>(k_ptr[k_idx]));  
                     sum += Q_val * K_val;
                 }
-                A[j] = static_cast<float>(sum * scale);
-                if(max_score < A[j]) max_score = A[j];
+                A[j] = static_cast<float>(sum * scale); //缩放
+                if(max_score < A[j]) max_score = A[j]; //记录最大值
             }
 
 

@@ -51,6 +51,7 @@ end
 
 if has_config("flashinfer") then
     add_defines("ENABLE_FLASHINFER")
+    add_includedirs("third_party/flashinfer")
     local fi_inc = get_config("flashinfer-include")
     if fi_inc and fi_inc ~= "" then
         add_includedirs(fi_inc)
@@ -166,14 +167,15 @@ target("llaisys")
         add_deps("llaisys-ops-metax")
     end
     if has_config("nv-gpu") then
+        add_deps("llaisys-device-nvidia")
+        add_deps("llaisys-ops-nvidia")
         add_links("cublas", "cudart")
         add_linkdirs("/usr/local/cuda/lib64")
         set_toolset("cu", "nvcc")
-        add_cuflags("-Xcompiler=-fPIC")
+        add_cuflags("-Xcompiler=-fPIC", "--default-stream=per-thread")
+        add_files("src/device/nvidia/*.cu")
         add_files("src/ops/self_attention/paged_attention.cpp")
         add_files("src/ops/cache/cache_ops.cpp")
-        add_files("src/device/nvidia/*.cu")
-        add_files("src/ops/*/nvidia/*.cu")
         if has_config("dist-nccl") then
             add_links("nccl")
             add_includedirs("/usr/include")
@@ -233,6 +235,9 @@ target_end()
 target("llaisys-dist-smoke")
     set_kind("binary")
     add_deps("llaisys")
+    add_links("llaisys")
+    add_linkdirs("$(builddir)/$(plat)/$(arch)/$(mode)")
+    add_rpathdirs("$(builddir)/$(plat)/$(arch)/$(mode)")
     set_languages("cxx17")
     set_warnings("all", "error")
     if not is_plat("windows") then
@@ -298,6 +303,7 @@ target("llaisys-test-paged-attention")
     if has_config("nv-gpu") then
         add_links("cudart")
         add_linkdirs("/usr/local/cuda/lib64")
+        add_includedirs("/usr/local/cuda/include")
     end
     add_files("test/test_paged_attention.cpp")
     add_includedirs("$(projectdir)")
@@ -314,6 +320,7 @@ target("llaisys-test-paged-batch")
     if has_config("nv-gpu") then
         add_links("cudart")
         add_linkdirs("/usr/local/cuda/lib64")
+        add_includedirs("/usr/local/cuda/include")
     end
     add_files("test/test_paged_batch.cpp")
     add_includedirs("$(projectdir)")
@@ -330,6 +337,7 @@ target("llaisys-test-kv-quant")
     if has_config("nv-gpu") then
         add_links("cudart")
         add_linkdirs("/usr/local/cuda/lib64")
+        add_includedirs("/usr/local/cuda/include")
     end
     add_files("test/test_kv_quant.cpp")
     add_includedirs("$(projectdir)")
@@ -346,6 +354,7 @@ target("llaisys-bench-paged-attention")
     if has_config("nv-gpu") then
         add_links("cudart")
         add_linkdirs("/usr/local/cuda/lib64")
+        add_includedirs("/usr/local/cuda/include")
     end
     add_files("test/bench_paged_attention.cpp")
     add_includedirs("$(projectdir)")

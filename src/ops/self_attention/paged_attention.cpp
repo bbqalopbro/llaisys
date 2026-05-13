@@ -37,8 +37,8 @@ static void paged_attention_cpu_fp32(
             float l = 0.0f;
             std::vector<float> acc(head_dim, 0.0f);
 
-            for (int bi = 0; bi < num_blocks; ++bi) {
-                int block_id = block_tables[b * max_blocks_per_seq + bi];
+            for (int bi = 0; bi < num_blocks; ++bi) { //bi:逻辑 block 编号
+                int block_id = block_tables[b * max_blocks_per_seq + bi]; //物理 block 编号
                 int tokens_in_block = std::min(block_size, seq_len - bi * block_size);
 
                 const float *k_base = reinterpret_cast<const float *>(
@@ -252,13 +252,22 @@ void paged_attention(
 {
 #ifdef ENABLE_NVIDIA_API
     if (device_type == LLAISYS_DEVICE_NVIDIA && kv_quant == KVQuantMode::FP32) {
-        if (nvidia::flashinfer_available()) {
+        int group_size = (num_kv_heads > 0) ? (num_heads / num_kv_heads) : 0;
+        bool flashinfer_dtype_supported = (dtype == LLAISYS_DTYPE_F16);
+        bool flashinfer_head_dim_supported =
+            (head_dim == 64 || head_dim == 128 || head_dim == 256);
+        bool flashinfer_group_size_supported =
+            (group_size == 1 || group_size == 2 || group_size == 4 || group_size == 8);
+        if (flashinfer_dtype_supported &&
+            flashinfer_head_dim_supported &&
+            flashinfer_group_size_supported &&
+            nvidia::flashinfer_available()) {
             nvidia::flashinfer_paged_attention(output, query, k_pool, v_pool,
                                                block_tables, seq_lens,
                                                batch_size, num_heads, num_kv_heads, head_dim,
                                                block_size, max_blocks_per_seq,
                                                pool_block_stride, pool_layer_stride,
-                                               layer_idx, scale);
+                                               layer_idx, scale, dtype);
             return;
         }
         nvidia::paged_attention(output, query, k_pool, v_pool,

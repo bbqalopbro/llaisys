@@ -25,6 +25,10 @@
 #include <algorithm>
 #include <numeric>
 
+#ifdef ENABLE_NVIDIA_API
+#include <cuda_fp16.h>
+#endif
+
 using namespace llaisys::core;
 using Clock = std::chrono::high_resolution_clock;
 
@@ -81,6 +85,12 @@ static void fill_random(float* data, size_t n, std::mt19937& rng) {
     std::uniform_real_distribution<float> dist(-0.5f, 0.5f);
     for (size_t i = 0; i < n; ++i) data[i] = dist(rng);
 }
+
+#ifdef ENABLE_NVIDIA_API
+static void float_to_half(const float* src, __half* dst, size_t n) {
+    for (size_t i = 0; i < n; ++i) dst[i] = __float2half(src[i]);
+}
+#endif
 
 static double bench_paged_attention(const BenchConfig& cfg, int warmup, int iters) {
     int block_size = cfg.block_size;
@@ -400,7 +410,7 @@ static void bench_paged_attention_gpu(const BenchConfig& cfg, int warmup, int it
     // Allocate on GPU via runtime API
     BlockAllocatorConfig alloc_cfg = {
         num_blocks_needed + 16, (size_t)block_size, (size_t)cfg.nlayer,
-        (size_t)cfg.num_kv_heads, (size_t)cfg.head_dim, sizeof(float)
+        (size_t)cfg.num_kv_heads, (size_t)cfg.head_dim, sizeof(__half)
     };
     BlockAllocator alloc(alloc_cfg, api);
 
@@ -419,17 +429,20 @@ static void bench_paged_attention_gpu(const BenchConfig& cfg, int warmup, int it
 
     // Fill KV on GPU (random data)
     size_t kv_row_elements = cfg.num_kv_heads * cfg.head_dim;
-    std::vector<float> host_kv(kv_row_elements);
+    std::vector<float> host_kv_f32(kv_row_elements);
+    std::vector<__half> host_kv_f16(kv_row_elements);
     for (int b = 0; b < cfg.batch_size; ++b) {
         for (int t = 0; t < cfg.seq_len; ++t) {
             int bid = pts[b].get_block_for_token(t);
             int off = pts[b].get_offset_in_block(t);
-            fill_random(host_kv.data(), kv_row_elements, rng);
-            float* k_ptr = (float*)alloc.get_k_ptr(bid, 0) + off * kv_row_elements;
-            float* v_ptr = (float*)alloc.get_v_ptr(bid, 0) + off * kv_row_elements;
-            api->memcpy_sync(k_ptr, host_kv.data(), kv_row_elements * sizeof(float), LLAISYS_MEMCPY_H2D);
-            fill_random(host_kv.data(), kv_row_elements, rng);
-            api->memcpy_sync(v_ptr, host_kv.data(), kv_row_elements * sizeof(float), LLAISYS_MEMCPY_H2D);
+            fill_random(host_kv_f32.data(), kv_row_elements, rng);
+            float_to_half(host_kv_f32.data(), host_kv_f16.data(), kv_row_elements);
+            void* k_ptr = (char*)alloc.get_k_ptr(bid, 0) + (size_t)off * kv_row_elements * sizeof(__half);
+            void* v_ptr = (char*)alloc.get_v_ptr(bid, 0) + (size_t)off * kv_row_elements * sizeof(__half);
+            api->memcpy_sync(k_ptr, host_kv_f16.data(), kv_row_elements * sizeof(__half), LLAISYS_MEMCPY_H2D);
+            fill_random(host_kv_f32.data(), kv_row_elements, rng);
+            float_to_half(host_kv_f32.data(), host_kv_f16.data(), kv_row_elements);
+            api->memcpy_sync(v_ptr, host_kv_f16.data(), kv_row_elements * sizeof(__half), LLAISYS_MEMCPY_H2D);
         }
     }
 
@@ -441,11 +454,13 @@ static void bench_paged_attention_gpu(const BenchConfig& cfg, int warmup, int it
 
     // Query on GPU
     size_t q_elements = cfg.batch_size * cfg.num_heads * cfg.head_dim;
-    std::vector<float> host_query(q_elements);
-    fill_random(host_query.data(), q_elements, rng);
-    float* d_query = (float*)api->malloc_device(q_elements * sizeof(float));
-    float* d_output = (float*)api->malloc_device(q_elements * sizeof(float));
-    api->memcpy_sync(d_query, host_query.data(), q_elements * sizeof(float), LLAISYS_MEMCPY_H2D);
+    std::vector<float> host_query_f32(q_elements);
+    std::vector<__half> host_query_f16(q_elements);
+    fill_random(host_query_f32.data(), q_elements, rng);
+    float_to_half(host_query_f32.data(), host_query_f16.data(), q_elements);
+    __half* d_query = (__half*)api->malloc_device(q_elements * sizeof(__half));
+    __half* d_output = (__half*)api->malloc_device(q_elements * sizeof(__half));
+    api->memcpy_sync(d_query, host_query_f16.data(), q_elements * sizeof(__half), LLAISYS_MEMCPY_H2D);
 
     float scale = 1.0f / std::sqrt((float)cfg.head_dim);
 
@@ -458,7 +473,8 @@ static void bench_paged_attention_gpu(const BenchConfig& cfg, int warmup, int it
             cfg.batch_size, cfg.num_heads, cfg.num_kv_heads, cfg.head_dim,
             block_size, max_blocks_per_seq,
             alloc.block_stride(), alloc.layer_stride(),
-            0, scale, LLAISYS_DEVICE_NVIDIA);
+            0, scale, LLAISYS_DEVICE_NVIDIA,
+            llaisys::ops::KVQuantMode::FP32, LLAISYS_DTYPE_F16);
     }
     api->device_synchronize();
 
@@ -472,13 +488,14 @@ static void bench_paged_attention_gpu(const BenchConfig& cfg, int warmup, int it
             cfg.batch_size, cfg.num_heads, cfg.num_kv_heads, cfg.head_dim,
             block_size, max_blocks_per_seq,
             alloc.block_stride(), alloc.layer_stride(),
-            0, scale, LLAISYS_DEVICE_NVIDIA);
+            0, scale, LLAISYS_DEVICE_NVIDIA,
+            llaisys::ops::KVQuantMode::FP32, LLAISYS_DTYPE_F16);
     }
     api->device_synchronize();
     auto t1 = Clock::now();
 
     double avg_ms = elapsed_ms(t0, t1) / iters;
-    std::cout << "  GPU " << std::left << std::setw(16) << cfg.label
+    std::cout << "  GPU-F16 " << std::left << std::setw(12) << cfg.label
               << std::right << std::setw(10) << std::fixed << std::setprecision(3)
               << avg_ms << " ms" << std::endl;
 
@@ -519,6 +536,15 @@ int main() {
         {8,  256,  12, 2, 128, 16, 1, "B=8  seq=256"},
     };
 
+    BenchConfig gpu_configs[] = {
+        {1,   64,   8, 2, 128, 16, 1, "B=1 seq=64"},
+        {1,  256,   8, 2, 128, 16, 1, "B=1 seq=256"},
+        {4,   64,   8, 2, 128, 16, 1, "B=4 seq=64"},
+        {4,  256,   8, 2, 128, 16, 1, "B=4 seq=256"},
+        {8,   64,   8, 2, 128, 16, 1, "B=8 seq=64"},
+        {8,  256,   8, 2, 128, 16, 1, "B=8 seq=256"},
+    };
+
     std::cout << std::left << std::setw(18) << "  Config"
               << std::right << std::setw(12) << "Paged(ms)"
               << std::setw(12) << "Contig(ms)"
@@ -541,7 +567,7 @@ int main() {
     // ── 2b. GPU Paged Attention (if available) ──
     if (has_gpu) {
         std::cout << "\n--- 2b. GPU Paged Attention Latency ---" << std::endl;
-        for (auto& c : configs) bench_paged_attention_gpu(c, 5, 100);
+        for (auto& c : gpu_configs) bench_paged_attention_gpu(c, 5, 100);
     }
 
     // ── 3. Memory Utilization ──
