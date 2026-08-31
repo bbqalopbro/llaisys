@@ -108,9 +108,6 @@ class PerfMockModel:
         self._last_ctx = ctx
         return ctx
 
-    def create_cache_pool(self):
-        return None
-
 
 # ── Benchmark 1: RequestQueue Throughput ──────────────────────────
 

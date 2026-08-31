@@ -1,9 +1,9 @@
 /**
- * FlashInfer Adapter — bridges LLAISYS paged KV decode to FlashInfer's
- * public batch decode API.
+ * FlashInfer Adapter — bridges LLAISYS paged KV prefill/decode to
+ * FlashInfer's public batch APIs.
  *
- * This adapter supports FP32/FP16/BF16 query + KV-cache. Middle accumulation
- * stays inside FlashInfer's kernel implementation.
+ * Paged prefill supports FP16/BF16; paged decode currently enables FP16.
+ * Intermediate accumulation stays inside FlashInfer's kernel implementation.
  */
 
 #ifdef ENABLE_FLASHINFER
@@ -17,6 +17,8 @@
 #include <flashinfer/allocator.h>
 #include <flashinfer/attention/decode.cuh>
 #include <flashinfer/attention/default_decode_params.cuh>
+#include <flashinfer/attention/default_prefill_params.cuh>
+#include <flashinfer/attention/prefill.cuh>
 #include <flashinfer/attention/scheduler.cuh>
 #include <flashinfer/attention/variants.cuh>
 #include <flashinfer/page.cuh>
@@ -31,6 +33,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <cstdlib>
 #include <cstdio>
 #include <stdexcept>
 #include <string>
@@ -51,8 +54,82 @@ namespace llaisys::ops::nvidia {
 namespace {
 
 using flashinfer::DecodePlanInfo;
+using flashinfer::MaskMode;
 using flashinfer::PosEncodingMode;
+using flashinfer::PrefillPlanInfo;
 using flashinfer::QKVLayout;
+
+constexpr size_t kPrefillFloatWorkspaceBytes = 64ULL * 1024 * 1024;
+constexpr size_t kPrefillIntWorkspaceBytes = 16ULL * 1024 * 1024;
+
+struct FlashInferPrefillWorkspace {
+    void *float_workspace = nullptr;
+    void *int_workspace = nullptr;
+    void *page_locked_int_workspace = nullptr;
+
+    int32_t *d_indices = nullptr;
+    int32_t *d_kv_indptr = nullptr;
+    int32_t *d_last_page_len = nullptr;
+    int32_t *d_qo_indptr = nullptr;
+    size_t indices_capacity = 0;
+    size_t batch_capacity = 0;
+
+    PrefillPlanInfo plan_info;
+    int batch_size = 0;
+    int num_heads = 0;
+    int num_kv_heads = 0;
+    int head_dim = 0;
+    int block_size = 0;
+    llaisysDataType_t dtype = LLAISYS_DTYPE_F16;
+    bool prepared = false;
+};
+
+static void release_prefill_workspace(FlashInferPrefillWorkspace *workspace) {
+    if (!workspace) return;
+    if (workspace->float_workspace) cudaFree(workspace->float_workspace);
+    if (workspace->int_workspace) cudaFree(workspace->int_workspace);
+    if (workspace->page_locked_int_workspace)
+        cudaFreeHost(workspace->page_locked_int_workspace);
+    if (workspace->d_indices) cudaFree(workspace->d_indices);
+    if (workspace->d_kv_indptr) cudaFree(workspace->d_kv_indptr);
+    if (workspace->d_last_page_len) cudaFree(workspace->d_last_page_len);
+    if (workspace->d_qo_indptr) cudaFree(workspace->d_qo_indptr);
+}
+
+static void ensure_prefill_workspace(FlashInferPrefillWorkspace &workspace) {
+    if (!workspace.float_workspace)
+        CUDA_CHECK(cudaMalloc(&workspace.float_workspace,
+                              kPrefillFloatWorkspaceBytes));
+    if (!workspace.int_workspace)
+        CUDA_CHECK(cudaMalloc(&workspace.int_workspace,
+                              kPrefillIntWorkspaceBytes));
+    if (!workspace.page_locked_int_workspace)
+        CUDA_CHECK(cudaMallocHost(&workspace.page_locked_int_workspace,
+                                  kPrefillIntWorkspaceBytes));
+}
+
+static void ensure_prefill_metadata_buffers(
+    FlashInferPrefillWorkspace &workspace, size_t num_pages, size_t batch_size) {
+    if (num_pages > workspace.indices_capacity) {
+        if (workspace.d_indices) CUDA_CHECK(cudaFree(workspace.d_indices));
+        CUDA_CHECK(cudaMalloc(&workspace.d_indices,
+                              num_pages * sizeof(int32_t)));
+        workspace.indices_capacity = num_pages;
+    }
+    if (batch_size > workspace.batch_capacity) {
+        if (workspace.d_kv_indptr) CUDA_CHECK(cudaFree(workspace.d_kv_indptr));
+        if (workspace.d_last_page_len)
+            CUDA_CHECK(cudaFree(workspace.d_last_page_len));
+        if (workspace.d_qo_indptr) CUDA_CHECK(cudaFree(workspace.d_qo_indptr));
+        CUDA_CHECK(cudaMalloc(&workspace.d_kv_indptr,
+                              (batch_size + 1) * sizeof(int32_t)));
+        CUDA_CHECK(cudaMalloc(&workspace.d_last_page_len,
+                              batch_size * sizeof(int32_t)));
+        CUDA_CHECK(cudaMalloc(&workspace.d_qo_indptr,
+                              (batch_size + 1) * sizeof(int32_t)));
+        workspace.batch_capacity = batch_size;
+    }
+}
 
 struct FlashInferDecodeCache {
     // FlashInfer 的 decode kernel 需要临时 workspace。
@@ -405,9 +482,286 @@ static void dispatch_head_dim(
     }
 }
 
+template <typename T, uint32_t HEAD_DIM>
+static void flashinfer_prefill_run_typed(
+    FlashInferPrefillWorkspace &workspace,
+    T *output, const T *query,
+    const void *k_pool, const void *v_pool,
+    size_t pool_block_stride, size_t pool_layer_stride,
+    int layer_idx, float scale)
+{
+    using Params = flashinfer::BatchPrefillPagedParams<T, T, T, int32_t>;
+    using AttentionVariant =
+        flashinfer::DefaultAttention<false, false, false, false>;
+
+    const char *k_layer = static_cast<const char *>(k_pool)
+                        + static_cast<size_t>(layer_idx) * pool_layer_stride;
+    const char *v_layer = static_cast<const char *>(v_pool)
+                        + static_cast<size_t>(layer_idx) * pool_layer_stride;
+    int64_t kv_strides[4] = {
+        static_cast<int64_t>(pool_block_stride / sizeof(T)),
+        static_cast<int64_t>(workspace.num_kv_heads * HEAD_DIM),
+        static_cast<int64_t>(HEAD_DIM),
+        1,
+    };
+
+    flashinfer::paged_kv_t<T, int32_t> paged_kv(
+        workspace.num_kv_heads, workspace.block_size, HEAD_DIM,
+        workspace.batch_size, QKVLayout::kNHD,
+        reinterpret_cast<T *>(const_cast<char *>(k_layer)),
+        reinterpret_cast<T *>(const_cast<char *>(v_layer)),
+        kv_strides, workspace.d_indices, workspace.d_kv_indptr,
+        workspace.d_last_page_len);
+
+    Params params;
+    params.q = const_cast<T *>(query);
+    params.paged_kv = paged_kv;
+    params.maybe_custom_mask = nullptr;
+    params.q_indptr = workspace.d_qo_indptr;
+    params.maybe_mask_indptr = nullptr;
+    params.maybe_q_rope_offset = nullptr;
+    params.o = output;
+    params.lse = nullptr;
+    params.maybe_alibi_slopes = nullptr;
+    params.group_size = flashinfer::uint_fastdiv(
+        workspace.num_heads / workspace.num_kv_heads);
+    params.num_qo_heads = workspace.num_heads;
+    params.q_stride_n = workspace.num_heads * HEAD_DIM;
+    params.q_stride_h = HEAD_DIM;
+    params.window_left = -1;
+    params.logits_soft_cap = 0.0f;
+    params.sm_scale = scale;
+    params.rope_rcp_scale = 1.0f;
+    params.rope_rcp_theta = 1.0f;
+
+    params.request_indices = flashinfer::GetPtrFromBaseOffset<int32_t>(
+        workspace.int_workspace, workspace.plan_info.request_indices_offset);
+    params.qo_tile_indices = flashinfer::GetPtrFromBaseOffset<int32_t>(
+        workspace.int_workspace, workspace.plan_info.qo_tile_indices_offset);
+    params.kv_tile_indices = flashinfer::GetPtrFromBaseOffset<int32_t>(
+        workspace.int_workspace, workspace.plan_info.kv_tile_indices_offset);
+    params.o_indptr = flashinfer::GetPtrFromBaseOffset<int32_t>(
+        workspace.int_workspace, workspace.plan_info.o_indptr_offset);
+    params.kv_chunk_size_ptr = flashinfer::GetPtrFromBaseOffset<int32_t>(
+        workspace.int_workspace, workspace.plan_info.kv_chunk_size_ptr_offset);
+    params.merge_indptr = nullptr;
+    params.block_valid_mask = nullptr;
+    params.total_num_rows = nullptr;
+    params.max_total_num_rows =
+        static_cast<uint32_t>(workspace.plan_info.total_num_rows);
+    params.padded_batch_size =
+        static_cast<uint32_t>(workspace.plan_info.padded_batch_size);
+    params.partition_kv = workspace.plan_info.split_kv;
+
+    T *tmp_v = nullptr;
+    float *tmp_s = nullptr;
+    if (workspace.plan_info.split_kv) {
+        params.merge_indptr = flashinfer::GetPtrFromBaseOffset<int32_t>(
+            workspace.int_workspace, workspace.plan_info.merge_indptr_offset);
+        tmp_v = flashinfer::GetPtrFromBaseOffset<T>(
+            workspace.float_workspace, workspace.plan_info.v_offset);
+        tmp_s = flashinfer::GetPtrFromBaseOffset<float>(
+            workspace.float_workspace, workspace.plan_info.s_offset);
+    }
+
+    cudaError_t status = cudaSuccess;
+    DISPATCH_CTA_TILE_Q(workspace.plan_info.cta_tile_q, CTA_TILE_Q, {
+        status = flashinfer::BatchPrefillWithPagedKVCacheDispatched<
+            CTA_TILE_Q, HEAD_DIM, HEAD_DIM, PosEncodingMode::kNone,
+            false, MaskMode::kCausal, AttentionVariant, Params>(
+                params, tmp_v, tmp_s, false, nullptr);
+    });
+    CUDA_CHECK(status);
+}
+
+template <typename T>
+static void dispatch_prefill_head_dim(
+    FlashInferPrefillWorkspace &workspace,
+    T *output, const T *query,
+    const void *k_pool, const void *v_pool,
+    size_t pool_block_stride, size_t pool_layer_stride,
+    int layer_idx, float scale)
+{
+    switch (workspace.head_dim) {
+    case 64:
+        flashinfer_prefill_run_typed<T, 64>(
+            workspace, output, query, k_pool, v_pool,
+            pool_block_stride, pool_layer_stride, layer_idx, scale);
+        return;
+    case 128:
+        flashinfer_prefill_run_typed<T, 128>(
+            workspace, output, query, k_pool, v_pool,
+            pool_block_stride, pool_layer_stride, layer_idx, scale);
+        return;
+    case 256:
+        flashinfer_prefill_run_typed<T, 256>(
+            workspace, output, query, k_pool, v_pool,
+            pool_block_stride, pool_layer_stride, layer_idx, scale);
+        return;
+    default:
+        throw std::runtime_error(
+            "FlashInfer paged prefill: unsupported head_dim");
+    }
+}
+
 } // namespace
 
 bool flashinfer_available() { return true; }
+
+void *flashinfer_paged_prefill_workspace_create() {
+    return new FlashInferPrefillWorkspace();
+}
+
+void flashinfer_paged_prefill_workspace_destroy(void *workspace) {
+    auto *prefill = static_cast<FlashInferPrefillWorkspace *>(workspace);
+    release_prefill_workspace(prefill);
+    delete prefill;
+}
+
+bool flashinfer_paged_prefill_supported(
+    int num_heads, int num_kv_heads, int head_dim,
+    llaisysDataType_t dtype)
+{
+    const char *disabled = std::getenv("LLAISYS_DISABLE_FLASHINFER_PREFILL");
+    if (disabled && std::string(disabled) == "1") return false;
+    if (num_heads <= 0 || num_kv_heads <= 0 ||
+        num_heads % num_kv_heads != 0)
+        return false;
+    // Unlike the decode templates, FlashInfer's paged-prefill kernel carries
+    // the GQA group size as a runtime fast-divisor.  Restricting this to the
+    // decode specialization set (1/2/4/8) incorrectly rejects models such as
+    // Qwen2-1.5B, whose local group size is 12 / 2 = 6.
+    bool head_supported = head_dim == 64 || head_dim == 128 ||
+                          head_dim == 256;
+    bool dtype_supported = dtype == LLAISYS_DTYPE_F16 ||
+                           dtype == LLAISYS_DTYPE_BF16;
+    return head_supported && dtype_supported;
+}
+
+void flashinfer_paged_prefill_prepare(
+    void *workspace,
+    const int *block_tables, const int *seq_lens, const int *query_lens,
+    int batch_size, int num_heads, int num_kv_heads, int head_dim,
+    int block_size, int max_blocks_per_seq,
+    llaisysDataType_t dtype)
+{
+    auto *prefill = static_cast<FlashInferPrefillWorkspace *>(workspace);
+    if (!prefill || !block_tables || !seq_lens || !query_lens)
+        throw std::invalid_argument(
+            "FlashInfer paged prefill: null workspace or metadata");
+    if (batch_size <= 0 || block_size <= 0 || max_blocks_per_seq <= 0)
+        throw std::invalid_argument(
+            "FlashInfer paged prefill: invalid batch/page shape");
+    if (!flashinfer_paged_prefill_supported(
+            num_heads, num_kv_heads, head_dim, dtype))
+        throw std::invalid_argument(
+            "FlashInfer paged prefill: unsupported attention shape or dtype");
+
+    prefill->prepared = false;
+    std::vector<int32_t> indices;
+    indices.reserve(static_cast<size_t>(batch_size) * max_blocks_per_seq);
+    std::vector<int32_t> kv_indptr(batch_size + 1, 0);
+    std::vector<int32_t> qo_indptr(batch_size + 1, 0);
+    std::vector<int32_t> last_page_len(batch_size, 0);
+
+    for (int batch = 0; batch < batch_size; ++batch) {
+        int seq_len = seq_lens[batch];
+        int query_len = query_lens[batch];
+        if (seq_len <= 0 || query_len <= 0 || query_len > seq_len)
+            throw std::invalid_argument(
+                "FlashInfer paged prefill: invalid query/sequence length");
+        int num_pages = (seq_len + block_size - 1) / block_size;
+        if (num_pages > max_blocks_per_seq)
+            throw std::invalid_argument(
+                "FlashInfer paged prefill: page table is too narrow");
+        kv_indptr[batch + 1] = kv_indptr[batch] + num_pages;
+        qo_indptr[batch + 1] = qo_indptr[batch] + query_len;
+        last_page_len[batch] = (seq_len - 1) % block_size + 1;
+        for (int page = 0; page < num_pages; ++page) {
+            int block_id = block_tables[batch * max_blocks_per_seq + page];
+            if (block_id < 0)
+                throw std::invalid_argument(
+                    "FlashInfer paged prefill: negative block id");
+            indices.push_back(static_cast<int32_t>(block_id));
+        }
+    }
+
+    ensure_prefill_workspace(*prefill);
+    ensure_prefill_metadata_buffers(*prefill, indices.size(), batch_size);
+    CUDA_CHECK(cudaMemcpyAsync(
+        prefill->d_indices, indices.data(),
+        indices.size() * sizeof(int32_t), cudaMemcpyHostToDevice, nullptr));
+    CUDA_CHECK(cudaMemcpyAsync(
+        prefill->d_kv_indptr, kv_indptr.data(),
+        kv_indptr.size() * sizeof(int32_t), cudaMemcpyHostToDevice, nullptr));
+    CUDA_CHECK(cudaMemcpyAsync(
+        prefill->d_last_page_len, last_page_len.data(),
+        last_page_len.size() * sizeof(int32_t), cudaMemcpyHostToDevice, nullptr));
+    CUDA_CHECK(cudaMemcpyAsync(
+        prefill->d_qo_indptr, qo_indptr.data(),
+        qo_indptr.size() * sizeof(int32_t), cudaMemcpyHostToDevice, nullptr));
+
+    PrefillPlanInfo plan_info;
+    CUDA_CHECK(flashinfer::PrefillPlan<int32_t>(
+        prefill->float_workspace, kPrefillFloatWorkspaceBytes,
+        prefill->int_workspace, prefill->page_locked_int_workspace,
+        kPrefillIntWorkspaceBytes, plan_info,
+        qo_indptr.data(), kv_indptr.data(),
+        static_cast<uint32_t>(qo_indptr.back()),
+        static_cast<uint32_t>(batch_size),
+        static_cast<uint32_t>(num_heads),
+        static_cast<uint32_t>(num_kv_heads),
+        static_cast<uint32_t>(head_dim),
+        static_cast<uint32_t>(head_dim),
+        static_cast<uint32_t>(block_size),
+        false, sizeof(__half), -1, -1, false, 0, nullptr));
+
+    prefill->plan_info = plan_info;
+    prefill->batch_size = batch_size;
+    prefill->num_heads = num_heads;
+    prefill->num_kv_heads = num_kv_heads;
+    prefill->head_dim = head_dim;
+    prefill->block_size = block_size;
+    prefill->dtype = dtype;
+    prefill->prepared = true;
+}
+
+void flashinfer_paged_prefill_run(
+    void *workspace,
+    void *output, const void *query,
+    const void *k_pool, const void *v_pool,
+    size_t pool_block_stride, size_t pool_layer_stride,
+    int layer_idx, float scale, llaisysDataType_t dtype)
+{
+    auto *prefill = static_cast<FlashInferPrefillWorkspace *>(workspace);
+    if (!prefill || !prefill->prepared)
+        throw std::runtime_error(
+            "FlashInfer paged prefill: workspace was not prepared");
+    if (!output || !query || !k_pool || !v_pool || layer_idx < 0)
+        throw std::invalid_argument(
+            "FlashInfer paged prefill: invalid tensor pointer or layer");
+    if (dtype != prefill->dtype)
+        throw std::invalid_argument(
+            "FlashInfer paged prefill: dtype differs from prepared plan");
+
+    switch (dtype) {
+    case LLAISYS_DTYPE_F16:
+        dispatch_prefill_head_dim<__half>(
+            *prefill, static_cast<__half *>(output),
+            static_cast<const __half *>(query), k_pool, v_pool,
+            pool_block_stride, pool_layer_stride, layer_idx, scale);
+        return;
+    case LLAISYS_DTYPE_BF16:
+        dispatch_prefill_head_dim<__nv_bfloat16>(
+            *prefill, static_cast<__nv_bfloat16 *>(output),
+            static_cast<const __nv_bfloat16 *>(query), k_pool, v_pool,
+            pool_block_stride, pool_layer_stride, layer_idx, scale);
+        return;
+    default:
+        throw std::runtime_error(
+            "FlashInfer paged prefill: unsupported dtype");
+    }
+}
 
 void flashinfer_paged_attention(
     void *output, const void *query,

@@ -2,8 +2,10 @@
 
 #include <cuda_runtime.h>
 #include <cuda_fp16.h>
+#include <cuda_bf16.h>
 #include <cstdio>
 #include <stdexcept>
+#include <cstdint>
 
 // ── reshape_and_cache kernel ──────────────────────────────────────
 // 将 K/V [B, nkvh, dh] 根据 positions 和 block_tables 写入 paged block pool
@@ -46,6 +48,48 @@ __global__ void reshape_and_cache_kernel(
     v_dst[elem] = v_src[b * kv_dim + elem];
 }
 
+__global__ void copy_next_token_to_input_ids_kernel(
+    const int32_t *__restrict__ next_token,
+    int64_t *__restrict__ input_ids)
+{
+    input_ids[0] = static_cast<int64_t>(next_token[0]);
+}
+
+template<typename T>
+__global__ void gather_paged_cache_kernel(
+    T *__restrict__ k_dst,
+    T *__restrict__ v_dst,
+    const char *__restrict__ k_pool,
+    const char *__restrict__ v_pool,
+    const int *__restrict__ block_table,
+    int total_tokens,
+    int kv_dim,
+    int block_size,
+    size_t pool_block_stride,
+    size_t pool_layer_stride,
+    int layer_idx)
+{
+    size_t linear = static_cast<size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+    size_t count = static_cast<size_t>(total_tokens) * kv_dim;
+    if (linear >= count) return;
+
+    int token = static_cast<int>(linear / kv_dim);
+    int elem = static_cast<int>(linear % kv_dim);
+    int logical_block = token / block_size;
+    int block_offset = token % block_size;
+    int block_id = block_table[logical_block];
+    const T *k_src = reinterpret_cast<const T *>(
+        k_pool + static_cast<size_t>(block_id) * pool_block_stride
+               + static_cast<size_t>(layer_idx) * pool_layer_stride)
+        + static_cast<size_t>(block_offset) * kv_dim;
+    const T *v_src = reinterpret_cast<const T *>(
+        v_pool + static_cast<size_t>(block_id) * pool_block_stride
+               + static_cast<size_t>(layer_idx) * pool_layer_stride)
+        + static_cast<size_t>(block_offset) * kv_dim;
+    k_dst[linear] = k_src[elem];
+    v_dst[linear] = v_src[elem];
+}
+
 // ── reshape_and_cache 启动器 (模板化) ─────────────────────────────
 template<typename T>
 static void reshape_and_cache_typed(
@@ -68,6 +112,62 @@ static void reshape_and_cache_typed(
 }
 
 namespace llaisys::ops::nvidia {
+
+template<typename T>
+static void gather_paged_cache_typed(
+    T *k_dst, T *v_dst,
+    const void *k_pool, const void *v_pool,
+    const int *block_table_dev,
+    int total_tokens, int kv_dim, int block_size,
+    size_t pool_block_stride, size_t pool_layer_stride, int layer_idx)
+{
+    size_t count = static_cast<size_t>(total_tokens) * kv_dim;
+    int threads = 256;
+    int blocks = static_cast<int>((count + threads - 1) / threads);
+    gather_paged_cache_kernel<T><<<blocks, threads>>>(
+        k_dst, v_dst,
+        static_cast<const char *>(k_pool), static_cast<const char *>(v_pool),
+        block_table_dev, total_tokens, kv_dim, block_size,
+        pool_block_stride, pool_layer_stride, layer_idx);
+    cudaError_t error = cudaGetLastError();
+    if (error != cudaSuccess) {
+        throw std::runtime_error(cudaGetErrorString(error));
+    }
+}
+
+void gather_paged_cache(
+    void *k_dst, void *v_dst,
+    const void *k_pool, const void *v_pool,
+    const int *block_table_dev,
+    int total_tokens, int num_kv_heads, int head_dim, int block_size,
+    size_t pool_block_stride, size_t pool_layer_stride,
+    int layer_idx, llaisysDataType_t dtype)
+{
+    int kv_dim = num_kv_heads * head_dim;
+    switch (dtype) {
+    case LLAISYS_DTYPE_F32:
+        gather_paged_cache_typed<float>(
+            static_cast<float *>(k_dst), static_cast<float *>(v_dst),
+            k_pool, v_pool, block_table_dev, total_tokens, kv_dim, block_size,
+            pool_block_stride, pool_layer_stride, layer_idx);
+        break;
+    case LLAISYS_DTYPE_F16:
+        gather_paged_cache_typed<__half>(
+            static_cast<__half *>(k_dst), static_cast<__half *>(v_dst),
+            k_pool, v_pool, block_table_dev, total_tokens, kv_dim, block_size,
+            pool_block_stride, pool_layer_stride, layer_idx);
+        break;
+    case LLAISYS_DTYPE_BF16:
+        gather_paged_cache_typed<__nv_bfloat16>(
+            static_cast<__nv_bfloat16 *>(k_dst),
+            static_cast<__nv_bfloat16 *>(v_dst),
+            k_pool, v_pool, block_table_dev, total_tokens, kv_dim, block_size,
+            pool_block_stride, pool_layer_stride, layer_idx);
+        break;
+    default:
+        throw std::runtime_error("[gather_paged_cache] unsupported dtype");
+    }
+}
 
 void reshape_and_cache(
     const void *k_src, const void *v_src,
@@ -97,6 +197,13 @@ void reshape_and_cache(
     default:
         throw std::runtime_error("[reshape_and_cache] unsupported dtype");
     }
+}
+
+void copy_next_token_to_input_ids(
+    const int32_t *next_token_dev,
+    int64_t *input_ids_dev)
+{
+    copy_next_token_to_input_ids_kernel<<<1, 1>>>(next_token_dev, input_ids_dev);
 }
 
 } // namespace llaisys::ops::nvidia

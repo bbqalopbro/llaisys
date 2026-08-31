@@ -9,7 +9,7 @@
 //   5. PagedAttention 批量推理:
 //      - BlockAllocator: GPU 显存块分配器 (固定块大小)
 //      - PageTable: 每个 slot 维护虚拟→物理块映射
-//      - batch_prefill_impl: 逐 token prefill, KV 直接写入 block pool
+//      - batch_prefill_impl: 多 token chunk prefill, KV 写入 block pool
 //      - batch_decode_impl: 多 slot 批量 decode, B 个请求一次 paged_attention
 //   6. Per-request sampling: 每个 slot 独立采样参数
 //
@@ -28,13 +28,17 @@
 #include "../../utils/types.hpp"
 #include "../../distributed/comm.hpp"
 #include "../../core/allocator/block_allocator.hpp"
+#include "../../core/cache/block_prefix_cache.hpp"
 #include "../../core/page_table.hpp"
 #include "../../core/context/context.hpp"
 #include "../../core/cuda_graph.hpp"
+#include "../../models/common/model_runner.hpp"
+#include "../../backends/backend.hpp"
 #include <algorithm>
 #include <vector>
 #include <iostream>
 #include <cstring>
+#include <cstdlib>
 #include <cmath>
 #include <memory>
 #include <string>
@@ -69,31 +73,7 @@ struct LlaisysQwen2CacheSnapshot {
     std::vector<std::vector<uint8_t>> buffers;
 };
 
-// 前缀树节点
-struct TrieNode {
-    std::unordered_map<int64_t, std::unique_ptr<TrieNode>> children;
-    LlaisysQwen2CacheSnapshot* snapshot = nullptr;  // 可能为 null
-
-    ~TrieNode() {
-        if (snapshot) {
-            delete snapshot;
-            snapshot = nullptr;
-        }
-    }
-};
-
-// KV-Cache 前缀树池
-struct LlaisysKVCachePool {
-    std::unique_ptr<TrieNode> root;
-
-    LlaisysKVCachePool() : root(std::make_unique<TrieNode>()) {}
-
-    void clear() {
-        root = std::make_unique<TrieNode>();
-    }
-};
-
-struct LlaisysQwen2Model {
+struct LlaisysQwen2Model final : llaisys::models::ModelRunner {
     LlaisysQwen2Meta meta;
     LlaisysQwen2Weights weights;
     llaisysDeviceType_t device_type;
@@ -137,14 +117,18 @@ struct LlaisysQwen2Model {
     
     tensor_t q, k, v;       
     tensor_t attn_out;      
+    tensor_t q_3d, k_3d, v_3d;
+    tensor_t attn_flat;
     
     tensor_t gate, up, mlp_act; 
     tensor_t logits;        
+    tensor_t logits_2d;
     tensor_t next_token;    
     tensor_t max_val;       
 
     int64_t current_pos = 0;
     uint64_t rng_seed = 42;
+    bool input_ids_buf_valid = false;
 
     // ── CUDA Graph + Paged Attention (SingleModel decode) ──
     // GPU 上使用 BlockAllocator 作为 KV-Cache 后端, 替代 per-layer kv_caches
@@ -299,7 +283,7 @@ struct LlaisysQwen2Model {
         init_buffers();
     }
 
-    ~LlaisysQwen2Model() {
+    ~LlaisysQwen2Model() override {
         delete[] weights.attn_norm_w; delete[] weights.attn_q_w; delete[] weights.attn_q_b;
         delete[] weights.attn_k_w;    delete[] weights.attn_k_b;
         delete[] weights.attn_v_w;    delete[] weights.attn_v_b;
@@ -318,6 +302,15 @@ struct LlaisysQwen2Model {
             if (d_block_tables) api->free_device(d_block_tables);
             if (d_seq_lens) api->free_device(d_seq_lens);
         }
+    }
+
+    const char *name() const override { return "qwen2"; }
+    llaisysDeviceType_t deviceType() const override { return device_type; }
+    int deviceId() const override { return device_id; }
+    llaisys::models::ModelCapabilities capabilities() const override {
+        return {llaisys::models::ModelFamily::Qwen2,
+                llaisys::models::AttentionFamily::StandardKV,
+                true, true, true, false};
     }
 
     void init_cache() {
@@ -376,8 +369,12 @@ struct LlaisysQwen2Model {
         q = Tensor::create({1, q_dim}, act_dtype, device_type, device_id);
         k = Tensor::create({1, kv_dim}, act_dtype, device_type, device_id);
         v = Tensor::create({1, kv_dim}, act_dtype, device_type, device_id);
+        q_3d = q->reshape({1, local_nh, meta.dh});
+        k_3d = k->reshape({1, local_nkvh, meta.dh});
+        v_3d = v->reshape({1, local_nkvh, meta.dh});
         
         attn_out = Tensor::create({1, local_nh, meta.dh}, act_dtype, device_type, device_id);
+        attn_flat = attn_out->reshape({1, local_nh * meta.dh});
         
         // TP: MLP 使用 local_di
         gate = Tensor::create({1, local_di}, act_dtype, device_type, device_id);
@@ -386,6 +383,7 @@ struct LlaisysQwen2Model {
         
         // logits 始终 FP32 (采样精度要求)
         logits = Tensor::create({1, meta.voc}, LLAISYS_DTYPE_F32, device_type, device_id);
+        logits_2d = logits->reshape({1, meta.voc});
         next_token = Tensor::create({1}, LLAISYS_DTYPE_I32, device_type, device_id);
         max_val = Tensor::create({1}, LLAISYS_DTYPE_F32, device_type, device_id);
     }
@@ -749,7 +747,9 @@ __export int64_t llaisysQwen2ModelInferSample(struct LlaisysQwen2Model * model, 
 
     if (ntoken > 1) {
         // Batch Prefill: 所有 token 一次性通过 transformer
-        return prefill_batch(model, token_ids, ntoken, temperature, top_k, top_p);
+        int64_t out = prefill_batch(model, token_ids, ntoken, temperature, top_k, top_p);
+        model->input_ids_buf_valid = false;
+        return out;
     }
 
     // Decode path: 单 token (ntoken == 1)
@@ -761,7 +761,11 @@ __export int64_t llaisysQwen2ModelInferSample(struct LlaisysQwen2Model * model, 
         int64_t pos = model->current_pos;
 
         // ── H2D: 上传 token / pos / seq_len (在 CUDA Graph 之外) ──
-        model->memcpyH2D(model->input_ids_buf, &token, sizeof(int64_t));
+        // 连续 GPU decode 时，上一轮已经在 device 上把 next_token 写回 input_ids_buf，
+        // 这一轮可以直接复用，省掉 Python/CPU -> GPU 的 token H2D。
+        if (!model->single_allocator || !model->input_ids_buf_valid) {
+            model->memcpyH2D(model->input_ids_buf, &token, sizeof(int64_t));
+        }
         model->memcpyH2D(model->pos_ids_buf, &pos, sizeof(int64_t));
 
         if (model->single_allocator) {
@@ -792,16 +796,12 @@ __export int64_t llaisysQwen2ModelInferSample(struct LlaisysQwen2Model * model, 
                         model->weights.attn_v_w[i], model->weights.attn_v_w_scale[i],
                         model->weights.attn_v_b[i], model->weights.attn_v_w_qzeros[i]);
 
-                    auto q_3d = model->q->reshape({1, model->local_nh, model->meta.dh});
-                    auto k_3d = model->k->reshape({1, model->local_nkvh, model->meta.dh});
-                    auto v_3d = model->v->reshape({1, model->local_nkvh, model->meta.dh});
-
-                    ops::rope(q_3d, q_3d, model->pos_ids_buf, model->meta.theta);
-                    ops::rope(k_3d, k_3d, model->pos_ids_buf, model->meta.theta);
+                    ops::rope(model->q_3d, model->q_3d, model->pos_ids_buf, model->meta.theta);
+                    ops::rope(model->k_3d, model->k_3d, model->pos_ids_buf, model->meta.theta);
 
                     // KV 写入 block pool (GPU kernel, 读取 pos_ids_buf 确定目标位置)
                     ops::reshape_and_cache(
-                        k_3d->data(), v_3d->data(),
+                        model->k_3d->data(), model->v_3d->data(),
                         model->single_allocator->pool_k_raw(),
                         model->single_allocator->pool_v_raw(),
                         reinterpret_cast<const int*>(model->d_block_tables),
@@ -815,7 +815,7 @@ __export int64_t llaisysQwen2ModelInferSample(struct LlaisysQwen2Model * model, 
                     // Paged Attention (device 指针, 无 malloc/free, CUDA Graph 兼容)
                     float scale = 1.0f / std::sqrt((float)model->meta.dh);
                     ops::paged_attention_device(
-                        model->attn_out->data(), q_3d->data(),
+                        model->attn_out->data(), model->q_3d->data(),
                         model->single_allocator->pool_k_raw(),
                         model->single_allocator->pool_v_raw(),
                         reinterpret_cast<const int*>(model->d_block_tables),
@@ -827,14 +827,13 @@ __export int64_t llaisysQwen2ModelInferSample(struct LlaisysQwen2Model * model, 
                         model->single_allocator->layer_stride(),
                         (int)i, scale, model->device_type, model->act_dtype);
 
-                    auto attn_flat = model->attn_out->reshape({1, model->local_nh * model->meta.dh});
                     if (model->tp_size <= 1) {
                         // Fused linear+add: GEMV+residual in one kernel
-                        model->linear_maybe_dequant(model->hidden_states, attn_flat,
+                        model->linear_maybe_dequant(model->hidden_states, model->attn_flat,
                             model->weights.attn_o_w[i], model->weights.attn_o_w_scale[i],
                             nullptr, model->weights.attn_o_w_qzeros[i], model->residual);
                     } else {
-                        model->linear_maybe_dequant(model->hidden_states, attn_flat,
+                        model->linear_maybe_dequant(model->hidden_states, model->attn_flat,
                             model->weights.attn_o_w[i], model->weights.attn_o_w_scale[i],
                             nullptr, model->weights.attn_o_w_qzeros[i]);
                         model->allReduceIfTP(model->hidden_states, model->meta.hs);
@@ -872,8 +871,11 @@ __export int64_t llaisysQwen2ModelInferSample(struct LlaisysQwen2Model * model, 
                                             model->weights.out_embed, model->weights.out_embed_scale, nullptr);
 
                 // 5. Argmax (确定性, 可被 Graph 捕获)
-                auto logits_2d = model->logits->reshape({1, model->meta.voc});
-                ops::argmax(model->next_token, model->max_val, logits_2d);
+                ops::argmax(model->next_token, model->max_val, model->logits_2d);
+                ops::copy_next_token_to_input_ids(
+                    reinterpret_cast<const int32_t*>(model->next_token->data()),
+                    reinterpret_cast<int64_t*>(model->input_ids_buf->data()),
+                    model->device_type);
             };
 
             // ── CUDA Graph: 第一次 capture, 之后 replay ──
@@ -881,8 +883,11 @@ __export int64_t llaisysQwen2ModelInferSample(struct LlaisysQwen2Model * model, 
 
             // 非 greedy 采样: graph 内做了 argmax, 这里重做采样
             if (!use_greedy) {
-                auto logits_2d = model->logits->reshape({1, model->meta.voc});
-                ops::sample(model->next_token, logits_2d, temperature, top_k, top_p, model->rng_seed++);
+                ops::sample(model->next_token, model->logits_2d, temperature, top_k, top_p, model->rng_seed++);
+                ops::copy_next_token_to_input_ids(
+                    reinterpret_cast<const int32_t*>(model->next_token->data()),
+                    reinterpret_cast<int64_t*>(model->input_ids_buf->data()),
+                    model->device_type);
             }
 
         } else {
@@ -963,8 +968,16 @@ __export int64_t llaisysQwen2ModelInferSample(struct LlaisysQwen2Model * model, 
         }
 
         int32_t host_token;
-        model->memcpyD2H(&host_token, model->next_token, sizeof(int32_t));
+        const char *skip_token_d2h = std::getenv("LLAISYS_SKIP_TOKEN_D2H");
+        if (skip_token_d2h && skip_token_d2h[0] == '1' && model->single_allocator) {
+            // 诊断开关：跳过每 token 的 D2H 同步，只用于测量同步开销。
+            // 生成结果不再有语义正确性，因为下一步 token 被固定成 0。
+            host_token = 0;
+        } else {
+            model->memcpyD2H(&host_token, model->next_token, sizeof(int32_t));
+        }
         output_token = host_token;
+        model->input_ids_buf_valid = (model->single_allocator != nullptr);
 
         model->current_pos++;
     }
@@ -974,6 +987,7 @@ __export int64_t llaisysQwen2ModelInferSample(struct LlaisysQwen2Model * model, 
 __export void llaisysQwen2ResetCache(struct LlaisysQwen2Model * model) {
     if (!model) return;
     model->current_pos = 0;
+    model->input_ids_buf_valid = false;
     // CUDA Graph 不需要 invalidate: 拓扑不变, 只是 seq_len 从 1 重新开始
 }
 
@@ -1216,69 +1230,6 @@ __export void llaisysQwen2DestroyCacheSnapshot(struct LlaisysQwen2CacheSnapshot 
     if (snapshot) delete snapshot;
 }
 
-// ==========================================
-// 5. 前缀树 KV-Cache 池
-// ==========================================
-
-__export struct LlaisysKVCachePool *llaisysKVCachePoolCreate(void) {
-    return new LlaisysKVCachePool();
-}
-
-__export void llaisysKVCachePoolDestroy(struct LlaisysKVCachePool * pool) {
-    if (pool) delete pool;
-}
-
-__export void llaisysKVCachePoolInsert(struct LlaisysKVCachePool * pool, int64_t * tokens, size_t len, struct LlaisysQwen2CacheSnapshot * snapshot) {
-    if (!pool || !tokens || len == 0 || !snapshot) return;
-
-    TrieNode* node = pool->root.get();
-    for (size_t i = 0; i < len; ++i) {
-        int64_t tok = tokens[i];
-        auto it = node->children.find(tok);
-        if (it == node->children.end()) {
-            node->children[tok] = std::make_unique<TrieNode>();
-        }
-        node = node->children[tok].get();
-    }
-
-    // 替换已有快照
-    if (node->snapshot) {
-        delete node->snapshot;
-    }
-    node->snapshot = snapshot;  // 转移所有权
-}
-
-__export struct LlaisysQwen2CacheSnapshot *llaisysKVCachePoolLookup(struct LlaisysKVCachePool * pool, int64_t * tokens, size_t len, size_t * match_len) {
-    if (!pool || !tokens || len == 0) {
-        if (match_len) *match_len = 0;
-        return nullptr;
-    }
-
-    TrieNode* node = pool->root.get();
-    LlaisysQwen2CacheSnapshot* best = nullptr;
-    size_t best_len = 0;
-
-    for (size_t i = 0; i < len; ++i) {
-        int64_t tok = tokens[i];
-        auto it = node->children.find(tok);
-        if (it == node->children.end()) break;
-
-        node = it->second.get();
-        if (node->snapshot) {
-            best = node->snapshot;
-            best_len = i + 1;
-        }
-    }
-
-    if (match_len) *match_len = best_len;
-    return best;
-}
-
-__export void llaisysKVCachePoolClear(struct LlaisysKVCachePool * pool) {
-    if (!pool) return;
-    pool->clear();
-}
-
 __export int llaisysQwen2IsQuantized(struct LlaisysQwen2Model * model) {
     if (!model) return 0;
     return model->has_quantized ? 1 : 0;
@@ -1329,6 +1280,11 @@ struct LlaisysQwen2BatchContext {
     // 共享 block 分配器: 所有 slot 从同一个池分配/释放块
     // block_pool 是一整块 GPU 显存, 按 (block_id, layer, offset) 索引
     std::unique_ptr<llaisys::core::BlockAllocator> block_allocator;
+    std::unique_ptr<llaisys::core::BlockPrefixCache> prefix_cache;
+
+    // Backend-owned paged-prefill plan/workspace. Page metadata is prepared
+    // once per prefill step and reused by every transformer layer.
+    void *paged_prefill_workspace = nullptr;
 
     // CUDA Graph 加速 (可选)
     llaisys::core::CUDAGraphDecodeSession cuda_graph_session;
@@ -1379,6 +1335,10 @@ struct LlaisysQwen2BatchContext {
         }
         const LlaisysRuntimeAPI* api = llaisysGetRuntimeAPI(dev);
         block_allocator = std::make_unique<llaisys::core::BlockAllocator>(cfg, api);
+        prefix_cache = std::make_unique<llaisys::core::BlockPrefixCache>(
+            block_allocator->block_manager(), static_cast<size_t>(block_size));
+        paged_prefill_workspace =
+            llaisys::ops::paged_prefill_workspace_create(dev);
 
         slots.resize(max_bs);
         for (size_t i = 0; i < max_bs; ++i) {
@@ -1407,6 +1367,11 @@ struct LlaisysQwen2BatchContext {
         single_max_val    = Tensor::create({1}, LLAISYS_DTYPE_F32, dev, dev_id);
     }
 
+    ~LlaisysQwen2BatchContext() {
+        llaisys::ops::paged_prefill_workspace_destroy(
+            paged_prefill_workspace, model->device_type);
+    }
+
     void linear_maybe_dequant(tensor_t out, tensor_t in,
                               llaisysTensor_t w_handle, llaisysTensor_t scale_handle,
                               llaisysTensor_t bias_handle,
@@ -1415,12 +1380,13 @@ struct LlaisysQwen2BatchContext {
     }
 };
 
-// ── Batch Prefill for BatchContext: 一次性处理所有 token，KV 写入 Block Pool ──
+// ── Batch Prefill for BatchContext: multi-token chunk，KV 写入 Block Pool ──
 // 所有 token 并行通过每层 transformer，然后将 KV scatter 到 paged block pool
 // 返回最后一个 token 对应的 output_token
 
 static int64_t batch_prefill_impl(LlaisysQwen2BatchContext* ctx, size_t slot_id,
-                                   int64_t* token_ids, size_t ntoken,
+                                   const int64_t* token_ids, size_t ntoken,
+                                   int64_t start_pos, bool sample_output,
                                    float temperature, int top_k, float top_p) {
     using Tensor = llaisys::Tensor;
 
@@ -1431,6 +1397,8 @@ static int64_t batch_prefill_impl(LlaisysQwen2BatchContext* ctx, size_t slot_id,
     bool use_greedy = (top_k == 1) || (temperature <= 0.0f);
 
     size_t S = ntoken;
+    size_t prefix_len = static_cast<size_t>(start_pos);
+    size_t total_len = prefix_len + S;
     auto dt = model->act_dtype;
     auto dev = model->device_type;
     auto did = model->device_id;
@@ -1445,24 +1413,17 @@ static int64_t batch_prefill_impl(LlaisysQwen2BatchContext* ctx, size_t slot_id,
     float scale = 1.0f / std::sqrt((float)dh);
     int bs = ctx->block_size;
 
-    // ── 1. 分配 blocks ──
-    size_t blocks_needed = (S + bs - 1) / bs;
-    for (size_t bi = 0; bi < blocks_needed; ++bi) {
-        if (slot.page_table.needs_new_block()) {
-            int bid = alloc.alloc();
-            if (bid < 0) {
-                std::cerr << "[qwen2] batch prefill: block pool exhausted, need "
-                          << blocks_needed << " blocks, only allocated " << bi << std::endl;
-                return -1;
-            }
-            slot.page_table.append_block(bid);
+    // ── 1. 为 prefix + 当前 chunk 分配物理 blocks ──
+    size_t blocks_needed = (total_len + bs - 1) / bs;
+    while (static_cast<size_t>(slot.page_table.num_blocks()) < blocks_needed) {
+        int bid = alloc.alloc();
+        if (bid < 0) {
+            std::cerr << "[qwen2] batch prefill: block pool exhausted, need "
+                      << blocks_needed << " total blocks" << std::endl;
+            return -1;
         }
-        // 预增 num_tokens 以触发 needs_new_block
-        size_t tokens_in_block = std::min((size_t)bs, S - bi * bs);
-        for (size_t t = 0; t < tokens_in_block; ++t)
-            slot.page_table.inc_num_tokens();
+        slot.page_table.append_block(bid);
     }
-    slot.page_table.set_num_tokens(0);  // 重置, 最后设为 S
 
     // ── 2. 创建临时缓冲区 [S, ...] ──
     auto ids_buf  = Tensor::create({S}, LLAISYS_DTYPE_I64, dev, did);
@@ -1481,8 +1442,64 @@ static int64_t batch_prefill_impl(LlaisysQwen2BatchContext* ctx, size_t slot_id,
     // ── 3. 上传 token_ids 和 pos_ids ──
     model->memcpyH2D(ids_buf, token_ids, S * sizeof(int64_t));
     std::vector<int64_t> pos_vec(S);
-    for (size_t i = 0; i < S; ++i) pos_vec[i] = (int64_t)i;
+    for (size_t i = 0; i < S; ++i) pos_vec[i] = start_pos + (int64_t)i;
     model->memcpyH2D(pos_buf, pos_vec.data(), S * sizeof(int64_t));
+
+    // The optimized backend path prepares one paged-prefill plan for the entire
+    // chunk. Every layer then reads the authoritative block pool directly. The
+    // contiguous gather/GEMM path remains only as a build/runtime fallback.
+    std::vector<int> prefill_block_tables;
+    std::vector<int> prefill_seq_lens;
+    tensor_t prefill_page_table_dev;
+    tensor_t full_k_buf;
+    tensor_t full_v_buf;
+    int max_blocks_per_seq = slot.page_table.num_blocks();
+    const auto &page_blocks = slot.page_table.block_ids();
+    bool use_direct_paged_prefill =
+        dev == LLAISYS_DEVICE_NVIDIA &&
+        ctx->paged_prefill_workspace != nullptr &&
+        llaisys::ops::paged_prefill_supported(
+            dev,
+            static_cast<int>(nh_local), static_cast<int>(nkvh_local),
+            static_cast<int>(dh), dt);
+    const char *require_direct_prefill =
+        std::getenv("LLAISYS_REQUIRE_PAGED_PREFILL");
+    if (require_direct_prefill && std::string(require_direct_prefill) == "1" &&
+        !use_direct_paged_prefill) {
+        throw std::runtime_error(
+            "LLAISYS_REQUIRE_PAGED_PREFILL=1, but no direct paged-prefill "
+            "backend supports this attention shape/dtype");
+    }
+    if (use_direct_paged_prefill) {
+        int seq_len = static_cast<int>(total_len);
+        int query_len = static_cast<int>(S);
+        llaisys::ops::paged_prefill_prepare(
+            ctx->paged_prefill_workspace,
+            page_blocks.data(), &seq_len, &query_len,
+            1, static_cast<int>(nh_local), static_cast<int>(nkvh_local),
+            static_cast<int>(dh), bs, max_blocks_per_seq, dev, dt);
+    } else if (prefix_len > 0) {
+        if (dev == LLAISYS_DEVICE_NVIDIA) {
+            prefill_page_table_dev = Tensor::create(
+                {static_cast<size_t>(max_blocks_per_seq)},
+                LLAISYS_DTYPE_I32, dev, did);
+            model->memcpyH2D(prefill_page_table_dev, page_blocks.data(),
+                             page_blocks.size() * sizeof(int));
+            full_k_buf = Tensor::create(
+                {total_len, nkvh_local, dh}, dt, dev, did);
+            full_v_buf = Tensor::create(
+                {total_len, nkvh_local, dh}, dt, dev, did);
+        } else {
+            prefill_block_tables.resize(
+                S * static_cast<size_t>(max_blocks_per_seq));
+            prefill_seq_lens.resize(S);
+            for (size_t row = 0; row < S; ++row) {
+                std::copy(page_blocks.begin(), page_blocks.end(),
+                          prefill_block_tables.begin() + row * max_blocks_per_seq);
+                prefill_seq_lens[row] = static_cast<int>(prefix_len + row + 1);
+            }
+        }
+    }
 
     // ── 4. Embedding: [S] → [S, hs] ──
     ops::embedding(hs_buf, ids_buf, TO_CPP_TENSOR(model->weights.in_embed));
@@ -1514,24 +1531,63 @@ static int64_t batch_prefill_impl(LlaisysQwen2BatchContext* ctx, size_t slot_id,
         ops::rope(q_3d, q_3d, pos_buf, meta.theta);
         ops::rope(k_3d, k_3d, pos_buf, meta.theta);
 
-        // ── Scatter KV to Block Pool ──
-        // 按 block 粒度拷贝: 每个 block 一次 memcpy
-        for (size_t bi = 0; bi < blocks_needed; ++bi) {
-            int block_id = slot.page_table.block_ids()[bi];
-            size_t tok_start = bi * bs;
-            size_t tok_end = std::min(tok_start + (size_t)bs, S);
-            size_t ntok = tok_end - tok_start;
+        // ── Scatter 当前 chunk KV to Block Pool ──
+        // start_pos 可能落在 partial block 中，因此按物理 block
+        // 边界切分 D2D copy，而不能假设 chunk 从 block offset 0 开始。
+        size_t chunk_offset = 0;
+        while (chunk_offset < S) {
+            size_t global_pos = prefix_len + chunk_offset;
+            size_t logical_block = global_pos / static_cast<size_t>(bs);
+            size_t block_offset = global_pos % static_cast<size_t>(bs);
+            size_t copy_tokens = std::min(
+                S - chunk_offset, static_cast<size_t>(bs) - block_offset);
+            int block_id = slot.page_table.block_ids()[logical_block];
 
-            char* k_src = (char*)k_3d->data() + tok_start * kv_bytes;
-            char* v_src = (char*)v_3d->data() + tok_start * kv_bytes;
-            char* k_dst = (char*)alloc.get_k_ptr(block_id, (int)layer);
-            char* v_dst = (char*)alloc.get_v_ptr(block_id, (int)layer);
-            model->memcpyOnDevice(k_dst, k_src, ntok * kv_bytes);
-            model->memcpyOnDevice(v_dst, v_src, ntok * kv_bytes);
+            char* k_src = (char*)k_3d->data() + chunk_offset * kv_bytes;
+            char* v_src = (char*)v_3d->data() + chunk_offset * kv_bytes;
+            char* k_dst = (char*)alloc.get_k_ptr(block_id, (int)layer)
+                        + block_offset * kv_bytes;
+            char* v_dst = (char*)alloc.get_v_ptr(block_id, (int)layer)
+                        + block_offset * kv_bytes;
+            model->memcpyOnDevice(k_dst, k_src, copy_tokens * kv_bytes);
+            model->memcpyOnDevice(v_dst, v_src, copy_tokens * kv_bytes);
+            chunk_offset += copy_tokens;
         }
 
-        // Self-Attention (causal mask, 使用连续 K/V 临时缓冲)
-        ops::self_attention(attn_buf, q_3d, k_3d, v_3d, scale);
+        if (use_direct_paged_prefill) {
+            llaisys::ops::paged_prefill_run(
+                ctx->paged_prefill_workspace,
+                attn_buf->data(), q_3d->data(),
+                alloc.pool_k_raw(), alloc.pool_v_raw(),
+                alloc.block_stride(), alloc.layer_stride(),
+                static_cast<int>(layer), scale, dev, dt);
+        } else if (prefix_len == 0) {
+            // First chunk: contiguous causal attention is the fastest path.
+            ops::self_attention(attn_buf, q_3d, k_3d, v_3d, scale);
+        } else if (dev == LLAISYS_DEVICE_NVIDIA) {
+            // Gather the authoritative paged cache into a contiguous layer
+            // view, then use the existing batched-GEMM causal attention. The
+            // gather is one CUDA kernel; attention no longer scans KV once per
+            // query row as the decode-oriented paged kernel does.
+            llaisys::ops::gather_paged_cache(
+                full_k_buf->data(), full_v_buf->data(),
+                alloc.pool_k_raw(), alloc.pool_v_raw(),
+                reinterpret_cast<const int *>(prefill_page_table_dev->data()),
+                static_cast<int>(total_len), static_cast<int>(nkvh_local),
+                static_cast<int>(dh), bs, alloc.block_stride(),
+                alloc.layer_stride(), static_cast<int>(layer), dev, dt);
+            ops::self_attention(attn_buf, q_3d, full_k_buf, full_v_buf, scale);
+        } else {
+            llaisys::ops::paged_attention(
+                attn_buf->data(), q_3d->data(),
+                alloc.pool_k_raw(), alloc.pool_v_raw(),
+                prefill_block_tables.data(), prefill_seq_lens.data(),
+                static_cast<int>(S), static_cast<int>(nh_local),
+                static_cast<int>(nkvh_local), static_cast<int>(dh), bs,
+                max_blocks_per_seq, alloc.block_stride(), alloc.layer_stride(),
+                static_cast<int>(layer), scale, dev,
+                llaisys::ops::KVQuantMode::FP32, dt);
+        }
 
         // O Projection
         auto attn_flat = attn_buf->reshape({S, nh_local * dh});
@@ -1559,7 +1615,13 @@ static int64_t batch_prefill_impl(LlaisysQwen2BatchContext* ctx, size_t slot_id,
         ops::add(hs_buf, hs_buf, res_buf);
     }
 
-    // ── 6. 取最后一个 token → Final Norm → LM Head → Sample ──
+    // ── 6. 先提交 cache 状态；中间 chunk 到此结束 ──
+    slot.page_table.set_num_tokens(static_cast<int>(total_len));
+    slot.current_pos = static_cast<int64_t>(total_len);
+    slot.active = true;
+    if (!sample_output) return -1;
+
+    // 只有最后一个 chunk 执行 Final Norm → LM Head → Sample。
     size_t elem_sz = llaisys::utils::dsize(dt);
     char* last_hs_src = (char*)hs_buf->data() + (S - 1) * hs * elem_sz;
     model->memcpyOnDevice(model->hidden_states->data(), last_hs_src, hs * elem_sz);
@@ -1580,10 +1642,6 @@ static int64_t batch_prefill_impl(LlaisysQwen2BatchContext* ctx, size_t slot_id,
     int32_t host_token;
     model->memcpyD2H(&host_token, model->next_token, sizeof(int32_t));
 
-    // ── 7. 更新 page table 和 slot 状态 ──
-    slot.page_table.set_num_tokens(static_cast<int>(S));
-    slot.current_pos = static_cast<int64_t>(S);
-    slot.active = true;
     return (int64_t)host_token;
 }
 
@@ -2074,7 +2132,18 @@ __export struct LlaisysQwen2BatchContext *llaisysQwen2BatchContextCreate(
     struct LlaisysQwen2Model * model, size_t max_batch_size, size_t max_seq_per_slot)
 {
     if (!model || max_batch_size == 0) return nullptr;
-    return new LlaisysQwen2BatchContext(model, max_batch_size, max_seq_per_slot);
+    try {
+        return new LlaisysQwen2BatchContext(model, max_batch_size,
+                                            max_seq_per_slot);
+    } catch (const std::exception &error) {
+        std::cerr << "[qwen2] failed to create batch context: "
+                  << error.what() << std::endl;
+        return nullptr;
+    } catch (...) {
+        std::cerr << "[qwen2] failed to create batch context: unknown error"
+                  << std::endl;
+        return nullptr;
+    }
 }
 
 __export void llaisysQwen2BatchContextDestroy(struct LlaisysQwen2BatchContext * ctx) {
@@ -2094,8 +2163,60 @@ __export int64_t llaisysQwen2BatchPrefill(
 {
     if (!ctx || slot_id >= ctx->max_batch_size || !token_ids || ntoken == 0) return -1;
     ctx->slots[slot_id].reset(*ctx->block_allocator);
-    return batch_prefill_impl(ctx, slot_id, token_ids, ntoken,
+    return batch_prefill_impl(ctx, slot_id, token_ids, ntoken, 0, true,
                               temperature, top_k, top_p);
+}
+
+__export int64_t llaisysQwen2BatchPrefillChunk(
+    struct LlaisysQwen2BatchContext * ctx,
+    size_t slot_id,
+    const int64_t * token_ids, size_t ntoken,
+    int64_t start_pos, int is_last_chunk,
+    float temperature, int top_k, float top_p)
+{
+    if (!ctx || slot_id >= ctx->max_batch_size || !token_ids || ntoken == 0)
+        return -1;
+    auto &slot = ctx->slots[slot_id];
+    if (start_pos < 0 || slot.current_pos != start_pos ||
+        static_cast<size_t>(start_pos) + ntoken > ctx->max_seq_per_slot)
+        return -1;
+
+    return batch_prefill_impl(ctx, slot_id, token_ids, ntoken, start_pos,
+                              is_last_chunk != 0,
+                              temperature, top_k, top_p);
+}
+
+__export size_t llaisysQwen2BatchPrefixLookup(
+    struct LlaisysQwen2BatchContext * ctx, size_t slot_id,
+    const int64_t * token_ids, size_t ntoken)
+{
+    if (!ctx || slot_id >= ctx->max_batch_size || !token_ids || ntoken <= 1 ||
+        !ctx->prefix_cache)
+        return 0;
+    auto &slot = ctx->slots[slot_id];
+    slot.reset(*ctx->block_allocator);
+
+    // Never consume the final prompt token from cache: its output logits are
+    // not part of the KV payload and must still be computed.
+    const size_t lookup_tokens = ntoken - 1;
+    auto match = ctx->prefix_cache->match(token_ids, lookup_tokens);
+    if (match.block_ids.empty()) return 0;
+    slot.page_table.attach_blocks(match.block_ids,
+                                  static_cast<int>(match.matched_tokens));
+    slot.current_pos = static_cast<int64_t>(match.matched_tokens);
+    slot.active = true;
+    return match.matched_tokens;
+}
+
+__export int llaisysQwen2BatchPrefixPublish(
+    struct LlaisysQwen2BatchContext * ctx, size_t slot_id,
+    const int64_t * token_ids, size_t ntoken)
+{
+    if (!ctx || slot_id >= ctx->max_batch_size || !token_ids || ntoken == 0 ||
+        !ctx->prefix_cache)
+        return 0;
+    const auto &block_ids = ctx->slots[slot_id].page_table.block_ids();
+    return ctx->prefix_cache->insert(token_ids, ntoken, block_ids) ? 1 : 0;
 }
 
 __export void llaisysQwen2BatchDecode(

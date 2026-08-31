@@ -1,5 +1,7 @@
 # Phase 2: Paged Attention Kernel 教学文档
 
+> 更新（2026-08-27）：本文前半保留早期 native decode kernel 的教学背景。当前生产路径已同时接入 FlashInfer paged decode 和 direct paged prefill；chunked prefill 不再依赖连续历史 K/V。
+
 ## 1. 设计动机
 
 ### 1.1 当前 Attention 实现的限制
@@ -248,7 +250,7 @@ kv_head_idx = query_head_idx / group_size
 
 ### 7.1 FlashInfer 路径什么时候启用
 
-`paged_attention.cpp` 是 paged attention 的总分发入口。当前实现中，只有满足以下条件时才会走 FlashInfer：
+`paged_attention.cpp` 是通用 paged attention 分发入口。Decode 的 FlashInfer 路径满足：
 
 ```cpp
 device_type == LLAISYS_DEVICE_NVIDIA
@@ -262,6 +264,8 @@ flashinfer_available()
 否则会 fallback 到本项目自己的 CUDA kernel。
 
 注意这里的 `KVQuantMode::FP32` 表示 KV cache 没有走 INT8/INT4 量化路径；`dtype == F16` 表示实际 K/V/Q/O 的 I/O 类型是 FP16。
+
+Prefill 使用独立的 `paged_prefill_prepare/run` 接口，当前支持 NVIDIA、FP16/BF16、`head_dim in {64, 128, 256}` 和任意整数 GQA group size。例如 Qwen2-1.5B 的 `12/2=6` 可以直接使用；上面的 `{1,2,4,8}` 是 decode 模板限制，不适用于 prefill。
 
 ### 7.2 Dense block_tables 到 CSR 页表
 
@@ -488,10 +492,10 @@ k_layer
 |------|------|-----------------|
 | Kernel 来源 | 自研 + FlashInfer | 自研 CPU + CUDA + FlashInfer adapter |
 | Decode 优化 | 高度优化 (warp-level, vectorized) | naive CUDA 路径较基础；满足条件时可走 FlashInfer |
-| Prefill | FlashAttention (无分页) | 暂用现有 attention |
+| Prefill | FlashAttention/FlashInfer 等后端 | FlashInfer direct paged prefill，gather+GEMM fallback |
 | GQA | 完整支持 | 完整支持 |
 | Block Table 位置 | GPU tensor | 普通路径 CPU→GPU 按需拷贝；device variant 可直接用 GPU 表 |
-| FP16/BF16 | 原生支持 | naive kernel 支持 FP32/FP16/BF16；FlashInfer adapter 当前启用 FP16 |
+| FP16/BF16 | 原生支持 | native kernel 支持 FP32/FP16/BF16；FlashInfer decode 当前 FP16，prefill 支持 FP16/BF16 |
 
 ## 10. 文件清单
 
@@ -502,7 +506,7 @@ k_layer
 | `src/ops/self_attention/nvidia/paged_attention_nvidia.cuh` | 新建 | CUDA 头文件 |
 | `src/ops/self_attention/nvidia/paged_attention_nvidia.cu` | 新建 | CUDA kernel |
 | `src/ops/self_attention/nvidia/flashinfer_adapter.cuh` | 新建 | FlashInfer adapter 声明 |
-| `src/ops/self_attention/nvidia/flashinfer_adapter.cu` | 新建 | FlashInfer paged KV decode 适配 |
+| `src/ops/self_attention/nvidia/flashinfer_adapter.cu` | 新建 | FlashInfer paged KV prefill/decode 适配 |
 | `include/llaisys/ops.h` | 修改 | 新增 `llaisysPagedAttention` C API |
 | `src/llaisys/ops.cc` | 修改 | C API wrapper 实现 |
 | `test/test_paged_attention.cpp` | 新建 | 数值正确性测试 (4 个用例) |

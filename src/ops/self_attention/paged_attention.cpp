@@ -13,6 +13,84 @@
 
 namespace llaisys::ops {
 
+void *paged_prefill_workspace_create(llaisysDeviceType_t device_type) {
+#ifdef ENABLE_NVIDIA_API
+    if (device_type == LLAISYS_DEVICE_NVIDIA &&
+        nvidia::flashinfer_available())
+        return nvidia::flashinfer_paged_prefill_workspace_create();
+#endif
+    return nullptr;
+}
+
+void paged_prefill_workspace_destroy(
+    void *workspace, llaisysDeviceType_t device_type) {
+#ifdef ENABLE_NVIDIA_API
+    if (device_type == LLAISYS_DEVICE_NVIDIA) {
+        nvidia::flashinfer_paged_prefill_workspace_destroy(workspace);
+        return;
+    }
+#else
+    (void)workspace;
+    (void)device_type;
+#endif
+}
+
+bool paged_prefill_supported(
+    llaisysDeviceType_t device_type,
+    int num_heads, int num_kv_heads, int head_dim,
+    llaisysDataType_t dtype) {
+#ifdef ENABLE_NVIDIA_API
+    if (device_type == LLAISYS_DEVICE_NVIDIA)
+        return nvidia::flashinfer_paged_prefill_supported(
+            num_heads, num_kv_heads, head_dim, dtype);
+#else
+    (void)device_type;
+    (void)num_heads;
+    (void)num_kv_heads;
+    (void)head_dim;
+    (void)dtype;
+#endif
+    return false;
+}
+
+void paged_prefill_prepare(
+    void *workspace,
+    const int *block_tables, const int *seq_lens, const int *query_lens,
+    int batch_size, int num_heads, int num_kv_heads, int head_dim,
+    int block_size, int max_blocks_per_seq,
+    llaisysDeviceType_t device_type, llaisysDataType_t dtype) {
+#ifdef ENABLE_NVIDIA_API
+    if (device_type == LLAISYS_DEVICE_NVIDIA) {
+        nvidia::flashinfer_paged_prefill_prepare(
+            workspace, block_tables, seq_lens, query_lens,
+            batch_size, num_heads, num_kv_heads, head_dim,
+            block_size, max_blocks_per_seq, dtype);
+        return;
+    }
+#endif
+    throw std::runtime_error(
+        "paged_prefill_prepare: no optimized backend for this device");
+}
+
+void paged_prefill_run(
+    void *workspace,
+    void *output, const void *query,
+    const void *k_pool, const void *v_pool,
+    size_t pool_block_stride, size_t pool_layer_stride,
+    int layer_idx, float scale,
+    llaisysDeviceType_t device_type, llaisysDataType_t dtype) {
+#ifdef ENABLE_NVIDIA_API
+    if (device_type == LLAISYS_DEVICE_NVIDIA) {
+        nvidia::flashinfer_paged_prefill_run(
+            workspace, output, query, k_pool, v_pool,
+            pool_block_stride, pool_layer_stride, layer_idx, scale, dtype);
+        return;
+    }
+#endif
+    throw std::runtime_error(
+        "paged_prefill_run: no optimized backend for this device");
+}
+
 // ── FP32 CPU kernel ────────────────────────────────────────────────
 
 static void paged_attention_cpu_fp32(

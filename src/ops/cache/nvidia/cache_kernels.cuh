@@ -25,4 +25,23 @@ void reshape_and_cache(
     int layer_idx,
     llaisysDataType_t dtype = LLAISYS_DTYPE_F32);
 
+void gather_paged_cache(
+    void *k_dst,
+    void *v_dst,
+    const void *k_pool,
+    const void *v_pool,
+    const int *block_table_dev,
+    int total_tokens,
+    int num_kv_heads,
+    int head_dim,
+    int block_size,
+    size_t pool_block_stride,
+    size_t pool_layer_stride,
+    int layer_idx,
+    llaisysDataType_t dtype = LLAISYS_DTYPE_F32);
+
+void copy_next_token_to_input_ids(
+    const int32_t *next_token_dev,
+    int64_t *input_ids_dev);
+
 } // namespace llaisys::ops::nvidia

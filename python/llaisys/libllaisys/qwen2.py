@@ -102,43 +102,6 @@ def _setup_functions():
         lib.llaisysQwen2DestroyCacheSnapshot.argtypes = [ctypes.c_void_p]
         lib.llaisysQwen2DestroyCacheSnapshot.restype = None
 
-    # ── Phase 4: 前缀树 KV-Cache 池 ──
-
-    # KVCachePoolCreate
-    if hasattr(lib, 'llaisysKVCachePoolCreate'):
-        lib.llaisysKVCachePoolCreate.argtypes = []
-        lib.llaisysKVCachePoolCreate.restype = ctypes.c_void_p
-
-    # KVCachePoolDestroy
-    if hasattr(lib, 'llaisysKVCachePoolDestroy'):
-        lib.llaisysKVCachePoolDestroy.argtypes = [ctypes.c_void_p]
-        lib.llaisysKVCachePoolDestroy.restype = None
-
-    # KVCachePoolInsert
-    if hasattr(lib, 'llaisysKVCachePoolInsert'):
-        lib.llaisysKVCachePoolInsert.argtypes = [
-            ctypes.c_void_p,                # pool
-            ctypes.POINTER(ctypes.c_int64), # tokens
-            ctypes.c_size_t,                # len
-            ctypes.c_void_p,                # snapshot
-        ]
-        lib.llaisysKVCachePoolInsert.restype = None
-
-    # KVCachePoolLookup
-    if hasattr(lib, 'llaisysKVCachePoolLookup'):
-        lib.llaisysKVCachePoolLookup.argtypes = [
-            ctypes.c_void_p,                 # pool
-            ctypes.POINTER(ctypes.c_int64),  # tokens
-            ctypes.c_size_t,                 # len
-            ctypes.POINTER(ctypes.c_size_t), # match_len (output)
-        ]
-        lib.llaisysKVCachePoolLookup.restype = ctypes.c_void_p
-
-    # KVCachePoolClear
-    if hasattr(lib, 'llaisysKVCachePoolClear'):
-        lib.llaisysKVCachePoolClear.argtypes = [ctypes.c_void_p]
-        lib.llaisysKVCachePoolClear.restype = None
-
     # ── Phase 5 (项目#4): 批量推理 API ──
 
     # BatchContextCreate
@@ -172,6 +135,34 @@ def _setup_functions():
             ctypes.c_float,                 # top_p
         ]
         lib.llaisysQwen2BatchPrefill.restype = ctypes.c_int64
+
+    # Incremental BatchPrefillChunk
+    if hasattr(lib, 'llaisysQwen2BatchPrefillChunk'):
+        lib.llaisysQwen2BatchPrefillChunk.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_size_t,
+            ctypes.POINTER(ctypes.c_int64),
+            ctypes.c_size_t,
+            ctypes.c_int64,
+            ctypes.c_int,
+            ctypes.c_float,
+            ctypes.c_int,
+            ctypes.c_float,
+        ]
+        lib.llaisysQwen2BatchPrefillChunk.restype = ctypes.c_int64
+
+    if hasattr(lib, 'llaisysQwen2BatchPrefixLookup'):
+        lib.llaisysQwen2BatchPrefixLookup.argtypes = [
+            ctypes.c_void_p, ctypes.c_size_t,
+            ctypes.POINTER(ctypes.c_int64), ctypes.c_size_t,
+        ]
+        lib.llaisysQwen2BatchPrefixLookup.restype = ctypes.c_size_t
+    if hasattr(lib, 'llaisysQwen2BatchPrefixPublish'):
+        lib.llaisysQwen2BatchPrefixPublish.argtypes = [
+            ctypes.c_void_p, ctypes.c_size_t,
+            ctypes.POINTER(ctypes.c_int64), ctypes.c_size_t,
+        ]
+        lib.llaisysQwen2BatchPrefixPublish.restype = ctypes.c_int
 
     # BatchDecode
     if hasattr(lib, 'llaisysQwen2BatchDecode'):
@@ -281,17 +272,14 @@ cache_truncate = LIB_LLAISYS.llaisysQwen2TruncateCache
 cache_get_pos = LIB_LLAISYS.llaisysQwen2GetCachePos
 cache_snapshot_destroy = LIB_LLAISYS.llaisysQwen2DestroyCacheSnapshot
 
-pool_create = LIB_LLAISYS.llaisysKVCachePoolCreate
-pool_destroy = LIB_LLAISYS.llaisysKVCachePoolDestroy
-pool_insert = LIB_LLAISYS.llaisysKVCachePoolInsert
-pool_lookup = LIB_LLAISYS.llaisysKVCachePoolLookup
-pool_clear = LIB_LLAISYS.llaisysKVCachePoolClear
-
 # Phase 5 (项目#4) 导出
 batch_context_create = LIB_LLAISYS.llaisysQwen2BatchContextCreate
 batch_context_destroy = LIB_LLAISYS.llaisysQwen2BatchContextDestroy
 batch_slot_reset = LIB_LLAISYS.llaisysQwen2BatchSlotReset
 batch_prefill = LIB_LLAISYS.llaisysQwen2BatchPrefill
+batch_prefill_chunk = getattr(LIB_LLAISYS, 'llaisysQwen2BatchPrefillChunk', None)
+batch_prefix_lookup = getattr(LIB_LLAISYS, 'llaisysQwen2BatchPrefixLookup', None)
+batch_prefix_publish = getattr(LIB_LLAISYS, 'llaisysQwen2BatchPrefixPublish', None)
 batch_decode = LIB_LLAISYS.llaisysQwen2BatchDecode
 batch_slot_get_pos = LIB_LLAISYS.llaisysQwen2BatchSlotGetPos
 batch_slot_save = LIB_LLAISYS.llaisysQwen2BatchSlotSave

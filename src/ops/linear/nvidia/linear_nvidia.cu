@@ -8,6 +8,7 @@
 #include <cuda_bf16.h>
 #include <cstdio>
 #include <stdexcept>
+#include <cstdlib>
 
 #define CUBLAS_CHECK(call)                                                            \
     do {                                                                              \
@@ -28,6 +29,11 @@
             throw std::runtime_error(cudaGetErrorString(err));                        \
         }                                                                             \
     } while (0)
+
+static bool linear_alloc_verbose() {
+    const char *v = std::getenv("LLAISYS_LINEAR_ALLOC_VERBOSE");
+    return v && v[0] == '1';
+}
 
 // ---- GEMV kernel: decode 阶段核心 (FP16 权重+输入, FP32 累加) ----
 //
@@ -443,6 +449,10 @@ void linear(tensor_t out, tensor_t in, tensor_t weight, tensor_t bias) {
         if (in_dtype == LLAISYS_DTYPE_F32) {
             int64_t in_elems = M * K;
             if (in_elems > in_f16_cap) {
+                if (linear_alloc_verbose()) {
+                    fprintf(stderr, "[linear] grow in_f16_buf: elems=%ld old_cap=%ld\n",
+                            (long)in_elems, (long)in_f16_cap);
+                }
                 if (in_f16_buf) cudaFree(in_f16_buf);
                 cudaMalloc(&in_f16_buf, in_elems * sizeof(__half));
                 in_f16_cap = in_elems;
@@ -490,6 +500,10 @@ void linear(tensor_t out, tensor_t in, tensor_t weight, tensor_t bias) {
         static thread_local int64_t in_f32_cap = 0;
         int64_t in_elems = M * K;
         if (in_elems > in_f32_cap) {
+            if (linear_alloc_verbose()) {
+                fprintf(stderr, "[linear] grow in_f32_buf: elems=%ld old_cap=%ld\n",
+                        (long)in_elems, (long)in_f32_cap);
+            }
             if (in_f32_buf) cudaFree(in_f32_buf);
             cudaMalloc(&in_f32_buf, in_elems * sizeof(float));
             in_f32_cap = in_elems;
@@ -524,6 +538,10 @@ void linear(tensor_t out, tensor_t in, tensor_t weight, tensor_t bias) {
             static thread_local int64_t out_f32_cap = 0;
             int64_t out_elems = M * N;
             if (out_elems > out_f32_cap) {
+                if (linear_alloc_verbose()) {
+                    fprintf(stderr, "[linear] grow out_f32_buf: elems=%ld old_cap=%ld\n",
+                            (long)out_elems, (long)out_f32_cap);
+                }
                 if (out_f32_buf) cudaFree(out_f32_buf);
                 cudaMalloc(&out_f32_buf, out_elems * sizeof(float));
                 out_f32_cap = out_elems;

@@ -50,13 +50,33 @@ public:
     // Get capture/replay counts for profiling.
     size_t capture_count() const { return _capture_count; }
     size_t replay_count() const { return _replay_count; }
+    size_t eager_count() const { return _eager_count; }
+    size_t warmup_count() const { return _warmup_count; }
+    size_t begin_capture_fail_count() const { return _begin_capture_fail_count; }
+    size_t end_capture_fail_count() const { return _end_capture_fail_count; }
+    size_t instantiate_fail_count() const { return _instantiate_fail_count; }
+    size_t replay_fail_count() const { return _replay_fail_count; }
+    size_t initial_launch_fail_count() const { return _initial_launch_fail_count; }
+    size_t node_count() const { return _node_count; }
+
+    // Print a one-line summary of CUDA Graph usage/fallbacks.
+    void print_stats() const;
 
 private:
     void *_graph = nullptr;        // cudaGraph_t
     void *_graph_exec = nullptr;   // cudaGraphExec_t
     bool _captured = false;
+    bool _warmup_done = false;
     size_t _capture_count = 0;
     size_t _replay_count = 0;
+    size_t _eager_count = 0;
+    size_t _warmup_count = 0;
+    size_t _begin_capture_fail_count = 0;
+    size_t _end_capture_fail_count = 0;
+    size_t _instantiate_fail_count = 0;
+    size_t _replay_fail_count = 0;
+    size_t _initial_launch_fail_count = 0;
+    size_t _node_count = 0;
 };
 
 /**

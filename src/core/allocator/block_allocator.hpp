@@ -1,10 +1,12 @@
 #pragma once
 
+#include "../cache/block_manager.hpp"
+#include "../cache/paged_cache_storage.hpp"
 #include "llaisys/runtime.h"
 
-#include <deque>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 
 namespace llaisys::core {
 
@@ -22,13 +24,9 @@ struct BlockAllocatorConfig {
 // Each (block_id, layer) pair maps to a contiguous [block_size, nkvh, dh] region.
 class BlockAllocator {
 private:
-    void *_pool_K;
-    void *_pool_V;
-    const LlaisysRuntimeAPI *_api;
     BlockAllocatorConfig _config;
-    size_t _block_stride;   // bytes per block across all layers
-    size_t _layer_stride;   // bytes per single (block_size, nkvh, dh) region
-    std::deque<int> _free_list;
+    std::unique_ptr<BlockManager> _blocks;
+    std::unique_ptr<PagedCacheStorage> _storage;
 
 public:
     BlockAllocator(const BlockAllocatorConfig &config, const LlaisysRuntimeAPI *api);
@@ -53,11 +51,21 @@ public:
     size_t nkvh() const { return _config.nkvh; }
     size_t dh() const { return _config.dh; }
     size_t elem_size() const { return _config.elem_size; }
-    size_t block_stride() const { return _block_stride; }
-    size_t layer_stride() const { return _layer_stride; }
+    size_t block_stride() const { return _storage->componentBlockStride(0); }
+    size_t layer_stride() const { return _storage->componentLayerStride(0, 0); }
 
-    void *pool_k_raw() const { return _pool_K; }
-    void *pool_v_raw() const { return _pool_V; }
+    void *pool_k_raw() const { return _storage->componentPool(0); }
+    void *pool_v_raw() const { return _storage->componentPool(1); }
+
+    // Generic interfaces used by future attention layouts (for example MLA).
+    BlockManager &block_manager() { return *_blocks; }
+    const BlockManager &block_manager() const { return *_blocks; }
+    PagedCacheStorage &storage() { return *_storage; }
+    const PagedCacheStorage &storage() const { return *_storage; }
+    const CacheLayout &layout() const { return _storage->layout(); }
+    void *component_ptr(size_t component, int block_id, size_t layer) {
+        return _storage->componentPtr(component, block_id, layer);
+    }
 };
 
 } // namespace llaisys::core

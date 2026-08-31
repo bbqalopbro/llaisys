@@ -15,7 +15,19 @@ Paged Attention
 
 目标不是复刻完整 vLLM/SGLang，而是把 LLAISYS 从原型级 batch decode 升级为可解释、可评估、可对标的 serving core。
 
-## 当前问题
+## 2026-08-27 进度摘要
+
+本文下方保留原始拆解清单作为设计记录；当前已完成：
+
+- `BlockManager + PagedCacheStorage + CacheLayout` 的 block 生命周期/数据格式解耦；
+- Python request 状态、token/KV budget、decode 优先、chunk 切分和 abort 基础调度；
+- multi-token chunked prefill 及 FlashInfer direct paged prefill，gather+GEMM 仅作 fallback；
+- block-level hash/refcount/LRU Prefix Cache，partial block 不发布；
+- pybind11 batch runtime、TTFT/TPOT/correctness/prefix/chunk/scheduler 端到端 benchmark。
+
+当前剩余的核心工作是：多请求 mixed prefill/decode GPU batch、scheduler 原生 device-side CSR metadata、完整可观测性，以及 B300 上的 DeepSeek MLA/MoE/TP/EP 接入与验证。
+
+## 原始问题（已由上述进度部分解决）
 
 - `BlockAllocator` 只负责物理 block 分配，缺少 block 元数据、引用计数、cache 状态、LRU 淘汰。
 - `PageTable` 只记录 request 到 block 的映射，缺少 computed/cached token 状态。
@@ -140,7 +152,7 @@ prefill chunk 之间允许插入其他 request 的 decode
 - [ ] 为 chunk 分配 KV blocks。
 - [ ] 当前 chunk 的 K/V 写入 paged KV pool。
 - [ ] chunk attention 支持访问历史 paged KV。
-- [ ] 首版可使用 correctness 优先路径，后续再接 FlashInfer prefill。
+- [x] 首版 correctness 路径已完成，并已接入 FlashInfer direct paged prefill。
 - [ ] 支持 chunk 结束后 request 从 PREFILLING 转入 DECODING。
 
 ### 验收
@@ -173,7 +185,7 @@ struct AttentionMetadata {
 
 - [ ] 将 block table / seq lens 构建从模型 forward 中抽离。
 - [ ] decode attention 主路径使用 FlashInfer paged decode。
-- [ ] prefill attention 增加 FlashInfer/FlashAttention 路径调研和接入点。
+- [x] prefill attention 通过通用 backend API 接入 FlashInfer paged prefill。
 - [ ] 保留手写 paged attention 作为 fallback 和学习实现。
 - [ ] 删除或隔离未接入的 `KVQuantMode::INT8/INT4` 原型路径，避免误导文档。
 

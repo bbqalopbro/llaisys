@@ -17,6 +17,13 @@ static cudaMemcpyKind toCudaMemcpyKind(llaisysMemcpyKind_t kind) {
     }
 }
 
+static cudaStream_t normalizeStream(llaisysStream_t stream) {
+    // 框架里很多调用传 nullptr 表示“默认 stream”。为了 CUDA Graph 路径稳定，
+    // NVIDIA 后端把它显式归一到 per-thread default stream，和
+    // CUDAGraphRunner 里的 cudaStreamPerThread 保持一致。
+    return stream ? (cudaStream_t)stream : cudaStreamPerThread;
+}
+
 // ------------------------------------------------------------
 // 辅助：简单的 CUDA 错误检查宏
 // ------------------------------------------------------------
@@ -87,7 +94,7 @@ void memcpySync(void *dst, const void *src, size_t size, llaisysMemcpyKind_t kin
 }
 
 void memcpyAsync(void *dst, const void *src, size_t size, llaisysMemcpyKind_t kind, llaisysStream_t stream) {
-    CUDA_CHECK(cudaMemcpyAsync(dst, src, size, toCudaMemcpyKind(kind), (cudaStream_t)stream));
+    CUDA_CHECK(cudaMemcpyAsync(dst, src, size, toCudaMemcpyKind(kind), normalizeStream(stream)));
 }
 
 static const LlaisysRuntimeAPI RUNTIME_API = {

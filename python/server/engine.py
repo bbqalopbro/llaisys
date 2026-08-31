@@ -11,7 +11,7 @@ LLAISYS Inference Engine — 请求队列 + 异步推理服务 (Continuous Batch
                                │InferenceEngine│  (后台 worker 线程)
                                │  _worker_loop │
                                └──────┬───────┘
-                                      │ ctypes 调用
+                                      │ SchedulePlan / batch runtime
                                       ↓
                                ┌──────────────┐
                                │ C++ BatchCtx │  (PagedAttention KV-Cache)
@@ -20,13 +20,13 @@ LLAISYS Inference Engine — 请求队列 + 异步推理服务 (Continuous Batch
 worker 循环的 4 个阶段:
   1. Admit:  从队列取新请求, 检查 block 容量, 必要时 preempt 低优先级请求
   2. Decode: 对所有活跃 slot 执行一步批量 decode (per-request 采样参数)
-  3. Finish: 完成的请求移出 batch, KV-Cache 存入前缀树池
+  3. Finish: 完成的请求移出 batch，释放 request block 引用
   4. Wait:   空闲时阻塞等待新请求 (避免 busy loop)
 
 关键设计:
   - 跨线程通信: worker 线程 → asyncio 主线程 via loop.call_soon_threadsafe
   - Preemption: block 不足时驱逐已生成最多 token 的请求 (保存快照 → 重入队列)
-  - 前缀匹配: 新请求优先从前缀树池复用 KV-Cache, 跳过已 prefill 的部分
+  - 前缀匹配: 以完整 cache block 为粒度，hash 命中后直接共享物理 block
 """
 
 from __future__ import annotations
@@ -210,25 +210,21 @@ class InferenceEngine:
         max_seq_per_slot: int = 2048,
         max_queue_size: int = 1024,
         block_watermark: float = 0.1,
+        prefill_chunk_size: int = 256,
+        enable_block_prefix_cache: bool = True,
     ):
         self.model = model
         self.tokenizer = tokenizer
         self.max_batch_size = max_batch_size
         self.max_seq_per_slot = max_seq_per_slot
         self.block_watermark = block_watermark
+        self.prefill_chunk_size = max(1, prefill_chunk_size)
+        self.enable_block_prefix_cache = enable_block_prefix_cache
 
         self.queue = RequestQueue(max_size=max_queue_size)
         self._worker_thread: Optional[threading.Thread] = None
         self._running = False
         self._eos_token_id = getattr(model, '_end_token', 151643)
-
-        # KV-Cache 前缀树池
-        self._cache_pool = None
-        try:
-            self._cache_pool = model.create_cache_pool()
-            logger.info("KV-Cache prefix pool created")
-        except Exception:
-            logger.warning("KV-Cache prefix pool not available")
 
         # 统计
         self._total_requests = 0
@@ -316,6 +312,46 @@ class InferenceEngine:
         total = batch_ctx.get_total_blocks()
         watermark = int(total * self.block_watermark)
         return free >= needed + watermark
+
+    def _prefill_prompt(self, batch_ctx, slot_id: int,
+                        req: InferenceRequest, start_pos: int = 0) -> int:
+        """Run scheduler-owned chunked prefill and return the first output token."""
+        all_tokens = req.input_ids
+        if not all_tokens or start_pos < 0 or start_pos >= len(all_tokens):
+            raise ValueError("input_ids must not be empty")
+        tokens = all_tokens[start_pos:]
+        chunk_fn = getattr(batch_ctx, "prefill_chunk", None)
+        if start_pos == 0 and (chunk_fn is None or
+                               len(tokens) <= self.prefill_chunk_size):
+            return int(batch_ctx.prefill(
+                slot_id=slot_id,
+                token_ids=tokens,
+                temperature=req.params.temperature,
+                top_k=req.params.top_k,
+                top_p=req.params.top_p,
+            ))
+
+        if chunk_fn is None:
+            raise RuntimeError("prefix reuse requires incremental prefill support")
+        if start_pos == 0:
+            batch_ctx.slot_reset(slot_id)
+        cursor = start_pos
+        result = None
+        while cursor < len(all_tokens):
+            end_pos = min(cursor + self.prefill_chunk_size, len(all_tokens))
+            result = chunk_fn(
+                slot_id=slot_id,
+                token_ids=all_tokens[cursor:end_pos],
+                start_pos=cursor,
+                is_last_chunk=end_pos == len(all_tokens),
+                temperature=req.params.temperature,
+                top_k=req.params.top_k,
+                top_p=req.params.top_p,
+            )
+            cursor = end_pos
+        if result is None:
+            raise RuntimeError("final prefill chunk did not produce a token")
+        return int(result)
 
     def _try_preempt(self, batch_ctx, running: Dict[int, InferenceRequest],
                      free_slots: List[int], needed_blocks: int) -> bool:
@@ -416,44 +452,21 @@ class InferenceEngine:
                         )
                         continue
 
-                    # 前缀匹配
-                    prefix_snapshot = None
+                    # Block-granular prefix matching. The runtime attaches
+                    # retained physical blocks directly to this slot.
                     match_len = 0
-                    if self._cache_pool:
-                        try:
-                            prefix_snapshot, match_len = self.model.cache_pool_lookup(
-                                self._cache_pool, req.input_ids
-                            )
-                        except Exception:
-                            pass
+                    prefix_lookup = getattr(batch_ctx, "prefix_lookup", None)
+                    if self.enable_block_prefix_cache and prefix_lookup:
+                        match_len = int(prefix_lookup(slot_id, req.input_ids))
 
-                    if prefix_snapshot and match_len > 0:
-                        batch_ctx.slot_restore(slot_id, prefix_snapshot)
-                        remaining_ids = req.input_ids[match_len:]
-                        logger.debug(
-                            f"Request {req.request_id}: prefix match "
-                            f"{match_len}/{len(req.input_ids)} tokens"
-                        )
-                    else:
+                    if match_len == 0:
                         batch_ctx.slot_reset(slot_id)
-                        remaining_ids = req.input_ids
-
-                    if remaining_ids:
-                        first_token = batch_ctx.prefill(
-                            slot_id=slot_id,
-                            token_ids=remaining_ids,
-                            temperature=req.params.temperature,
-                            top_k=req.params.top_k,
-                            top_p=req.params.top_p,
-                        )
-                    else:
-                        first_token = batch_ctx.prefill(
-                            slot_id=slot_id,
-                            token_ids=[req.input_ids[-1]],
-                            temperature=req.params.temperature,
-                            top_k=req.params.top_k,
-                            top_p=req.params.top_p,
-                        )
+                    first_token = self._prefill_prompt(
+                        batch_ctx, slot_id, req, start_pos=match_len
+                    )
+                    prefix_publish = getattr(batch_ctx, "prefix_publish", None)
+                    if self.enable_block_prefix_cache and prefix_publish:
+                        prefix_publish(slot_id, req.input_ids)
 
                     first_token = int(first_token)
 
@@ -524,17 +537,6 @@ class InferenceEngine:
 
                 for slot_id in finished_slots:
                     req = running.pop(slot_id)
-
-                    if self._cache_pool:
-                        try:
-                            snapshot = batch_ctx.slot_save(slot_id)
-                            if snapshot:
-                                all_tokens = req.input_ids + req.generated_tokens
-                                self.model.cache_pool_insert(
-                                    self._cache_pool, all_tokens, snapshot
-                                )
-                        except Exception:
-                            pass
 
                     batch_ctx.slot_reset(slot_id)
                     free_slots.append(slot_id)

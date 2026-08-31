@@ -23,6 +23,11 @@ public:
         _block_ids.push_back(block_id);
     }
 
+    void attach_blocks(const std::vector<int> &block_ids, int num_tokens) {
+        _block_ids = block_ids;
+        _num_tokens = num_tokens;
+    }
+
     int get_block_for_token(int token_pos) const {
         int block_idx = token_pos / _block_size; //这个 token 属于第几个逻辑块
         if (block_idx < 0 || block_idx >= static_cast<int>(_block_ids.size()))

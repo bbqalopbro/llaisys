@@ -58,9 +58,6 @@ __C {
     // 不透明的 KV-Cache 快照句柄
     struct LlaisysQwen2CacheSnapshot;
 
-    // 不透明的 KV-Cache 前缀树池句柄
-    struct LlaisysKVCachePool;
-
     // 创建模型实例
     __export struct LlaisysQwen2Model *llaisysQwen2ModelCreate(const struct LlaisysQwen2Meta *meta, llaisysDeviceType_t device, int *device_ids, int ndevice);
 
@@ -114,25 +111,6 @@ __C {
     __export void llaisysQwen2DestroyCacheSnapshot(struct LlaisysQwen2CacheSnapshot * snapshot);
 
     // ==========================================
-    // Phase 4: 前缀树 KV-Cache 池
-    // ==========================================
-
-    // 创建 KV-Cache 前缀树池
-    __export struct LlaisysKVCachePool *llaisysKVCachePoolCreate(void);
-
-    // 销毁 KV-Cache 前缀树池 (释放所有存储的快照)
-    __export void llaisysKVCachePoolDestroy(struct LlaisysKVCachePool * pool);
-
-    // 向池中插入快照 (池获取快照所有权, 调用者不再拥有)
-    __export void llaisysKVCachePoolInsert(struct LlaisysKVCachePool * pool, int64_t * tokens, size_t len, struct LlaisysQwen2CacheSnapshot * snapshot);
-
-    // 查找最长前缀匹配, 返回对应快照 (不转移所有权), match_len 输出匹配长度
-    __export struct LlaisysQwen2CacheSnapshot *llaisysKVCachePoolLookup(struct LlaisysKVCachePool * pool, int64_t * tokens, size_t len, size_t * match_len);
-
-    // 清空池中所有条目
-    __export void llaisysKVCachePoolClear(struct LlaisysKVCachePool * pool);
-
-    // ==========================================
     // 量化支持
     // ==========================================
 
@@ -165,6 +143,25 @@ __C {
         size_t slot_id,
         int64_t * token_ids, size_t ntoken,
         float temperature, int top_k, float top_p);
+
+    // Incremental prefill: append one prompt chunk without resetting the slot.
+    // start_pos must equal the slot's current cache position. Intermediate
+    // chunks return -1; the final chunk samples and returns the next token.
+    __export int64_t llaisysQwen2BatchPrefillChunk(
+        struct LlaisysQwen2BatchContext * ctx,
+        size_t slot_id,
+        const int64_t * token_ids, size_t ntoken,
+        int64_t start_pos, int is_last_chunk,
+        float temperature, int top_k, float top_p);
+
+    // Block-granular prefix cache. Lookup resets the slot and attaches shared
+    // complete blocks; publish indexes complete computed prompt blocks.
+    __export size_t llaisysQwen2BatchPrefixLookup(
+        struct LlaisysQwen2BatchContext * ctx, size_t slot_id,
+        const int64_t * token_ids, size_t ntoken);
+    __export int llaisysQwen2BatchPrefixPublish(
+        struct LlaisysQwen2BatchContext * ctx, size_t slot_id,
+        const int64_t * token_ids, size_t ntoken);
 
     // 批量 Decode: 对 num_active 个活跃 slot 执行一步 decode
     //   active_slots: [num_active] slot ID 数组

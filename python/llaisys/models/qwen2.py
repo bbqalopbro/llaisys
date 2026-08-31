@@ -7,7 +7,7 @@ models/qwen2.py — Qwen2 模型高层 Python 封装
      - GPTQ/AWQ: CPU 端解包 → FP16 反量化, 结果缓存到 .llaisys_cache/
      - AWQ native: 原始 I32 数据直接传 GPU, 推理时 GPU 在线反量化
   3. generate / generate_stream: 调用 C 端 Infer/InferSample 做推理
-  4. KV-Cache 管理: save/restore/truncate + 前缀树池
+  4. KV-Cache 管理: save/restore/truncate + block-level Prefix Cache
   5. BatchContext: 批量推理 (多 slot 并发 decode)
   6. 张量并行 (TP): model_create_tp + comm 绑定
 
@@ -19,6 +19,7 @@ import numpy as np
 import torch
 from typing import Sequence, Optional
 from ..libllaisys import DeviceType
+from .. import native as _native
 
 # 引入底层接口定义
 from ..libllaisys.qwen2 import (
@@ -35,17 +36,14 @@ from ..libllaisys.qwen2 import (
     cache_truncate,
     cache_get_pos,
     cache_snapshot_destroy,
-    # Phase 4: 前缀树 KV-Cache 池
-    pool_create,
-    pool_destroy,
-    pool_insert,
-    pool_lookup,
-    pool_clear,
     # Phase 5 (项目#4): 批量推理 API
     batch_context_create,
     batch_context_destroy,
     batch_slot_reset,
     batch_prefill,
+    batch_prefill_chunk,
+    batch_prefix_lookup,
+    batch_prefix_publish,
     batch_decode,
     batch_slot_get_pos,
     batch_slot_save,
@@ -989,66 +987,6 @@ class Qwen2:
             cache_snapshot_destroy(snapshot_handle)
 
     # ==========================================
-    # Phase 4: 前缀树 KV-Cache 池
-    # ==========================================
-
-    def create_cache_pool(self):
-        """创建 KV-Cache 前缀树池.
-        
-        Returns:
-            int: 池句柄.
-        """
-        return pool_create()
-
-    @staticmethod
-    def destroy_cache_pool(pool_handle):
-        """销毁 KV-Cache 前缀树池."""
-        if pool_handle:
-            pool_destroy(pool_handle)
-
-    @staticmethod
-    def cache_pool_insert(pool_handle, tokens: Sequence[int], snapshot_handle):
-        """向前缀树池插入快照 (池获取所有权).
-        
-        Args:
-            pool_handle: create_cache_pool() 返回的池句柄.
-            tokens: token 序列 (前缀).
-            snapshot_handle: save_cache() 返回的快照句柄, 插入后调用者不再拥有.
-        """
-        if not pool_handle or not snapshot_handle or not tokens:
-            return
-        token_np = np.array(tokens, dtype=np.int64)
-        token_ptr = token_np.ctypes.data_as(ctypes.POINTER(ctypes.c_int64))
-        pool_insert(pool_handle, token_ptr, ctypes.c_size_t(len(tokens)), snapshot_handle)
-
-    @staticmethod
-    def cache_pool_lookup(pool_handle, tokens: Sequence[int]):
-        """在前缀树池中查找最长前缀匹配.
-        
-        Args:
-            pool_handle: 池句柄.
-            tokens: 要匹配的 token 序列.
-            
-        Returns:
-            tuple: (snapshot_handle or None, match_len: int)
-        """
-        if not pool_handle or not tokens:
-            return None, 0
-        token_np = np.array(tokens, dtype=np.int64)
-        token_ptr = token_np.ctypes.data_as(ctypes.POINTER(ctypes.c_int64))
-        match_len = ctypes.c_size_t(0)
-        snap = pool_lookup(pool_handle, token_ptr, ctypes.c_size_t(len(tokens)), ctypes.byref(match_len))
-        if not snap:
-            return None, 0
-        return snap, int(match_len.value)
-
-    @staticmethod
-    def cache_pool_clear(pool_handle):
-        """清空前缀树池."""
-        if pool_handle:
-            pool_clear(pool_handle)
-
-    # ==========================================
     # Phase 5 (项目#4): 批量推理 API
     # ==========================================
 
@@ -1090,22 +1028,34 @@ class BatchContext:
         self.model = model
         self.max_batch_size = max_batch_size
         self.max_seq_per_slot = max_seq_per_slot
-        self._handle = batch_context_create(
-            model.model_handle,
-            ctypes.c_size_t(max_batch_size),
-            ctypes.c_size_t(max_seq_per_slot),
-        )
-        if not self._handle:
-            raise RuntimeError("Failed to create batch context")
+        self._native = None
+        self._handle = None
+        if _native.available:
+            self._native = _native.Qwen2BatchRuntime(
+                int(model.model_handle), max_batch_size, max_seq_per_slot
+            )
+        else:
+            self._handle = batch_context_create(
+                model.model_handle,
+                ctypes.c_size_t(max_batch_size),
+                ctypes.c_size_t(max_seq_per_slot),
+            )
+            if not self._handle:
+                raise RuntimeError("Failed to create batch context")
         self._end_token = model._end_token
 
     def __del__(self):
+        if hasattr(self, '_native') and self._native is not None:
+            self._native = None
         if hasattr(self, '_handle') and self._handle:
             batch_context_destroy(self._handle)
             self._handle = None
 
     def slot_reset(self, slot_id: int):
         """重置指定 slot 的 KV-Cache."""
+        if self._native is not None:
+            self._native.reset(slot_id)
+            return
         batch_slot_reset(self._handle, ctypes.c_size_t(slot_id))
 
     def prefill(
@@ -1128,6 +1078,12 @@ class BatchContext:
         Returns:
             int: 首个生成的 token ID.
         """
+        if self._native is not None:
+            sampling = _native.SamplingParams()
+            sampling.temperature = temperature
+            sampling.top_k = top_k
+            sampling.top_p = top_p
+            return int(self._native.prefill(slot_id, list(token_ids), sampling))
         token_np = np.array(token_ids, dtype=np.int64)
         if not token_np.flags['C_CONTIGUOUS']:
             token_np = np.ascontiguousarray(token_np)
@@ -1143,6 +1099,83 @@ class BatchContext:
             ctypes.c_float(top_p),
         )
         return int(result)
+
+    def prefill_chunk(
+        self,
+        slot_id: int,
+        token_ids: Sequence[int],
+        start_pos: int,
+        is_last_chunk: bool = False,
+        temperature: float = 0.8,
+        top_k: int = 50,
+        top_p: float = 0.9,
+    ) -> int | None:
+        """Append a prompt chunk to an existing paged-cache slot.
+
+        The first chunk uses ``start_pos=0`` after ``slot_reset``. Subsequent
+        chunks must use the slot position produced by the preceding chunk.
+        Only the final chunk returns a sampled token.
+        """
+        if batch_prefill_chunk is None:
+            raise RuntimeError("native library does not support incremental prefill")
+        if not 0 <= slot_id < self.max_batch_size:
+            raise ValueError("slot_id is out of range")
+        if start_pos < 0 or not token_ids:
+            raise ValueError("start_pos must be non-negative and token_ids non-empty")
+        if self._native is not None:
+            sampling = _native.SamplingParams()
+            sampling.temperature = temperature
+            sampling.top_k = top_k
+            sampling.top_p = top_p
+            result = self._native.prefill_chunk(
+                slot_id, list(token_ids), start_pos, is_last_chunk, sampling
+            )
+            return int(result) if is_last_chunk else None
+        token_np = np.ascontiguousarray(token_ids, dtype=np.int64)
+        result = batch_prefill_chunk(
+            self._handle,
+            ctypes.c_size_t(slot_id),
+            token_np.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
+            ctypes.c_size_t(len(token_np)),
+            ctypes.c_int64(start_pos),
+            ctypes.c_int(bool(is_last_chunk)),
+            ctypes.c_float(temperature),
+            ctypes.c_int(top_k),
+            ctypes.c_float(top_p),
+        )
+        if is_last_chunk and result < 0:
+            raise RuntimeError("incremental prefill failed")
+        return int(result) if is_last_chunk else None
+
+    def prefix_lookup(self, slot_id: int, token_ids: Sequence[int]) -> int:
+        """Attach reusable complete cache blocks and return matched tokens."""
+        if self._native is not None:
+            return int(self._native.prefix_lookup(slot_id, list(token_ids)))
+        if batch_prefix_lookup is None:
+            return 0
+        token_np = np.ascontiguousarray(token_ids, dtype=np.int64)
+        if token_np.size == 0:
+            return 0
+        return int(batch_prefix_lookup(
+            self._handle, ctypes.c_size_t(slot_id),
+            token_np.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
+            ctypes.c_size_t(token_np.size),
+        ))
+
+    def prefix_publish(self, slot_id: int, token_ids: Sequence[int]) -> bool:
+        """Publish complete computed prompt blocks to the shared prefix cache."""
+        if self._native is not None:
+            return bool(self._native.prefix_publish(slot_id, list(token_ids)))
+        if batch_prefix_publish is None:
+            return False
+        token_np = np.ascontiguousarray(token_ids, dtype=np.int64)
+        if token_np.size == 0:
+            return False
+        return bool(batch_prefix_publish(
+            self._handle, ctypes.c_size_t(slot_id),
+            token_np.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
+            ctypes.c_size_t(token_np.size),
+        ))
 
     def decode(
         self,
@@ -1210,6 +1243,12 @@ class BatchContext:
         assert len(top_ks) == num_active
         assert len(top_ps) == num_active
 
+        if self._native is not None:
+            return list(self._native.decode_per_request(
+                list(active_slots), list(current_tokens), list(temperatures),
+                list(top_ks), list(top_ps)
+            ))
+
         slots_arr = (ctypes.c_size_t * num_active)(*active_slots)
         tokens_arr = (ctypes.c_int64 * num_active)(*current_tokens)
         temp_arr = (ctypes.c_float * num_active)(*temperatures)
@@ -1232,6 +1271,8 @@ class BatchContext:
 
     def slot_get_pos(self, slot_id: int) -> int:
         """获取 slot 的当前 KV-Cache 位置."""
+        if self._native is not None:
+            return int(self._native.slot_position(slot_id))
         return int(batch_slot_get_pos(self._handle, ctypes.c_size_t(slot_id)))
 
     def slot_save(self, slot_id: int):
@@ -1240,7 +1281,10 @@ class BatchContext:
         Returns:
             snapshot handle (C++ 指针), 如果 slot 为空则返回 None.
         """
-        handle = batch_slot_save(self._handle, ctypes.c_size_t(slot_id))
+        if self._native is not None:
+            handle = self._native.slot_save(slot_id)
+        else:
+            handle = batch_slot_save(self._handle, ctypes.c_size_t(slot_id))
         if not handle:
             return None
         return handle
@@ -1248,6 +1292,9 @@ class BatchContext:
     def slot_restore(self, slot_id: int, snapshot_handle):
         """从快照恢复 slot 的 KV-Cache."""
         if snapshot_handle:
+            if self._native is not None:
+                self._native.slot_restore(slot_id, int(snapshot_handle))
+                return
             batch_slot_restore(
                 self._handle,
                 ctypes.c_size_t(slot_id),
@@ -1256,14 +1303,20 @@ class BatchContext:
 
     def get_free_blocks(self) -> int:
         """获取当前可用的 KV-Cache block 数量."""
+        if self._native is not None:
+            return int(self._native.free_blocks)
         return int(batch_get_free_blocks(self._handle))
 
     def get_total_blocks(self) -> int:
         """获取 KV-Cache block 总数."""
+        if self._native is not None:
+            return int(self._native.total_blocks)
         return int(batch_get_total_blocks(self._handle))
 
     def get_block_size(self) -> int:
         """获取每个 block 包含的 token 数."""
+        if self._native is not None:
+            return int(self._native.block_size)
         return int(batch_get_block_size(self._handle))
 
     def get_block_usage(self) -> dict:

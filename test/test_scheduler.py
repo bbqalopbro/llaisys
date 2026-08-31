@@ -81,9 +81,6 @@ class MockModel:
     def create_batch_context(self, max_batch_size, max_seq_per_slot):
         return MockBatchContext(block_size=16, total_blocks=64)
 
-    def create_cache_pool(self):
-        return None
-
 
 # ── Unit Tests ──
 
@@ -189,6 +186,31 @@ class TestPerRequestSampling(unittest.TestCase):
             top_ps=[0.9, 0.95],
         )
         assert len(results) == 2
+
+
+class TestChunkedPrefill(unittest.TestCase):
+    def test_scheduler_splits_prompt_and_tracks_positions(self):
+        engine = InferenceEngine.__new__(InferenceEngine)
+        engine.prefill_chunk_size = 3
+        calls = []
+
+        class ChunkContext(MockBatchContext):
+            def prefill_chunk(self, slot_id, token_ids, start_pos,
+                              is_last_chunk, **sampling):
+                calls.append((list(token_ids), start_pos, is_last_chunk))
+                return 77 if is_last_chunk else None
+
+        req = InferenceRequest(
+            request_id="chunk", input_ids=list(range(8)),
+            params=SamplingParams(), session_id="s"
+        )
+        result = engine._prefill_prompt(ChunkContext(), 0, req)
+        assert result == 77
+        assert calls == [
+            ([0, 1, 2], 0, False),
+            ([3, 4, 5], 3, False),
+            ([6, 7], 6, True),
+        ]
 
 
 if __name__ == "__main__":

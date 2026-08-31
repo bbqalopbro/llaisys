@@ -24,6 +24,8 @@ __pycache__/
 
 # Cache
 cache/
+!src/core/cache/
+!src/core/cache/**
 
 # JSON
 *.json
@@ -108,4 +110,3 @@ test_awq_native.py
 项目文档/*.ncu-rep
 项目文档/*.nsys-rep
 项目文档/*.sqlite
-

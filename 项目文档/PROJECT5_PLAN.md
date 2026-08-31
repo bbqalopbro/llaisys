@@ -1,5 +1,7 @@
 # 项目#5：分布式推理（张量并行）实施报告（修订版）
 
+> **历史文档说明（2026-08）**：本文保留早期 TP/serving 实施过程，其中 token Trie + CPU snapshot 前缀池、独立连续 KV slot 和逐 slot attention 等描述不再代表当前实现。当前以 block-level Prefix Cache、Paged KV、pybind11 runtime 和 direct paged prefill 为准，详见 [FIRST_STAGE_ENGINEERING_RECORD.md](FIRST_STAGE_ENGINEERING_RECORD.md)。
+
 > 修订时间: 2026-03-08  
 > 修订原因: 原计划范围过大、阶段耦合过强，不利于快速落地验证。  
 > 本版目标: 先完成“可运行的最小闭环（MVP）”，再逐步扩展到完整 NCCL + MPI。

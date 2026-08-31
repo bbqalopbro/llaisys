@@ -13,6 +13,12 @@ option("nv-gpu")
     set_description("Whether to compile implementations for Nvidia GPU")
 option_end()
 
+option("cuda-arch")
+    set_default("sm_80")
+    set_showmenu(true)
+    set_description("CUDA architecture passed to nvcc (for example sm_80)")
+option_end()
+
 option("dist-nccl")
     set_default(false)
     set_showmenu(true)
@@ -26,15 +32,33 @@ option("dist-mpi")
 option_end()
 
 option("flashinfer")
-    set_default(false)
+    set_default(true)
     set_showmenu(true)
-    set_description("Enable FlashInfer optimized attention kernel (requires FlashInfer headers)")
+    set_description("Enable vendored FlashInfer paged prefill/decode backend on NVIDIA")
 option_end()
 
 option("flashinfer-include")
     set_default("")
     set_showmenu(true)
     set_description("Path to FlashInfer include directory")
+option_end()
+
+option("python-bindings")
+    set_default(false)
+    set_showmenu(true)
+    set_description("Build the optional pybind11 scheduling/runtime extension")
+option_end()
+
+option("pybind11-include")
+    set_default("")
+    set_showmenu(true)
+    set_description("Path to pybind11 headers (required when python-bindings=y)")
+option_end()
+
+option("python-include")
+    set_default("")
+    set_showmenu(true)
+    set_description("Path to Python headers (required when python-bindings=y)")
 option_end()
 
 -- MetaX (沐曦) --
@@ -49,7 +73,7 @@ if has_config("nv-gpu") then
     includes("xmake/nvidia.lua")
 end
 
-if has_config("flashinfer") then
+if has_config("nv-gpu") and has_config("flashinfer") then
     add_defines("ENABLE_FLASHINFER")
     add_includedirs("third_party/flashinfer")
     local fi_inc = get_config("flashinfer-include")
@@ -232,6 +256,28 @@ target("llaisys")
     end)
 target_end()
 
+if has_config("python-bindings") then
+    target("llaisys-python")
+        set_kind("shared")
+        set_languages("cxx17")
+        add_deps("llaisys")
+        add_files("python/bindings/module.cpp")
+        add_includedirs(".")
+        set_targetdir("python/llaisys")
+        set_filename("_C.so")
+        local py_inc = get_config("python-include")
+        if not py_inc or py_inc == "" then
+            raise("python-bindings requires --python-include=<Python include directory>")
+        end
+        local bind_inc = get_config("pybind11-include")
+        if not bind_inc or bind_inc == "" then
+            raise("python-bindings requires --pybind11-include=<pybind11 include directory>")
+        end
+        add_includedirs(py_inc, bind_inc)
+        add_rpathdirs("$ORIGIN/libllaisys")
+    target_end()
+end
+
 target("llaisys-dist-smoke")
     set_kind("binary")
     add_deps("llaisys")
@@ -244,6 +290,15 @@ target("llaisys-dist-smoke")
         add_cxflags("-fPIC", "-Wno-unknown-pragmas")
     end
     add_files("test/dist_smoke.cpp")
+target_end()
+
+target("llaisys-cache-core-test")
+    set_kind("binary")
+    add_deps("llaisys-core")
+    set_languages("cxx17")
+    set_warnings("all", "error")
+    add_includedirs(".")
+    add_files("test/cache_core_test.cpp")
 target_end()
 
 target("llaisys-tp-shard-smoke")

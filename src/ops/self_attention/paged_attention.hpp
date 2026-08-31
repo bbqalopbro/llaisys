@@ -12,6 +12,33 @@ enum class KVQuantMode : int {
     INT4 = 2,
 };
 
+// Opaque backend-owned execution workspace for multi-token paged prefill.
+// prepare() converts scheduler/block-manager metadata once per engine step;
+// run() reuses it across all transformer layers.
+void *paged_prefill_workspace_create(llaisysDeviceType_t device_type);
+void paged_prefill_workspace_destroy(
+    void *workspace, llaisysDeviceType_t device_type);
+
+bool paged_prefill_supported(
+    llaisysDeviceType_t device_type,
+    int num_heads, int num_kv_heads, int head_dim,
+    llaisysDataType_t dtype);
+
+void paged_prefill_prepare(
+    void *workspace,
+    const int *block_tables, const int *seq_lens, const int *query_lens,
+    int batch_size, int num_heads, int num_kv_heads, int head_dim,
+    int block_size, int max_blocks_per_seq,
+    llaisysDeviceType_t device_type, llaisysDataType_t dtype);
+
+void paged_prefill_run(
+    void *workspace,
+    void *output, const void *query,
+    const void *k_pool, const void *v_pool,
+    size_t pool_block_stride, size_t pool_layer_stride,
+    int layer_idx, float scale,
+    llaisysDeviceType_t device_type, llaisysDataType_t dtype);
+
 // Paged Attention: compute Q·K^T→softmax→·V where K/V live in a block pool
 // addressed via per-sequence page tables. Supports GQA.
 //

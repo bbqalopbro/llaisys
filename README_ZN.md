@@ -9,6 +9,8 @@
 
 LLAISYS（Let's Learn AI SYStem）是一个教育项目，旨在为新手和未来的AI工程师提供一个从零开始构建AI系统的学习平台。LLAISYS包含多个作业，帮助学生学习和构建基础模块；以及一些项目挑战，让他们为系统添加更多高级功能。LLAISYS使用C++作为系统后端的主要编程语言，并编译成共享库，提供C语言API。前端代码使用Python编写，调用这些API以提供更便捷的测试和与其他架构（如PyTorch）的交互。
 
+> **Serving runtime 更新（2026-08）**：批推理热路径已迁移到 pybind11，并完成 format-agnostic BlockManager、block Prefix Cache、chunked prefill 和 FlashInfer direct paged prefill。完整的设计取舍、迭代过程、性能数据和 B300/DeepSeek 交接边界见 [第一阶段工程改造完整记录](项目文档/FIRST_STAGE_ENGINEERING_RECORD.md)。模型创建/权重加载等非热路径仍保留部分 ctypes 兼容层。
+
 ### 项目结构概览
 
 - `\include`：包含所有定义共享库提供的C API的头文件的目录。（函数声明以`__export`开头）
