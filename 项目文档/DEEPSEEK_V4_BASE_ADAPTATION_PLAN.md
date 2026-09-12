@@ -29,7 +29,11 @@ Slurm 23085 已完成正式 C++ config/checkpoint/Model 入口验证：完整加
 新增原生逐算子去重计数；2026-09-12 复核报告全文件摘要仍与当前实现一致。
 
 仍待完成原生 paged/Prefix 接入、请求抢占快照、原始 full/chunk
-数值门槛、HTTP、正式性能矩阵和多卡 TP/EP。不能因为单卡整模型一组通过而结束
+数值门槛、HTTP、稳定性能复测和多卡 TP/EP。Slurm 26564 已提供首组原生 serving
+性能矩阵（32/256/2105 输入、16 输出、并发 1/2；warmup=1/repeat=3），但长输入
+波动明显、显存仅 100 ms 采样，不能称为稳定 SLO 或精确 allocator 峰值。
+Slurm 26578 的 33 项新增/既有调度与 benchmark 合同测试通过。
+不能因为单卡整模型一组通过而结束
 整个基础适配目标。下表旧报告按原测试范围保留，不视为新源码的全套回归。
 
 ## 验收矩阵（2026-09-08 历史快照；新增原生结果见上节）
@@ -106,8 +110,9 @@ relative L2 超过预设 1% 门槛，尚未通过数值验收；默认基线保�
    三类 Compressor、完整 Indexer、三种 ratio 的连续 Attention、HC pre/post/head 和完整
    Transformer Block；新增正式配置/权重入口、embedding/final norm/vocab head、
    43 层执行与 pybind SchedulePlan 已分别对照 32/352 步真实 logits。下一步接通
-   既有 paged pool/lease 及请求缓存所有权，并将原生 Session 接回 InferenceEngine
-   facade；不能停在独立 CLI/批接口，不用逐算子 Python callback 替代 C++ 执行。
+   既有 paged pool/lease 及请求缓存所有权。原生 Session 已通过 facade 接回
+   InferenceEngine 并验证流式/取消；继续原生分页、快照和 HTTP，不能停在现有
+   continuous/ring 路径，不用逐算子 Python callback 替代 C++ 执行。
 5. 正式单卡端到端正确性与性能矩阵；量化说明各后端收益及代价。
 6. 配额满足后双卡 EP、完整多卡 TP×EP；随后再推进 serving 性能优化。
 

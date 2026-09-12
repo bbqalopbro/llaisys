@@ -1,0 +1,2859 @@
+{
+  "scope": "pure C++ TileLang kernel backend, not model runtime completion",
+  "result": {
+    "all_passed": true,
+    "cases": 23,
+    "tensor_byte_comparisons": 193,
+    "linear_cases": 9,
+    "linear_repetitions": 2,
+    "linear_input_offset_rows": 1,
+    "empty_linear_checks": 9,
+    "negative_checks": 113,
+    "python_interpreter": false,
+    "torch_runtime": false,
+    "fallback": false,
+    "destruction_errors": 0
+  },
+  "all_passed": true,
+  "source_unchanged": true,
+  "slurm_job_id": "23094",
+  "gpu": "NVIDIA B300 SXM6 AC",
+  "compute_capability": [
+    10,
+    3
+  ],
+  "visible_gpu_count": 1,
+  "driver": "580.126.09",
+  "host_compiler": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+  "tilelang": "0.1.8",
+  "tvm_ffi": "0.1.8.post2",
+  "torch": "2.13.0+cu130",
+  "cuda": "13.0",
+  "kernel_specializations": 13,
+  "cases": [
+    {
+      "name": "act_quant_m1_qdq0",
+      "library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_0.so",
+      "tensors": [
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            1,
+            512
+          ],
+          "bytes": 1024,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case0_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case0_arg0_out.bin",
+          "input_sha256": "3294628b84f58c8397f39ef382e5fa8a885d0e07f4908806cfc8b1800c4b58a8",
+          "output_sha256": "3294628b84f58c8397f39ef382e5fa8a885d0e07f4908806cfc8b1800c4b58a8"
+        },
+        {
+          "dtype": [
+            8,
+            8,
+            1
+          ],
+          "shape": [
+            1,
+            512
+          ],
+          "bytes": 512,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case0_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case0_arg1_out.bin",
+          "input_sha256": "076a27c79e5ace2a3d47f9dd2e83e4ff6ea8872b3c2218f66c92b89b55f36560",
+          "output_sha256": "f04a1d8f44bfc779b17d9114b42f5534c67972c0c03e189d29d34637700e953f"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            1,
+            4
+          ],
+          "bytes": 4,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case0_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case0_arg2_out.bin",
+          "input_sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+          "output_sha256": "2481a63c85a62cf889d2b149f1a52e985a9341750173fe01eff50cc27b5941b5"
+        }
+      ]
+    },
+    {
+      "name": "fp4_quant_m1_qdq0",
+      "library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_1.so",
+      "tensors": [
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            1,
+            512
+          ],
+          "bytes": 1024,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case1_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case1_arg0_out.bin",
+          "input_sha256": "3294628b84f58c8397f39ef382e5fa8a885d0e07f4908806cfc8b1800c4b58a8",
+          "output_sha256": "3294628b84f58c8397f39ef382e5fa8a885d0e07f4908806cfc8b1800c4b58a8"
+        },
+        {
+          "dtype": [
+            17,
+            4,
+            1
+          ],
+          "shape": [
+            1,
+            512
+          ],
+          "bytes": 256,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case1_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case1_arg1_out.bin",
+          "input_sha256": "5341e6b2646979a70e57653007a1f310169421ec9bdd9f1a5648f75ade005af1",
+          "output_sha256": "fcd76922a456baca5d9c85d4fb68b34c34c61d77bc34605cdf2a392d39eb6114"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            1,
+            16
+          ],
+          "bytes": 16,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case1_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case1_arg2_out.bin",
+          "input_sha256": "374708fff7719dd5979ec875d56cd2286f6d3cf7ec317a3b25632aab28ec37bb",
+          "output_sha256": "7020373caed49533ac20d462ab47a36daf11e920c649a07b12358ed338399684"
+        }
+      ]
+    },
+    {
+      "name": "act_quant_m1_qdq1",
+      "library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_2.so",
+      "tensors": [
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            1,
+            512
+          ],
+          "bytes": 1024,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case2_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case2_arg0_out.bin",
+          "input_sha256": "3294628b84f58c8397f39ef382e5fa8a885d0e07f4908806cfc8b1800c4b58a8",
+          "output_sha256": "3294628b84f58c8397f39ef382e5fa8a885d0e07f4908806cfc8b1800c4b58a8"
+        },
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            1,
+            512
+          ],
+          "bytes": 1024,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case2_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case2_arg1_out.bin",
+          "input_sha256": "5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+          "output_sha256": "c3eae83fcd450ef5e81534b4c2c93c012d3532e76f46d96f39cd1d41e59edd8d"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            1,
+            4
+          ],
+          "bytes": 4,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case2_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case2_arg2_out.bin",
+          "input_sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+          "output_sha256": "2481a63c85a62cf889d2b149f1a52e985a9341750173fe01eff50cc27b5941b5"
+        }
+      ]
+    },
+    {
+      "name": "fp4_quant_m1_qdq1",
+      "library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_3.so",
+      "tensors": [
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            1,
+            512
+          ],
+          "bytes": 1024,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case3_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case3_arg0_out.bin",
+          "input_sha256": "3294628b84f58c8397f39ef382e5fa8a885d0e07f4908806cfc8b1800c4b58a8",
+          "output_sha256": "3294628b84f58c8397f39ef382e5fa8a885d0e07f4908806cfc8b1800c4b58a8"
+        },
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            1,
+            512
+          ],
+          "bytes": 1024,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case3_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case3_arg1_out.bin",
+          "input_sha256": "5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+          "output_sha256": "89b9a765f1df75fc1a431d05d24c6764c43ebb4a4337bdb6eb226120136240b7"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            1,
+            16
+          ],
+          "bytes": 16,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case3_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case3_arg2_out.bin",
+          "input_sha256": "374708fff7719dd5979ec875d56cd2286f6d3cf7ec317a3b25632aab28ec37bb",
+          "output_sha256": "7020373caed49533ac20d462ab47a36daf11e920c649a07b12358ed338399684"
+        }
+      ]
+    },
+    {
+      "name": "fp8_gemm_m1",
+      "library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_4.so",
+      "tensors": [
+        {
+          "dtype": [
+            8,
+            8,
+            1
+          ],
+          "shape": [
+            1,
+            512
+          ],
+          "bytes": 512,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case4_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case4_arg0_out.bin",
+          "input_sha256": "8d6f555f880ad1769fe81ff5f05e57ecde6da3681885c45faa409de2f6d619af",
+          "output_sha256": "8d6f555f880ad1769fe81ff5f05e57ecde6da3681885c45faa409de2f6d619af"
+        },
+        {
+          "dtype": [
+            8,
+            8,
+            1
+          ],
+          "shape": [
+            256,
+            512
+          ],
+          "bytes": 131072,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case4_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case4_arg1_out.bin",
+          "input_sha256": "5525aaca87869d895bf37117c4d12942db2561e4638a64657185f172d0eb7da9",
+          "output_sha256": "5525aaca87869d895bf37117c4d12942db2561e4638a64657185f172d0eb7da9"
+        },
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            1,
+            256
+          ],
+          "bytes": 512,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case4_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case4_arg2_out.bin",
+          "input_sha256": "076a27c79e5ace2a3d47f9dd2e83e4ff6ea8872b3c2218f66c92b89b55f36560",
+          "output_sha256": "5c7fb9025434ba171da07909542ab452756e747877d6f3831c9e6851250b6983"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            1,
+            4
+          ],
+          "bytes": 4,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case4_arg3_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case4_arg3_out.bin",
+          "input_sha256": "365475d471c68745e3881c3743e1669911103607f18d88d9db7292e29177c0bf",
+          "output_sha256": "365475d471c68745e3881c3743e1669911103607f18d88d9db7292e29177c0bf"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            2,
+            4
+          ],
+          "bytes": 8,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case4_arg4_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case4_arg4_out.bin",
+          "input_sha256": "46194707528ae299862af306e62722b98c4b6be1145099f8fdd625f956ec7787",
+          "output_sha256": "46194707528ae299862af306e62722b98c4b6be1145099f8fdd625f956ec7787"
+        }
+      ]
+    },
+    {
+      "name": "fp4_gemm_m1",
+      "library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_5.so",
+      "tensors": [
+        {
+          "dtype": [
+            8,
+            8,
+            1
+          ],
+          "shape": [
+            1,
+            512
+          ],
+          "bytes": 512,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case5_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case5_arg0_out.bin",
+          "input_sha256": "336c34a3a82782088509bde5a032691b328ca63d3412133a638997975513652d",
+          "output_sha256": "336c34a3a82782088509bde5a032691b328ca63d3412133a638997975513652d"
+        },
+        {
+          "dtype": [
+            17,
+            4,
+            1
+          ],
+          "shape": [
+            256,
+            512
+          ],
+          "bytes": 65536,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case5_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case5_arg1_out.bin",
+          "input_sha256": "f6364b8ff733def137ec490762eb507038547e284fafffe609993bd6743ffb1b",
+          "output_sha256": "f6364b8ff733def137ec490762eb507038547e284fafffe609993bd6743ffb1b"
+        },
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            1,
+            256
+          ],
+          "bytes": 512,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case5_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case5_arg2_out.bin",
+          "input_sha256": "076a27c79e5ace2a3d47f9dd2e83e4ff6ea8872b3c2218f66c92b89b55f36560",
+          "output_sha256": "fd2b47a45565936023b8c8f596fe39d2f6084457584405366a0dea729b3b004a"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            1,
+            4
+          ],
+          "bytes": 4,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case5_arg3_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case5_arg3_out.bin",
+          "input_sha256": "365475d471c68745e3881c3743e1669911103607f18d88d9db7292e29177c0bf",
+          "output_sha256": "365475d471c68745e3881c3743e1669911103607f18d88d9db7292e29177c0bf"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            256,
+            16
+          ],
+          "bytes": 4096,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case5_arg4_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case5_arg4_out.bin",
+          "input_sha256": "71cbdbeec021b7f441e73b1594b1a99d2366ffe2011bb71d9a0c256d616c34c3",
+          "output_sha256": "71cbdbeec021b7f441e73b1594b1a99d2366ffe2011bb71d9a0c256d616c34c3"
+        }
+      ]
+    },
+    {
+      "name": "hc_sinkhorn_m1",
+      "library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_6.so",
+      "tensors": [
+        {
+          "dtype": [
+            2,
+            32,
+            1
+          ],
+          "shape": [
+            1,
+            24
+          ],
+          "bytes": 96,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case6_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case6_arg0_out.bin",
+          "input_sha256": "cfc2e00058b0761b3b003ad582a61824cee40125c00d80e0aa242815aa585ae1",
+          "output_sha256": "cfc2e00058b0761b3b003ad582a61824cee40125c00d80e0aa242815aa585ae1"
+        },
+        {
+          "dtype": [
+            2,
+            32,
+            1
+          ],
+          "shape": [
+            3
+          ],
+          "bytes": 12,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case6_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case6_arg1_out.bin",
+          "input_sha256": "9be699c0be9926ec9ce706a12e6f3d545a6ba1c78b4cb9163d3cfe61c6923dbe",
+          "output_sha256": "9be699c0be9926ec9ce706a12e6f3d545a6ba1c78b4cb9163d3cfe61c6923dbe"
+        },
+        {
+          "dtype": [
+            2,
+            32,
+            1
+          ],
+          "shape": [
+            24
+          ],
+          "bytes": 96,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case6_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case6_arg2_out.bin",
+          "input_sha256": "74c40b5e1cced93eb70401a40d95073e3b33104586bd283b23f2934b98a10d11",
+          "output_sha256": "74c40b5e1cced93eb70401a40d95073e3b33104586bd283b23f2934b98a10d11"
+        },
+        {
+          "dtype": [
+            2,
+            32,
+            1
+          ],
+          "shape": [
+            1,
+            4
+          ],
+          "bytes": 16,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case6_arg3_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case6_arg3_out.bin",
+          "input_sha256": "374708fff7719dd5979ec875d56cd2286f6d3cf7ec317a3b25632aab28ec37bb",
+          "output_sha256": "997aab33a4d6c9c7e2172a0d3f0f0f3ef205a1f6df31beffd57f0a0188f9d1eb"
+        },
+        {
+          "dtype": [
+            2,
+            32,
+            1
+          ],
+          "shape": [
+            1,
+            4
+          ],
+          "bytes": 16,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case6_arg4_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case6_arg4_out.bin",
+          "input_sha256": "374708fff7719dd5979ec875d56cd2286f6d3cf7ec317a3b25632aab28ec37bb",
+          "output_sha256": "f29d5416178a71a74eed153bab7e8b2641b9f0733485f967d333cc8bbbce1594"
+        },
+        {
+          "dtype": [
+            2,
+            32,
+            1
+          ],
+          "shape": [
+            1,
+            4,
+            4
+          ],
+          "bytes": 64,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case6_arg5_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case6_arg5_out.bin",
+          "input_sha256": "f5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b",
+          "output_sha256": "ae1860921c4273d0a317480d93ebfe0445b082861f2138c0bdd8ba976d308f08"
+        }
+      ]
+    },
+    {
+      "name": "act_quant_m33_qdq0",
+      "library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_0.so",
+      "tensors": [
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            33,
+            512
+          ],
+          "bytes": 33792,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case7_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case7_arg0_out.bin",
+          "input_sha256": "4f461f3db0acf429ca6482515859629ce188b4bbc33b8f16ce34edd20eab4283",
+          "output_sha256": "4f461f3db0acf429ca6482515859629ce188b4bbc33b8f16ce34edd20eab4283"
+        },
+        {
+          "dtype": [
+            8,
+            8,
+            1
+          ],
+          "shape": [
+            33,
+            512
+          ],
+          "bytes": 16896,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case7_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case7_arg1_out.bin",
+          "input_sha256": "f57511198cd295e9187ab5e6153bd837c4ee91d0217ea593d6b767ca37fa74c2",
+          "output_sha256": "ab0d47fa8100343d3e8d3fb9e1527120606712e917633afce63b7eb5ad895ec4"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            33,
+            4
+          ],
+          "bytes": 132,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case7_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case7_arg2_out.bin",
+          "input_sha256": "115bad14f1c9f2c027a84de21b107015722cb76be8d0abf3760ad8e00d6c24a5",
+          "output_sha256": "24904cac056c88fc1eac78a0e2c15658ed8085fbd63e2f3a250a393742831446"
+        }
+      ]
+    },
+    {
+      "name": "fp4_quant_m33_qdq0",
+      "library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_1.so",
+      "tensors": [
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            33,
+            512
+          ],
+          "bytes": 33792,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case8_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case8_arg0_out.bin",
+          "input_sha256": "4f461f3db0acf429ca6482515859629ce188b4bbc33b8f16ce34edd20eab4283",
+          "output_sha256": "4f461f3db0acf429ca6482515859629ce188b4bbc33b8f16ce34edd20eab4283"
+        },
+        {
+          "dtype": [
+            17,
+            4,
+            1
+          ],
+          "shape": [
+            33,
+            512
+          ],
+          "bytes": 8448,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case8_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case8_arg1_out.bin",
+          "input_sha256": "0f47ecf52af95b17e5b78e1ac181dc092897de95163da5d708eee4331918cf16",
+          "output_sha256": "9e2d98d81bf2e694478756f062157467219fb28c19833c5bdf2129a37b6f4f98"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            33,
+            16
+          ],
+          "bytes": 528,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case8_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case8_arg2_out.bin",
+          "input_sha256": "8889eb3cdd3d0ac94711b47ce78b430d8e23a7b31ecc994c56d0c3310c87674a",
+          "output_sha256": "7500327ea63105b6cebdc87c91a24cf8abf87fab05ca703d715400c2e4f4e8aa"
+        }
+      ]
+    },
+    {
+      "name": "act_quant_m33_qdq1",
+      "library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_2.so",
+      "tensors": [
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            33,
+            512
+          ],
+          "bytes": 33792,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case9_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case9_arg0_out.bin",
+          "input_sha256": "4f461f3db0acf429ca6482515859629ce188b4bbc33b8f16ce34edd20eab4283",
+          "output_sha256": "4f461f3db0acf429ca6482515859629ce188b4bbc33b8f16ce34edd20eab4283"
+        },
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            33,
+            512
+          ],
+          "bytes": 33792,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case9_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case9_arg1_out.bin",
+          "input_sha256": "904cc818da7f8339cc5ea26ae49ec7f7d33bbca04f63902ea9c2bcd6012532a7",
+          "output_sha256": "2d7d8d4f61562c96c2300bd07a7f95483b3cb5d0e55d16d46aff2c778cf59d75"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            33,
+            4
+          ],
+          "bytes": 132,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case9_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case9_arg2_out.bin",
+          "input_sha256": "115bad14f1c9f2c027a84de21b107015722cb76be8d0abf3760ad8e00d6c24a5",
+          "output_sha256": "24904cac056c88fc1eac78a0e2c15658ed8085fbd63e2f3a250a393742831446"
+        }
+      ]
+    },
+    {
+      "name": "fp4_quant_m33_qdq1",
+      "library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_3.so",
+      "tensors": [
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            33,
+            512
+          ],
+          "bytes": 33792,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case10_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case10_arg0_out.bin",
+          "input_sha256": "4f461f3db0acf429ca6482515859629ce188b4bbc33b8f16ce34edd20eab4283",
+          "output_sha256": "4f461f3db0acf429ca6482515859629ce188b4bbc33b8f16ce34edd20eab4283"
+        },
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            33,
+            512
+          ],
+          "bytes": 33792,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case10_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case10_arg1_out.bin",
+          "input_sha256": "904cc818da7f8339cc5ea26ae49ec7f7d33bbca04f63902ea9c2bcd6012532a7",
+          "output_sha256": "3a54ed950723ff87df953e4690d00d87b4266029a962f34422cc5df52e0bcf5c"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            33,
+            16
+          ],
+          "bytes": 528,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case10_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case10_arg2_out.bin",
+          "input_sha256": "8889eb3cdd3d0ac94711b47ce78b430d8e23a7b31ecc994c56d0c3310c87674a",
+          "output_sha256": "7500327ea63105b6cebdc87c91a24cf8abf87fab05ca703d715400c2e4f4e8aa"
+        }
+      ]
+    },
+    {
+      "name": "fp8_gemm_m33",
+      "library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_4.so",
+      "tensors": [
+        {
+          "dtype": [
+            8,
+            8,
+            1
+          ],
+          "shape": [
+            33,
+            512
+          ],
+          "bytes": 16896,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case11_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case11_arg0_out.bin",
+          "input_sha256": "8ed692f368b16f5fc22164196384deb1a7098bb64746b2e3ac196c333e15c465",
+          "output_sha256": "8ed692f368b16f5fc22164196384deb1a7098bb64746b2e3ac196c333e15c465"
+        },
+        {
+          "dtype": [
+            8,
+            8,
+            1
+          ],
+          "shape": [
+            256,
+            512
+          ],
+          "bytes": 131072,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case11_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case11_arg1_out.bin",
+          "input_sha256": "b53af4bce33078823b140543e16ddec839477539a6bacf2cc3a5e894677dfd6c",
+          "output_sha256": "b53af4bce33078823b140543e16ddec839477539a6bacf2cc3a5e894677dfd6c"
+        },
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            33,
+            256
+          ],
+          "bytes": 16896,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case11_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case11_arg2_out.bin",
+          "input_sha256": "f57511198cd295e9187ab5e6153bd837c4ee91d0217ea593d6b767ca37fa74c2",
+          "output_sha256": "c62ef158341db7550ced4c21a9dcbb37b0037011719358e948026a6ac4b30c27"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            33,
+            4
+          ],
+          "bytes": 132,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case11_arg3_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case11_arg3_out.bin",
+          "input_sha256": "d3c24e83e0f7032ca5be38c32dd8a52f10336748fe9fdf0cf0fc0f555d6f998e",
+          "output_sha256": "d3c24e83e0f7032ca5be38c32dd8a52f10336748fe9fdf0cf0fc0f555d6f998e"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            2,
+            4
+          ],
+          "bytes": 8,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case11_arg4_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case11_arg4_out.bin",
+          "input_sha256": "46194707528ae299862af306e62722b98c4b6be1145099f8fdd625f956ec7787",
+          "output_sha256": "46194707528ae299862af306e62722b98c4b6be1145099f8fdd625f956ec7787"
+        }
+      ]
+    },
+    {
+      "name": "fp4_gemm_m33",
+      "library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_5.so",
+      "tensors": [
+        {
+          "dtype": [
+            8,
+            8,
+            1
+          ],
+          "shape": [
+            33,
+            512
+          ],
+          "bytes": 16896,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case12_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case12_arg0_out.bin",
+          "input_sha256": "7bd9cdda8f59f051ed1e3556c778a4854614452cd8d76a22d58ac980bf18f900",
+          "output_sha256": "7bd9cdda8f59f051ed1e3556c778a4854614452cd8d76a22d58ac980bf18f900"
+        },
+        {
+          "dtype": [
+            17,
+            4,
+            1
+          ],
+          "shape": [
+            256,
+            512
+          ],
+          "bytes": 65536,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case12_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case12_arg1_out.bin",
+          "input_sha256": "25328f86a3e1c0df15254fc7575ff671548d5469ee66f640c6b3a2947cf4c572",
+          "output_sha256": "25328f86a3e1c0df15254fc7575ff671548d5469ee66f640c6b3a2947cf4c572"
+        },
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            33,
+            256
+          ],
+          "bytes": 16896,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case12_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case12_arg2_out.bin",
+          "input_sha256": "f57511198cd295e9187ab5e6153bd837c4ee91d0217ea593d6b767ca37fa74c2",
+          "output_sha256": "c1a881d4ec740825e0b4dc8e67c4315b1a42972a95346695dda0d493077ef661"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            33,
+            4
+          ],
+          "bytes": 132,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case12_arg3_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case12_arg3_out.bin",
+          "input_sha256": "d3c24e83e0f7032ca5be38c32dd8a52f10336748fe9fdf0cf0fc0f555d6f998e",
+          "output_sha256": "d3c24e83e0f7032ca5be38c32dd8a52f10336748fe9fdf0cf0fc0f555d6f998e"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            256,
+            16
+          ],
+          "bytes": 4096,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case12_arg4_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case12_arg4_out.bin",
+          "input_sha256": "71cbdbeec021b7f441e73b1594b1a99d2366ffe2011bb71d9a0c256d616c34c3",
+          "output_sha256": "71cbdbeec021b7f441e73b1594b1a99d2366ffe2011bb71d9a0c256d616c34c3"
+        }
+      ]
+    },
+    {
+      "name": "hc_sinkhorn_m33",
+      "library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_6.so",
+      "tensors": [
+        {
+          "dtype": [
+            2,
+            32,
+            1
+          ],
+          "shape": [
+            33,
+            24
+          ],
+          "bytes": 3168,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case13_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case13_arg0_out.bin",
+          "input_sha256": "a34caa76a7a2f72205d50b14ef758841c84220a53f28e44c9cc5e54225639859",
+          "output_sha256": "a34caa76a7a2f72205d50b14ef758841c84220a53f28e44c9cc5e54225639859"
+        },
+        {
+          "dtype": [
+            2,
+            32,
+            1
+          ],
+          "shape": [
+            3
+          ],
+          "bytes": 12,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case13_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case13_arg1_out.bin",
+          "input_sha256": "73944e85033a1b41ac7aa7ee931c307566196a77f315df7c181a4ac43ba5cb0c",
+          "output_sha256": "73944e85033a1b41ac7aa7ee931c307566196a77f315df7c181a4ac43ba5cb0c"
+        },
+        {
+          "dtype": [
+            2,
+            32,
+            1
+          ],
+          "shape": [
+            24
+          ],
+          "bytes": 96,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case13_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case13_arg2_out.bin",
+          "input_sha256": "9c322b0f12d4d1eb0521ea431d5dc942e042f433cf5669fd7ab096586da96009",
+          "output_sha256": "9c322b0f12d4d1eb0521ea431d5dc942e042f433cf5669fd7ab096586da96009"
+        },
+        {
+          "dtype": [
+            2,
+            32,
+            1
+          ],
+          "shape": [
+            33,
+            4
+          ],
+          "bytes": 528,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case13_arg3_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case13_arg3_out.bin",
+          "input_sha256": "8889eb3cdd3d0ac94711b47ce78b430d8e23a7b31ecc994c56d0c3310c87674a",
+          "output_sha256": "18a5d7593d2158f4b7b009f9fc49a6028b0a3b8e475327e111b7e1a02b668a1b"
+        },
+        {
+          "dtype": [
+            2,
+            32,
+            1
+          ],
+          "shape": [
+            33,
+            4
+          ],
+          "bytes": 528,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case13_arg4_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case13_arg4_out.bin",
+          "input_sha256": "8889eb3cdd3d0ac94711b47ce78b430d8e23a7b31ecc994c56d0c3310c87674a",
+          "output_sha256": "ef01db1a3f42c9d6f44aba78f176f3de48ecb0c060c2653018580e0665d2ac12"
+        },
+        {
+          "dtype": [
+            2,
+            32,
+            1
+          ],
+          "shape": [
+            33,
+            4,
+            4
+          ],
+          "bytes": 2112,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case13_arg5_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case13_arg5_out.bin",
+          "input_sha256": "80b67b115f8e28f3b67fddcd4cd1daac24a054603d1dd0cb13793a299a5dadfc",
+          "output_sha256": "dbdf182270f913f3169ccdadbbd5a3822ae8004add35db3c711c840fb8e7cd48"
+        }
+      ]
+    },
+    {
+      "name": "act_quant_m137_qdq0",
+      "library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_0.so",
+      "tensors": [
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            137,
+            512
+          ],
+          "bytes": 140288,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case14_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case14_arg0_out.bin",
+          "input_sha256": "cb5ea1f16d28067c0ca0afdecf9eedf483d484fc90189ca34e57fe9fdbc6a070",
+          "output_sha256": "cb5ea1f16d28067c0ca0afdecf9eedf483d484fc90189ca34e57fe9fdbc6a070"
+        },
+        {
+          "dtype": [
+            8,
+            8,
+            1
+          ],
+          "shape": [
+            137,
+            512
+          ],
+          "bytes": 70144,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case14_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case14_arg1_out.bin",
+          "input_sha256": "160fe14a04c81fc94e208850df8283f9a3736840a418ca51babbd6f1056ffbcf",
+          "output_sha256": "de77bbd26b7d8f08287fda431c4d4a5d6555713b9dfb719de2642f8e6e7dfe08"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            137,
+            4
+          ],
+          "bytes": 548,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case14_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case14_arg2_out.bin",
+          "input_sha256": "73f10e16a57e80fcd212b6629685e2e19a1d19bf13d34dda6c866b528b098684",
+          "output_sha256": "d2570098637c0bccda73a7a390d467a310e6f4383698c80d6becd133bd4e6bf9"
+        }
+      ]
+    },
+    {
+      "name": "fp4_quant_m137_qdq0",
+      "library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_1.so",
+      "tensors": [
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            137,
+            512
+          ],
+          "bytes": 140288,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case15_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case15_arg0_out.bin",
+          "input_sha256": "cb5ea1f16d28067c0ca0afdecf9eedf483d484fc90189ca34e57fe9fdbc6a070",
+          "output_sha256": "cb5ea1f16d28067c0ca0afdecf9eedf483d484fc90189ca34e57fe9fdbc6a070"
+        },
+        {
+          "dtype": [
+            17,
+            4,
+            1
+          ],
+          "shape": [
+            137,
+            512
+          ],
+          "bytes": 35072,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case15_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case15_arg1_out.bin",
+          "input_sha256": "797761da2cf563411ac599198068bae30f763e3baf52e3269dc1a5ade014cdcf",
+          "output_sha256": "c7195716fef7e780feff1a0c33b16bdbf32797242841fa343798388b967a3fa8"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            137,
+            16
+          ],
+          "bytes": 2192,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case15_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case15_arg2_out.bin",
+          "input_sha256": "c3f98bcd6e42258b08619d44bece48a614e4d6825295af9e133c62e05efe6da8",
+          "output_sha256": "0785ee731cd8227b16155c822bf426687f9e6d3e7d96a688cb391e65e5bb3a0c"
+        }
+      ]
+    },
+    {
+      "name": "act_quant_m137_qdq1",
+      "library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_2.so",
+      "tensors": [
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            137,
+            512
+          ],
+          "bytes": 140288,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case16_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case16_arg0_out.bin",
+          "input_sha256": "cb5ea1f16d28067c0ca0afdecf9eedf483d484fc90189ca34e57fe9fdbc6a070",
+          "output_sha256": "cb5ea1f16d28067c0ca0afdecf9eedf483d484fc90189ca34e57fe9fdbc6a070"
+        },
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            137,
+            512
+          ],
+          "bytes": 140288,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case16_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case16_arg1_out.bin",
+          "input_sha256": "7a0b7110216afe3d821cfe05c83769567b011db945b99aacd1201af0bc0d20c8",
+          "output_sha256": "f303174d6c94f8c1963de5f6309c075a44ce796922611cbf6f9ed4de6cd7bf0c"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            137,
+            4
+          ],
+          "bytes": 548,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case16_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case16_arg2_out.bin",
+          "input_sha256": "73f10e16a57e80fcd212b6629685e2e19a1d19bf13d34dda6c866b528b098684",
+          "output_sha256": "d2570098637c0bccda73a7a390d467a310e6f4383698c80d6becd133bd4e6bf9"
+        }
+      ]
+    },
+    {
+      "name": "fp4_quant_m137_qdq1",
+      "library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_3.so",
+      "tensors": [
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            137,
+            512
+          ],
+          "bytes": 140288,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case17_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case17_arg0_out.bin",
+          "input_sha256": "cb5ea1f16d28067c0ca0afdecf9eedf483d484fc90189ca34e57fe9fdbc6a070",
+          "output_sha256": "cb5ea1f16d28067c0ca0afdecf9eedf483d484fc90189ca34e57fe9fdbc6a070"
+        },
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            137,
+            512
+          ],
+          "bytes": 140288,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case17_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case17_arg1_out.bin",
+          "input_sha256": "7a0b7110216afe3d821cfe05c83769567b011db945b99aacd1201af0bc0d20c8",
+          "output_sha256": "c9a2249dfa5e5dec830eb3a7b35379e9a133d523dcf9be3b56c08b5b138ce2cc"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            137,
+            16
+          ],
+          "bytes": 2192,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case17_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case17_arg2_out.bin",
+          "input_sha256": "c3f98bcd6e42258b08619d44bece48a614e4d6825295af9e133c62e05efe6da8",
+          "output_sha256": "0785ee731cd8227b16155c822bf426687f9e6d3e7d96a688cb391e65e5bb3a0c"
+        }
+      ]
+    },
+    {
+      "name": "fp8_gemm_m137",
+      "library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_4.so",
+      "tensors": [
+        {
+          "dtype": [
+            8,
+            8,
+            1
+          ],
+          "shape": [
+            137,
+            512
+          ],
+          "bytes": 70144,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case18_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case18_arg0_out.bin",
+          "input_sha256": "74f6c8c2154a29ec5b8cbda8b300babd107c80fa97f9270b47b70abff82466b2",
+          "output_sha256": "74f6c8c2154a29ec5b8cbda8b300babd107c80fa97f9270b47b70abff82466b2"
+        },
+        {
+          "dtype": [
+            8,
+            8,
+            1
+          ],
+          "shape": [
+            256,
+            512
+          ],
+          "bytes": 131072,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case18_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case18_arg1_out.bin",
+          "input_sha256": "2d6483f86e33e30fb4278b832a8aac9a1b45dcbeaba0526c69459d84bf0e481e",
+          "output_sha256": "2d6483f86e33e30fb4278b832a8aac9a1b45dcbeaba0526c69459d84bf0e481e"
+        },
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            137,
+            256
+          ],
+          "bytes": 70144,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case18_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case18_arg2_out.bin",
+          "input_sha256": "160fe14a04c81fc94e208850df8283f9a3736840a418ca51babbd6f1056ffbcf",
+          "output_sha256": "99177774b9b2c6f2c7951e611b4be58238827968719b1cf67ad067a382340d65"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            137,
+            4
+          ],
+          "bytes": 548,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case18_arg3_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case18_arg3_out.bin",
+          "input_sha256": "5e891b5674d71d8faf4597134b2e59c21a61bb9f66a1fd213fd6e100d6232200",
+          "output_sha256": "5e891b5674d71d8faf4597134b2e59c21a61bb9f66a1fd213fd6e100d6232200"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            2,
+            4
+          ],
+          "bytes": 8,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case18_arg4_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case18_arg4_out.bin",
+          "input_sha256": "46194707528ae299862af306e62722b98c4b6be1145099f8fdd625f956ec7787",
+          "output_sha256": "46194707528ae299862af306e62722b98c4b6be1145099f8fdd625f956ec7787"
+        }
+      ]
+    },
+    {
+      "name": "fp4_gemm_m137",
+      "library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_5.so",
+      "tensors": [
+        {
+          "dtype": [
+            8,
+            8,
+            1
+          ],
+          "shape": [
+            137,
+            512
+          ],
+          "bytes": 70144,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case19_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case19_arg0_out.bin",
+          "input_sha256": "79817daf0f8668213310195d0541953b03bbdaa911ea15275d431968c5dd336f",
+          "output_sha256": "79817daf0f8668213310195d0541953b03bbdaa911ea15275d431968c5dd336f"
+        },
+        {
+          "dtype": [
+            17,
+            4,
+            1
+          ],
+          "shape": [
+            256,
+            512
+          ],
+          "bytes": 65536,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case19_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case19_arg1_out.bin",
+          "input_sha256": "b58477785b50dff0d87f63e4e07be321b86572715b484d23c883f351cb617a01",
+          "output_sha256": "b58477785b50dff0d87f63e4e07be321b86572715b484d23c883f351cb617a01"
+        },
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            137,
+            256
+          ],
+          "bytes": 70144,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case19_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case19_arg2_out.bin",
+          "input_sha256": "160fe14a04c81fc94e208850df8283f9a3736840a418ca51babbd6f1056ffbcf",
+          "output_sha256": "4173f08cd9ac1d6753f837414c7fcc72a67c58b5d95159fcc663fa8a3be387b2"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            137,
+            4
+          ],
+          "bytes": 548,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case19_arg3_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case19_arg3_out.bin",
+          "input_sha256": "5e891b5674d71d8faf4597134b2e59c21a61bb9f66a1fd213fd6e100d6232200",
+          "output_sha256": "5e891b5674d71d8faf4597134b2e59c21a61bb9f66a1fd213fd6e100d6232200"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            256,
+            16
+          ],
+          "bytes": 4096,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case19_arg4_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case19_arg4_out.bin",
+          "input_sha256": "71cbdbeec021b7f441e73b1594b1a99d2366ffe2011bb71d9a0c256d616c34c3",
+          "output_sha256": "71cbdbeec021b7f441e73b1594b1a99d2366ffe2011bb71d9a0c256d616c34c3"
+        }
+      ]
+    },
+    {
+      "name": "hc_sinkhorn_m137",
+      "library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_6.so",
+      "tensors": [
+        {
+          "dtype": [
+            2,
+            32,
+            1
+          ],
+          "shape": [
+            137,
+            24
+          ],
+          "bytes": 13152,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case20_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case20_arg0_out.bin",
+          "input_sha256": "97a573324e9ed15097d0ae8b1a7bc6bcb61188a31a11ba4a85cbc2df369f57bd",
+          "output_sha256": "97a573324e9ed15097d0ae8b1a7bc6bcb61188a31a11ba4a85cbc2df369f57bd"
+        },
+        {
+          "dtype": [
+            2,
+            32,
+            1
+          ],
+          "shape": [
+            3
+          ],
+          "bytes": 12,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case20_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case20_arg1_out.bin",
+          "input_sha256": "5dd638b72ccf0f18488dc0072381c7543c4af80f224945288490efdbccad976a",
+          "output_sha256": "5dd638b72ccf0f18488dc0072381c7543c4af80f224945288490efdbccad976a"
+        },
+        {
+          "dtype": [
+            2,
+            32,
+            1
+          ],
+          "shape": [
+            24
+          ],
+          "bytes": 96,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case20_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case20_arg2_out.bin",
+          "input_sha256": "a1f47c8e509cc3c8e7edf829bde3eaf21e0d65cba1e0155dd0770b3cf7bba81e",
+          "output_sha256": "a1f47c8e509cc3c8e7edf829bde3eaf21e0d65cba1e0155dd0770b3cf7bba81e"
+        },
+        {
+          "dtype": [
+            2,
+            32,
+            1
+          ],
+          "shape": [
+            137,
+            4
+          ],
+          "bytes": 2192,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case20_arg3_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case20_arg3_out.bin",
+          "input_sha256": "c3f98bcd6e42258b08619d44bece48a614e4d6825295af9e133c62e05efe6da8",
+          "output_sha256": "583f88d36d796e952a79b870be564867a6d173b3619f0b5e5c1e493893a36644"
+        },
+        {
+          "dtype": [
+            2,
+            32,
+            1
+          ],
+          "shape": [
+            137,
+            4
+          ],
+          "bytes": 2192,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case20_arg4_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case20_arg4_out.bin",
+          "input_sha256": "c3f98bcd6e42258b08619d44bece48a614e4d6825295af9e133c62e05efe6da8",
+          "output_sha256": "ec3e5feef97bd205b9efc60fb3feea01f85e3e121269e8c63abff8f2c026b4c7"
+        },
+        {
+          "dtype": [
+            2,
+            32,
+            1
+          ],
+          "shape": [
+            137,
+            4,
+            4
+          ],
+          "bytes": 8768,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case20_arg5_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case20_arg5_out.bin",
+          "input_sha256": "5c28427c5056ac7f71bbbf9bbbb74baa310c02341d5f9669c6503d13dbeabd24",
+          "output_sha256": "804a153f5e4a1f721c6a42c2ca00965ff256577af5a4332a7d6fec091ee5e5d4"
+        }
+      ]
+    },
+    {
+      "name": "sparse_attention_s1_k64",
+      "library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_7.so",
+      "tensors": [
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            1,
+            1,
+            64,
+            512
+          ],
+          "bytes": 65536,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case21_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case21_arg0_out.bin",
+          "input_sha256": "09cac91e9e2792852bf3d37e5c46750e263de58e048654cc0500cb4dffb279df",
+          "output_sha256": "09cac91e9e2792852bf3d37e5c46750e263de58e048654cc0500cb4dffb279df"
+        },
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            1,
+            640,
+            512
+          ],
+          "bytes": 655360,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case21_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case21_arg1_out.bin",
+          "input_sha256": "e26daf07522afbca48dcc88e44637eef928e94b516ab4c3dbb74a16dc9793552",
+          "output_sha256": "e26daf07522afbca48dcc88e44637eef928e94b516ab4c3dbb74a16dc9793552"
+        },
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            1,
+            1,
+            64,
+            512
+          ],
+          "bytes": 65536,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case21_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case21_arg2_out.bin",
+          "input_sha256": "de2f256064a0af797747c2b97505dc0b9f3df0de4f489eac731c23ae9ca9cc31",
+          "output_sha256": "634d2a3e614bf872ece7667139c886a9e7846d3259fcd7e2c62fa12e73cd77d3"
+        },
+        {
+          "dtype": [
+            2,
+            32,
+            1
+          ],
+          "shape": [
+            64
+          ],
+          "bytes": 256,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case21_arg3_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case21_arg3_out.bin",
+          "input_sha256": "118d0c1074f760bc45f8f523c4b67842070980dc512802e76ee115a9aaa60018",
+          "output_sha256": "118d0c1074f760bc45f8f523c4b67842070980dc512802e76ee115a9aaa60018"
+        },
+        {
+          "dtype": [
+            0,
+            32,
+            1
+          ],
+          "shape": [
+            1,
+            1,
+            64
+          ],
+          "bytes": 256,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case21_arg4_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case21_arg4_out.bin",
+          "input_sha256": "638063118bb8445060fe2798b98738c1a5fc782963c2a4ada340de98e0c64054",
+          "output_sha256": "638063118bb8445060fe2798b98738c1a5fc782963c2a4ada340de98e0c64054"
+        }
+      ]
+    },
+    {
+      "name": "sparse_attention_s3_k576",
+      "library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_7.so",
+      "tensors": [
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            1,
+            3,
+            64,
+            512
+          ],
+          "bytes": 196608,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case22_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case22_arg0_out.bin",
+          "input_sha256": "1c4635142086262768f61587cf40a42c9ada4e36e286e7932b88609f26d4b2e3",
+          "output_sha256": "1c4635142086262768f61587cf40a42c9ada4e36e286e7932b88609f26d4b2e3"
+        },
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            1,
+            640,
+            512
+          ],
+          "bytes": 655360,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case22_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case22_arg1_out.bin",
+          "input_sha256": "8158c6b40ffcb4903e67d310c024482ecd87f186757e3be004bc2558f7c80d40",
+          "output_sha256": "8158c6b40ffcb4903e67d310c024482ecd87f186757e3be004bc2558f7c80d40"
+        },
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            1,
+            3,
+            64,
+            512
+          ],
+          "bytes": 196608,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case22_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case22_arg2_out.bin",
+          "input_sha256": "3381de4ca9f3a477f25989dfc8b744e7916046b7aa369f61a9a2f7dc0963ec9e",
+          "output_sha256": "affdfa48f991bb3d074397c17a5a6f28e07bb3378f871756e11880002ea6332f"
+        },
+        {
+          "dtype": [
+            2,
+            32,
+            1
+          ],
+          "shape": [
+            64
+          ],
+          "bytes": 256,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case22_arg3_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case22_arg3_out.bin",
+          "input_sha256": "348a2d68fb5c82641125c5cef939a7d345e2303617f4fe2cf63e3cfe7a444d64",
+          "output_sha256": "348a2d68fb5c82641125c5cef939a7d345e2303617f4fe2cf63e3cfe7a444d64"
+        },
+        {
+          "dtype": [
+            0,
+            32,
+            1
+          ],
+          "shape": [
+            1,
+            3,
+            576
+          ],
+          "bytes": 6912,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case22_arg4_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/case22_arg4_out.bin",
+          "input_sha256": "70a1a52286cd972797089a7c233aaddb5d16b67372bcd496586d0d2da619fccc",
+          "output_sha256": "70a1a52286cd972797089a7c233aaddb5d16b67372bcd496586d0d2da619fccc"
+        }
+      ]
+    }
+  ],
+  "linear_cases": [
+    {
+      "name": "layers.0.attn.wq_a_m1",
+      "quant_library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_8.so",
+      "gemm_library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_9.so",
+      "tensors": [
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            1,
+            4096
+          ],
+          "bytes": 8192,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear0_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear0_arg0_out.bin",
+          "input_sha256": "82424ef45f5aa93c498a2c7033accbec38d3b1316d2ad716ed0accfc630eb009",
+          "output_sha256": "82424ef45f5aa93c498a2c7033accbec38d3b1316d2ad716ed0accfc630eb009"
+        },
+        {
+          "dtype": [
+            10,
+            8,
+            1
+          ],
+          "shape": [
+            1024,
+            4096
+          ],
+          "bytes": 4194304,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear0_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear0_arg1_out.bin",
+          "input_sha256": "d8646783efb3c0bda83bcd2c64b03cb25d1677d27b0c45ffe143a4175922932c",
+          "output_sha256": "d8646783efb3c0bda83bcd2c64b03cb25d1677d27b0c45ffe143a4175922932c"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            8,
+            32
+          ],
+          "bytes": 256,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear0_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear0_arg2_out.bin",
+          "input_sha256": "aea19c77d256ca30999de59a811b152a2dfc82673a43877d9cd67b80578bc5e2",
+          "output_sha256": "aea19c77d256ca30999de59a811b152a2dfc82673a43877d9cd67b80578bc5e2"
+        },
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            1,
+            1024
+          ],
+          "bytes": 2048,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear0_arg3_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear0_arg3_out.bin",
+          "input_sha256": "e5a00aa9991ac8a5ee3109844d84a55583bd20572ad3ffcd42792f3c36b183ad",
+          "output_sha256": "12a09a1be9d67fdab001919706edc200ec6eb039f18263c38438f93a9aed42a8"
+        },
+        {
+          "dtype": [
+            10,
+            8,
+            1
+          ],
+          "shape": [
+            1,
+            4096
+          ],
+          "bytes": 4096,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear0_arg4_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear0_arg4_out.bin",
+          "input_sha256": "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7",
+          "output_sha256": "2d6980307b5fd8b97339191ea8bab3d0539c46097c4740c8c158cc24629351f2"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            1,
+            32
+          ],
+          "bytes": 32,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear0_arg5_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear0_arg5_out.bin",
+          "input_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925",
+          "output_sha256": "fd020a5ffba80de11a871ebf3979b02ff9dd8ed2744b198063a0f7a945b8a914"
+        }
+      ]
+    },
+    {
+      "name": "layers.0.attn.wq_a_m33",
+      "quant_library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_8.so",
+      "gemm_library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_9.so",
+      "tensors": [
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            33,
+            4096
+          ],
+          "bytes": 270336,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear1_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear1_arg0_out.bin",
+          "input_sha256": "ca79703f36c16226cfd2ca0ab24e1df105fc983b79bf697d279895d959104324",
+          "output_sha256": "ca79703f36c16226cfd2ca0ab24e1df105fc983b79bf697d279895d959104324"
+        },
+        {
+          "dtype": [
+            10,
+            8,
+            1
+          ],
+          "shape": [
+            1024,
+            4096
+          ],
+          "bytes": 4194304,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear1_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear1_arg1_out.bin",
+          "input_sha256": "d8646783efb3c0bda83bcd2c64b03cb25d1677d27b0c45ffe143a4175922932c",
+          "output_sha256": "d8646783efb3c0bda83bcd2c64b03cb25d1677d27b0c45ffe143a4175922932c"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            8,
+            32
+          ],
+          "bytes": 256,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear1_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear1_arg2_out.bin",
+          "input_sha256": "aea19c77d256ca30999de59a811b152a2dfc82673a43877d9cd67b80578bc5e2",
+          "output_sha256": "aea19c77d256ca30999de59a811b152a2dfc82673a43877d9cd67b80578bc5e2"
+        },
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            33,
+            1024
+          ],
+          "bytes": 67584,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear1_arg3_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear1_arg3_out.bin",
+          "input_sha256": "2e1d1f24ad4c0336267e3f21f9e4083cfc299a1a41b208c12f42e166ce33f631",
+          "output_sha256": "ddd334ed2be1413b458ada98e21a23116ff2aef3796968dc2ad358adc3941f33"
+        },
+        {
+          "dtype": [
+            10,
+            8,
+            1
+          ],
+          "shape": [
+            33,
+            4096
+          ],
+          "bytes": 135168,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear1_arg4_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear1_arg4_out.bin",
+          "input_sha256": "74518f204d46de660dff3ed003e92476bad8c691ba392453fc1c7532cc856018",
+          "output_sha256": "fc132355777aecc7aa75a263dce0ef171ebc7eb260b6f86f0fe6510e1720ea19"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            33,
+            32
+          ],
+          "bytes": 1056,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear1_arg5_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear1_arg5_out.bin",
+          "input_sha256": "10e2103ee73921931a7828ebdf325d3a3a64c7a90cc1da5c0ca6fe17b1e3dd78",
+          "output_sha256": "e595cd08f266de086dd95d7c597a1e74777690025db1e0896f2e9d6594a6707c"
+        }
+      ]
+    },
+    {
+      "name": "layers.0.attn.wq_a_m137",
+      "quant_library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_8.so",
+      "gemm_library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_9.so",
+      "tensors": [
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            137,
+            4096
+          ],
+          "bytes": 1122304,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear2_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear2_arg0_out.bin",
+          "input_sha256": "baf4dada385070b4254d6822b5a6769e1ee0e3c54a7b6533d24eb608d761fb98",
+          "output_sha256": "baf4dada385070b4254d6822b5a6769e1ee0e3c54a7b6533d24eb608d761fb98"
+        },
+        {
+          "dtype": [
+            10,
+            8,
+            1
+          ],
+          "shape": [
+            1024,
+            4096
+          ],
+          "bytes": 4194304,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear2_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear2_arg1_out.bin",
+          "input_sha256": "d8646783efb3c0bda83bcd2c64b03cb25d1677d27b0c45ffe143a4175922932c",
+          "output_sha256": "d8646783efb3c0bda83bcd2c64b03cb25d1677d27b0c45ffe143a4175922932c"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            8,
+            32
+          ],
+          "bytes": 256,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear2_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear2_arg2_out.bin",
+          "input_sha256": "aea19c77d256ca30999de59a811b152a2dfc82673a43877d9cd67b80578bc5e2",
+          "output_sha256": "aea19c77d256ca30999de59a811b152a2dfc82673a43877d9cd67b80578bc5e2"
+        },
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            137,
+            1024
+          ],
+          "bytes": 280576,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear2_arg3_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear2_arg3_out.bin",
+          "input_sha256": "f0a22a71e61b423ce6cdb3586f03359fab5b5118ae22271214bdc269f3018971",
+          "output_sha256": "ed4f5f5578c947c5eda962f842642199ca102edcbaa8f8eb9016ccbc8df6cd7a"
+        },
+        {
+          "dtype": [
+            10,
+            8,
+            1
+          ],
+          "shape": [
+            137,
+            4096
+          ],
+          "bytes": 561152,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear2_arg4_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear2_arg4_out.bin",
+          "input_sha256": "2c199f84198e5aca169676c7e43fbad22a3951e78e75ab5d63505f3110d5449f",
+          "output_sha256": "9cc7ef43eabf2289c667f91438c7d6f6bb04c2209eaf1aa9acf8d2f16133e5b9"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            137,
+            32
+          ],
+          "bytes": 4384,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear2_arg5_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear2_arg5_out.bin",
+          "input_sha256": "5913f2321b0b2f2caccd56941518a30f46d1063e534cc2788f0402ccb01ecffc",
+          "output_sha256": "e5488b32e2ad6c089061f704a1ca7846c6c50264b0cb07cfa4b66684dfab5f27"
+        }
+      ]
+    },
+    {
+      "name": "layers.0.ffn.experts.0.w1_m1",
+      "quant_library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_8.so",
+      "gemm_library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_10.so",
+      "tensors": [
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            1,
+            4096
+          ],
+          "bytes": 8192,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear3_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear3_arg0_out.bin",
+          "input_sha256": "0b69a170016c8ac8d9b82e5c97ba10df44cb10c8b71e040abe57dd31f4bd55c5",
+          "output_sha256": "0b69a170016c8ac8d9b82e5c97ba10df44cb10c8b71e040abe57dd31f4bd55c5"
+        },
+        {
+          "dtype": [
+            17,
+            4,
+            1
+          ],
+          "shape": [
+            2048,
+            4096
+          ],
+          "bytes": 4194304,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear3_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear3_arg1_out.bin",
+          "input_sha256": "8b8124ab561c2954c4f8d590c60c5478efb7b6726035d1328d89e806988ccceb",
+          "output_sha256": "8b8124ab561c2954c4f8d590c60c5478efb7b6726035d1328d89e806988ccceb"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            2048,
+            128
+          ],
+          "bytes": 262144,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear3_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear3_arg2_out.bin",
+          "input_sha256": "e2e52dd1cf8e590514eec022f7115e5c1cf7c2305bbe8372f03b1af517b5871a",
+          "output_sha256": "e2e52dd1cf8e590514eec022f7115e5c1cf7c2305bbe8372f03b1af517b5871a"
+        },
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            1,
+            2048
+          ],
+          "bytes": 4096,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear3_arg3_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear3_arg3_out.bin",
+          "input_sha256": "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7",
+          "output_sha256": "92f340dd74f83cb7a9ca97a675cc01ddd3e7b540926c303ff736b39a24cbccba"
+        },
+        {
+          "dtype": [
+            10,
+            8,
+            1
+          ],
+          "shape": [
+            1,
+            4096
+          ],
+          "bytes": 4096,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear3_arg4_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear3_arg4_out.bin",
+          "input_sha256": "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7",
+          "output_sha256": "cb0cb35f944c4cbe339f51d9ae5abea78e86a8938dfd659100803f86cdb696e4"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            1,
+            32
+          ],
+          "bytes": 32,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear3_arg5_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear3_arg5_out.bin",
+          "input_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925",
+          "output_sha256": "e0dd872cebe0835dd00fecb02d75c835918e13ebe199e82fecb2188142af233a"
+        }
+      ]
+    },
+    {
+      "name": "layers.0.ffn.experts.0.w1_m33",
+      "quant_library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_8.so",
+      "gemm_library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_10.so",
+      "tensors": [
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            33,
+            4096
+          ],
+          "bytes": 270336,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear4_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear4_arg0_out.bin",
+          "input_sha256": "8c940daf0c207df619a8cbd57a0d324386b4a89ac11e45775250b85badb08bbe",
+          "output_sha256": "8c940daf0c207df619a8cbd57a0d324386b4a89ac11e45775250b85badb08bbe"
+        },
+        {
+          "dtype": [
+            17,
+            4,
+            1
+          ],
+          "shape": [
+            2048,
+            4096
+          ],
+          "bytes": 4194304,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear4_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear4_arg1_out.bin",
+          "input_sha256": "8b8124ab561c2954c4f8d590c60c5478efb7b6726035d1328d89e806988ccceb",
+          "output_sha256": "8b8124ab561c2954c4f8d590c60c5478efb7b6726035d1328d89e806988ccceb"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            2048,
+            128
+          ],
+          "bytes": 262144,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear4_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear4_arg2_out.bin",
+          "input_sha256": "e2e52dd1cf8e590514eec022f7115e5c1cf7c2305bbe8372f03b1af517b5871a",
+          "output_sha256": "e2e52dd1cf8e590514eec022f7115e5c1cf7c2305bbe8372f03b1af517b5871a"
+        },
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            33,
+            2048
+          ],
+          "bytes": 135168,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear4_arg3_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear4_arg3_out.bin",
+          "input_sha256": "74518f204d46de660dff3ed003e92476bad8c691ba392453fc1c7532cc856018",
+          "output_sha256": "e373287730e62e3f49a1d70c130d58a7df0f02be830d6cafb61454887758fbf5"
+        },
+        {
+          "dtype": [
+            10,
+            8,
+            1
+          ],
+          "shape": [
+            33,
+            4096
+          ],
+          "bytes": 135168,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear4_arg4_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear4_arg4_out.bin",
+          "input_sha256": "74518f204d46de660dff3ed003e92476bad8c691ba392453fc1c7532cc856018",
+          "output_sha256": "512065a3f8baa1dc7f7e1e24217d1083d07da651ba29133c1fd13ef89eddfbf7"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            33,
+            32
+          ],
+          "bytes": 1056,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear4_arg5_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear4_arg5_out.bin",
+          "input_sha256": "10e2103ee73921931a7828ebdf325d3a3a64c7a90cc1da5c0ca6fe17b1e3dd78",
+          "output_sha256": "897e8d353f0b4b387e13ba2432e36e55446c35e004bff38b47f1959a8c1d7d3d"
+        }
+      ]
+    },
+    {
+      "name": "layers.0.ffn.experts.0.w1_m137",
+      "quant_library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_8.so",
+      "gemm_library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_10.so",
+      "tensors": [
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            137,
+            4096
+          ],
+          "bytes": 1122304,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear5_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear5_arg0_out.bin",
+          "input_sha256": "5ba2378835d4039efadb789d7f43e5065073ba28e321346b3bf615929d1484ff",
+          "output_sha256": "5ba2378835d4039efadb789d7f43e5065073ba28e321346b3bf615929d1484ff"
+        },
+        {
+          "dtype": [
+            17,
+            4,
+            1
+          ],
+          "shape": [
+            2048,
+            4096
+          ],
+          "bytes": 4194304,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear5_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear5_arg1_out.bin",
+          "input_sha256": "8b8124ab561c2954c4f8d590c60c5478efb7b6726035d1328d89e806988ccceb",
+          "output_sha256": "8b8124ab561c2954c4f8d590c60c5478efb7b6726035d1328d89e806988ccceb"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            2048,
+            128
+          ],
+          "bytes": 262144,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear5_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear5_arg2_out.bin",
+          "input_sha256": "e2e52dd1cf8e590514eec022f7115e5c1cf7c2305bbe8372f03b1af517b5871a",
+          "output_sha256": "e2e52dd1cf8e590514eec022f7115e5c1cf7c2305bbe8372f03b1af517b5871a"
+        },
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            137,
+            2048
+          ],
+          "bytes": 561152,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear5_arg3_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear5_arg3_out.bin",
+          "input_sha256": "2c199f84198e5aca169676c7e43fbad22a3951e78e75ab5d63505f3110d5449f",
+          "output_sha256": "62ce8d1b40ed2915509e81eb19e326d3361c46278d15fadb1ee29a48945957df"
+        },
+        {
+          "dtype": [
+            10,
+            8,
+            1
+          ],
+          "shape": [
+            137,
+            4096
+          ],
+          "bytes": 561152,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear5_arg4_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear5_arg4_out.bin",
+          "input_sha256": "2c199f84198e5aca169676c7e43fbad22a3951e78e75ab5d63505f3110d5449f",
+          "output_sha256": "f9625bf97778f54f9f324383d459398ceab8f2b32490cda77dd436183ee4db06"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            137,
+            32
+          ],
+          "bytes": 4384,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear5_arg5_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear5_arg5_out.bin",
+          "input_sha256": "5913f2321b0b2f2caccd56941518a30f46d1063e534cc2788f0402ccb01ecffc",
+          "output_sha256": "42fe310a798fb6f9da09f96fe3dca4beba1d6c702e9a114082f11dd816a721b0"
+        }
+      ]
+    },
+    {
+      "name": "layers.0.ffn.experts.0.w2_m1",
+      "quant_library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_11.so",
+      "gemm_library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_12.so",
+      "tensors": [
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            1,
+            2048
+          ],
+          "bytes": 4096,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear6_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear6_arg0_out.bin",
+          "input_sha256": "246efe3ed059f9b6f33a2e75731de261350c28b020b6f1581df734a813c4e177",
+          "output_sha256": "246efe3ed059f9b6f33a2e75731de261350c28b020b6f1581df734a813c4e177"
+        },
+        {
+          "dtype": [
+            17,
+            4,
+            1
+          ],
+          "shape": [
+            4096,
+            2048
+          ],
+          "bytes": 4194304,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear6_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear6_arg1_out.bin",
+          "input_sha256": "c013d9e37391314d6b8d9e7cadb4d0863aa39e249863c0694cd35e0c17a5e871",
+          "output_sha256": "c013d9e37391314d6b8d9e7cadb4d0863aa39e249863c0694cd35e0c17a5e871"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            4096,
+            64
+          ],
+          "bytes": 262144,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear6_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear6_arg2_out.bin",
+          "input_sha256": "7c60715f1e31b4c2e64dfa01713c6293e7fa3af437e1d988be0a1b06cc01d579",
+          "output_sha256": "7c60715f1e31b4c2e64dfa01713c6293e7fa3af437e1d988be0a1b06cc01d579"
+        },
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            1,
+            4096
+          ],
+          "bytes": 8192,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear6_arg3_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear6_arg3_out.bin",
+          "input_sha256": "9f1dcbc35c350d6027f98be0f5c8b43b42ca52b7604459c0c42be3aa88913d47",
+          "output_sha256": "f0d75eb3d6d68789a22edd5ff37a4aab33e4dfcc747437ccfd9e6ffcae69afe9"
+        },
+        {
+          "dtype": [
+            10,
+            8,
+            1
+          ],
+          "shape": [
+            1,
+            2048
+          ],
+          "bytes": 2048,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear6_arg4_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear6_arg4_out.bin",
+          "input_sha256": "e5a00aa9991ac8a5ee3109844d84a55583bd20572ad3ffcd42792f3c36b183ad",
+          "output_sha256": "e01c4a7cfde49a8f9ac8637e3dbbed8a4184e808e6700ab7b0ae2e34b74fc013"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            1,
+            16
+          ],
+          "bytes": 16,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear6_arg5_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear6_arg5_out.bin",
+          "input_sha256": "374708fff7719dd5979ec875d56cd2286f6d3cf7ec317a3b25632aab28ec37bb",
+          "output_sha256": "a33d0bb2132a643c7662469c0a2fd6b16db8697de0dcf0868f06e258dbf2262b"
+        }
+      ]
+    },
+    {
+      "name": "layers.0.ffn.experts.0.w2_m33",
+      "quant_library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_11.so",
+      "gemm_library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_12.so",
+      "tensors": [
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            33,
+            2048
+          ],
+          "bytes": 135168,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear7_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear7_arg0_out.bin",
+          "input_sha256": "a5e4c2838c780df9c2193d35d9994f934e5eda916b61d131900b19a8c7a0e587",
+          "output_sha256": "a5e4c2838c780df9c2193d35d9994f934e5eda916b61d131900b19a8c7a0e587"
+        },
+        {
+          "dtype": [
+            17,
+            4,
+            1
+          ],
+          "shape": [
+            4096,
+            2048
+          ],
+          "bytes": 4194304,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear7_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear7_arg1_out.bin",
+          "input_sha256": "c013d9e37391314d6b8d9e7cadb4d0863aa39e249863c0694cd35e0c17a5e871",
+          "output_sha256": "c013d9e37391314d6b8d9e7cadb4d0863aa39e249863c0694cd35e0c17a5e871"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            4096,
+            64
+          ],
+          "bytes": 262144,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear7_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear7_arg2_out.bin",
+          "input_sha256": "7c60715f1e31b4c2e64dfa01713c6293e7fa3af437e1d988be0a1b06cc01d579",
+          "output_sha256": "7c60715f1e31b4c2e64dfa01713c6293e7fa3af437e1d988be0a1b06cc01d579"
+        },
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            33,
+            4096
+          ],
+          "bytes": 270336,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear7_arg3_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear7_arg3_out.bin",
+          "input_sha256": "1dbe3ea172a960421ded4894bb5873096352e4b1c590a896121b72efea9a7be1",
+          "output_sha256": "05a6b0d0738f69ef125a65575de0c517a0edd3f97719df0dd1700d34f3bcc41d"
+        },
+        {
+          "dtype": [
+            10,
+            8,
+            1
+          ],
+          "shape": [
+            33,
+            2048
+          ],
+          "bytes": 67584,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear7_arg4_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear7_arg4_out.bin",
+          "input_sha256": "2e1d1f24ad4c0336267e3f21f9e4083cfc299a1a41b208c12f42e166ce33f631",
+          "output_sha256": "0a9aacb6e72e921cbe5a76655856ee05cde43724bb95d38204b58dffdb2b5103"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            33,
+            16
+          ],
+          "bytes": 528,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear7_arg5_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear7_arg5_out.bin",
+          "input_sha256": "8889eb3cdd3d0ac94711b47ce78b430d8e23a7b31ecc994c56d0c3310c87674a",
+          "output_sha256": "5105f945efd013b162f8906e053dd597b3d5e2e1a72b2bab1e659f6e7d58cfbd"
+        }
+      ]
+    },
+    {
+      "name": "layers.0.ffn.experts.0.w2_m137",
+      "quant_library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_11.so",
+      "gemm_library": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_12.so",
+      "tensors": [
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            137,
+            2048
+          ],
+          "bytes": 561152,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear8_arg0_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear8_arg0_out.bin",
+          "input_sha256": "f75990c919d616c862b8b15b4ae9aed296237de718ae5301d6a5b84aaa72336c",
+          "output_sha256": "f75990c919d616c862b8b15b4ae9aed296237de718ae5301d6a5b84aaa72336c"
+        },
+        {
+          "dtype": [
+            17,
+            4,
+            1
+          ],
+          "shape": [
+            4096,
+            2048
+          ],
+          "bytes": 4194304,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear8_arg1_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear8_arg1_out.bin",
+          "input_sha256": "c013d9e37391314d6b8d9e7cadb4d0863aa39e249863c0694cd35e0c17a5e871",
+          "output_sha256": "c013d9e37391314d6b8d9e7cadb4d0863aa39e249863c0694cd35e0c17a5e871"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            4096,
+            64
+          ],
+          "bytes": 262144,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear8_arg2_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear8_arg2_out.bin",
+          "input_sha256": "7c60715f1e31b4c2e64dfa01713c6293e7fa3af437e1d988be0a1b06cc01d579",
+          "output_sha256": "7c60715f1e31b4c2e64dfa01713c6293e7fa3af437e1d988be0a1b06cc01d579"
+        },
+        {
+          "dtype": [
+            4,
+            16,
+            1
+          ],
+          "shape": [
+            137,
+            4096
+          ],
+          "bytes": 1122304,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear8_arg3_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear8_arg3_out.bin",
+          "input_sha256": "b8a42f2e2f204dd64673e70042a4cea7b245954903e7271600eadaf18f475b4f",
+          "output_sha256": "f910e93da07ffdbd4b7f43b0ce0c5bf033d77b2d5c58a7e47475bf1c50b31247"
+        },
+        {
+          "dtype": [
+            10,
+            8,
+            1
+          ],
+          "shape": [
+            137,
+            2048
+          ],
+          "bytes": 280576,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear8_arg4_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear8_arg4_out.bin",
+          "input_sha256": "f0a22a71e61b423ce6cdb3586f03359fab5b5118ae22271214bdc269f3018971",
+          "output_sha256": "e2dc0f326f674aba7970805c1e47f9d0f0350afb0b8fb0ae6064601d3201b282"
+        },
+        {
+          "dtype": [
+            14,
+            8,
+            1
+          ],
+          "shape": [
+            137,
+            16
+          ],
+          "bytes": 2192,
+          "input": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear8_arg5_in.bin",
+          "output": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/linear8_arg5_out.bin",
+          "input_sha256": "c3f98bcd6e42258b08619d44bece48a614e4d6825295af9e133c62e05efe6da8",
+          "output_sha256": "825925c9f91e1c77b22d6a8be6617f3936bb5aba8006b6508fae7360218e6cca"
+        }
+      ]
+    }
+  ],
+  "checkpoint": {
+    "path": "/tmp/llaisys-deepseek-v4-flash-mp1/model0-mp1.safetensors",
+    "header_sha256": "80fb82525d75f1580d3bfca8d0f5340fc8cc4a8f243a1e6ae3bb36cf6a6df22c",
+    "size_bytes": 168430204680,
+    "selected_tensors": [
+      {
+        "weight_key": "layers.0.attn.wq_a.weight",
+        "scale_key": "layers.0.attn.wq_a.scale",
+        "weight_header": {
+          "dtype": "F8_E4M3",
+          "shape": [
+            1024,
+            4096
+          ],
+          "data_offsets": [
+            15520690936,
+            15524885240
+          ]
+        },
+        "scale_header": {
+          "dtype": "F8_E8M0",
+          "shape": [
+            8,
+            32
+          ],
+          "data_offsets": [
+            6223727736,
+            6223727992
+          ]
+        },
+        "weight_payload_sha256": "d8646783efb3c0bda83bcd2c64b03cb25d1677d27b0c45ffe143a4175922932c",
+        "scale_payload_sha256": "aea19c77d256ca30999de59a811b152a2dfc82673a43877d9cd67b80578bc5e2"
+      },
+      {
+        "weight_key": "layers.0.ffn.experts.0.w1.weight",
+        "scale_key": "layers.0.ffn.experts.0.w1.scale",
+        "weight_header": {
+          "dtype": "F4",
+          "shape": [
+            2048,
+            4096
+          ],
+          "data_offsets": [
+            20245574392,
+            20249768696
+          ]
+        },
+        "scale_header": {
+          "dtype": "F8_E8M0",
+          "shape": [
+            2048,
+            128
+          ],
+          "data_offsets": [
+            6223730040,
+            6223992184
+          ]
+        },
+        "weight_payload_sha256": "8b8124ab561c2954c4f8d590c60c5478efb7b6726035d1328d89e806988ccceb",
+        "scale_payload_sha256": "e2e52dd1cf8e590514eec022f7115e5c1cf7c2305bbe8372f03b1af517b5871a"
+      },
+      {
+        "weight_key": "layers.0.ffn.experts.0.w2.weight",
+        "scale_key": "layers.0.ffn.experts.0.w2.scale",
+        "weight_header": {
+          "dtype": "F4",
+          "shape": [
+            4096,
+            2048
+          ],
+          "data_offsets": [
+            20249768696,
+            20253963000
+          ]
+        },
+        "scale_header": {
+          "dtype": "F8_E8M0",
+          "shape": [
+            4096,
+            64
+          ],
+          "data_offsets": [
+            6223992184,
+            6224254328
+          ]
+        },
+        "weight_payload_sha256": "c013d9e37391314d6b8d9e7cadb4d0863aa39e249863c0694cd35e0c17a5e871",
+        "scale_payload_sha256": "7c60715f1e31b4c2e64dfa01713c6293e7fa3af437e1d988be0a1b06cc01d579"
+      }
+    ],
+    "whole_model_loaded": false,
+    "whole_payload_hashed": false
+  },
+  "export_origins": {
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_0.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/48a76237c858081c15db075e06ff02165fc1c81a3ff985a0ab7f8a99cf46abbe/executable.so"
+    },
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_1.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/927f11fdb5a8d9120a673e445a210633ba28acc3faa6375bd55aa721ba1abdb9/executable.so"
+    },
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_2.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/983730fa7fb25c816e8f62ce9d777282612d5c93d39bd8e15ca553b7268b1f95/executable.so"
+    },
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_3.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/8f33a0f22239426c542a627f782f4cad6ec11c305f7285db6503411e98fd0a73/executable.so"
+    },
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_4.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/dc396ea0311f9f5ae07c1500e0f3b3cd95dc199761c7cd895650e4c7660f229f/executable.so"
+    },
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_5.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/25ede9b6c7294469ad443d4af6968cd2dadf4637b2af7807a8f1fcd4182e29a1/executable.so"
+    },
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_6.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/0aea8a2faf5a2802b38f86759e644ffcba9ca972a8444f696dfdd83a4dca40e7/executable.so"
+    },
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_7.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/13008f65b0b6edf5bb7e2ed991523a5f3c35269e22dcb3b68f35bfc57e6c3a2c/executable.so"
+    },
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_8.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/fd0cec6d531f099a1275eb0b9d3343caba2f2e3265ad7b834adf11b7da666de9/executable.so"
+    },
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_9.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/c868324117e883a0cb2d38b13441b5002a8c425c8acdbf61ca4202222118deb5/executable.so"
+    },
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_10.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/52136d985765f4fac6a3234da8e319b46867e7e6b48dfdb0e3055126b4a4d995/executable.so"
+    },
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_11.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/1fafd1df3f169c40d09a9a593330c88da1ae999ef4094a3db312383ae1451d9a/executable.so"
+    },
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_12.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/08eea94d36ef434ad09eb12e428cba350b35331058ff884db20028c23229fedd/executable.so"
+    }
+  },
+  "native_exit_code": 0,
+  "stdout": "case 0 act_quant_m1_qdq0 exact\ncase 1 fp4_quant_m1_qdq0 exact\ncase 2 act_quant_m1_qdq1 exact\ncase 3 fp4_quant_m1_qdq1 exact\ncase 4 fp8_gemm_m1 exact\ncase 5 fp4_gemm_m1 exact\ncase 6 hc_sinkhorn_m1 exact\ncase 7 act_quant_m33_qdq0 exact\ncase 8 fp4_quant_m33_qdq0 exact\ncase 9 act_quant_m33_qdq1 exact\ncase 10 fp4_quant_m33_qdq1 exact\ncase 11 fp8_gemm_m33 exact\ncase 12 fp4_gemm_m33 exact\ncase 13 hc_sinkhorn_m33 exact\ncase 14 act_quant_m137_qdq0 exact\ncase 15 fp4_quant_m137_qdq0 exact\ncase 16 act_quant_m137_qdq1 exact\ncase 17 fp4_quant_m137_qdq1 exact\ncase 18 fp8_gemm_m137 exact\ncase 19 fp4_gemm_m137 exact\ncase 20 hc_sinkhorn_m137 exact\ncase 21 sparse_attention_s1_k64 exact\ncase 22 sparse_attention_s3_k576 exact\nlinear 0 layers.0.attn.wq_a_m1 exact twice; weights released; no fallback\nlinear 1 layers.0.attn.wq_a_m33 exact twice; weights released; no fallback\nlinear 2 layers.0.attn.wq_a_m137 exact twice; weights released; no fallback\nlinear 3 layers.0.ffn.experts.0.w1_m1 exact twice; weights released; no fallback\nlinear 4 layers.0.ffn.experts.0.w1_m33 exact twice; weights released; no fallback\nlinear 5 layers.0.ffn.experts.0.w1_m137 exact twice; weights released; no fallback\nlinear 6 layers.0.ffn.experts.0.w2_m1 exact twice; weights released; no fallback\nlinear 7 layers.0.ffn.experts.0.w2_m33 exact twice; weights released; no fallback\nlinear 8 layers.0.ffn.experts.0.w2_m137 exact twice; weights released; no fallback\n{\"all_passed\":true,\"cases\":23,\"tensor_byte_comparisons\":193,\"linear_cases\":9,\"linear_repetitions\":2,\"linear_input_offset_rows\":1,\"empty_linear_checks\":9,\"negative_checks\":113,\"python_interpreter\":false,\"torch_runtime\":false,\"fallback\":false,\"destruction_errors\":0}\n",
+  "stderr": "",
+  "xmake_native_library": "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-tilelang-native.a",
+  "dependencies": "\tlinux-vdso.so.1 (0x00007ffdb6948000)\n\tlibllaisys.so => /home/lcpu/57682329/workspace/llaisys/python/llaisys/libllaisys/libllaisys.so (0x00007000ebc00000)\n\tlibtilelang.so => /home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/lib/libtilelang.so (0x00007000eb200000)\n\tlibtvm.so => /home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/lib/libtvm.so (0x00007000e7600000)\n\tlibtvm_ffi.so => /home/lcpu/57682329/.local/deepseek-v4-tilelang-compat/tvm_ffi/lib/libtvm_ffi.so (0x00007000ebaf1000)\n\tlibstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007000e7200000)\n\tlibm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007000e7517000)\n\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007000ebac3000)\n\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007000e6e00000)\n\t/lib64/ld-linux-x86-64.so.2 (0x00007000ec626000)\n\tlibcublas.so.13 => /usr/local/cuda/lib64/libcublas.so.13 (0x00007000e3800000)\n\tlibcudart.so.13 => /usr/local/cuda/lib64/libcudart.so.13 (0x00007000e3400000)\n\tlibcuda_stub.so => /home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/lib/libcuda_stub.so (0x00007000ec5ef000)\n\tlibpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007000ec5ea000)\n\tlibz3.so => /home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/lib/../../z3/lib/libz3.so (0x00007000e2000000)\n\tlibdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x00007000ec5e5000)\n\tlibcudart_stub.so => /home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/lib/libcudart_stub.so (0x00007000ec5db000)\n\tlibnvrtc_stub.so => /home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/lib/libnvrtc_stub.so (0x00007000ec5d6000)\n\tlibcublasLt.so.13 => /usr/local/cuda/lib64/libcublasLt.so.13 (0x00007000bc000000)\n\tlibrt.so.1 => /lib/x86_64-linux-gnu/librt.so.1 (0x00007000ec5d1000)\n",
+  "artifact_sha256": {
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/tilelang-native-standalone": "9e47855ab5d2bebf864a6df1b44e788bb07e408177d5d5c499184d6f9ccf87fd",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/manifest.txt": "238ca6344ee5938d09ee373820c0eaaea10f1c4a10fe287b25969314c0b48e42",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_0.so": "468bc4c9a0af32d7dd13489c2d39aecbd45f59e36a2d34b6b6a22bb088ad9817",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_1.so": "59328db6774d78b3ac173f00f54d722ddd5dab22deeb9232909a0ddf3b9e79de",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_2.so": "157e38938fa0cd7eadacfef71ac83ce1584178a10815cabfcc79c2843fbf503e",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_3.so": "c4d92fb591145ba4cad3aaf4aebf4e7293845125a619a416fc582d86190dcaaa",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_4.so": "b3a6cd74b62155588e0b0cbab018e387a0aa48f689d6848cb704e4f002c869e0",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_5.so": "a9b88b414748b5a93c0ed8de58927e2599da6de15cf48ad6752f174877e25ec3",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_6.so": "cade241b287938b6318fd5d725c29ce893a1886524bfc968d08c8312bb92f554",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_7.so": "8dde7b38f7af6adac84f58bd87a6712ee1caa9552124fed4ff8e2f19babcbed5",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_8.so": "785aaa135dc8bee95433adbdfe9d09b11ce542a2f3ce80681374818a4adc0ad9",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_9.so": "149cded612c8fe9c60cdd5811969d961494a4958d68be8f93977b948135568e7",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_10.so": "7ff6f2b8d0d806596f7ec6c87351863331c2291918f67523eef6c293ab0ba050",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_11.so": "dc7a13961136dea35b4e12efb71c676ddb85445d7d3d5ea56ca940010d40d577",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/kernel_12.so": "3d070d57e6287b37ad0dab28e1f1814e8393e6ea0563c98be7a40943ce1fc651"
+  },
+  "provenance": {
+    "command": [
+      "tools/deepseek_v4_reference/verify_native_tilelang.py",
+      "--source-model",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731",
+      "--checkpoint",
+      "/tmp/llaisys-deepseek-v4-flash-mp1/model0-mp1.safetensors",
+      "--native-library",
+      "build/linux/x86_64/release/libllaisys-tilelang-native.a",
+      "--output",
+      "benchmark_results/deepseek_v4_b300_native_tilelang.json"
+    ],
+    "build_command": [
+      "/usr/bin/g++",
+      "-std=c++17",
+      "-O2",
+      "-pthread",
+      "-I/home/lcpu/57682329/workspace/llaisys",
+      "-I/home/lcpu/57682329/workspace/llaisys/include",
+      "-I/home/lcpu/57682329/.local/deepseek-v4-tilelang-compat/tvm_ffi/include",
+      "/home/lcpu/57682329/workspace/llaisys/test/tilelang_native_standalone.cpp",
+      "-L/home/lcpu/57682329/workspace/llaisys/python/llaisys/libllaisys",
+      "-L/home/lcpu/57682329/.local/deepseek-v4-tilelang-compat/tvm_ffi/lib",
+      "-L/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/lib",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-tilelang-native.a",
+      "-Wl,--start-group",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-core.a",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-device.a",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-device-cpu.a",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-utils.a",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-native-tensor.a",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-deepseek-v4-native.a",
+      "-Wl,--end-group",
+      "-Wl,--no-as-needed",
+      "-lllaisys",
+      "-ltilelang",
+      "-ltvm",
+      "-ltvm_ffi",
+      "-ldl",
+      "-Wl,-rpath,/home/lcpu/57682329/workspace/llaisys/python/llaisys/libllaisys",
+      "-Wl,-rpath,/home/lcpu/57682329/.local/deepseek-v4-tilelang-compat/tvm_ffi/lib",
+      "-Wl,-rpath,/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/lib",
+      "-o",
+      "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_tilelang_zvaagazn/tilelang-native-standalone"
+    ],
+    "file_sha256": {
+      "/home/lcpu/57682329/workspace/llaisys/tools/deepseek_v4_reference/verify_native_tilelang.py": "0dd77cedbe2d3f28ab0fe447f23ff7d2f0fa77a26257a0f98902a8154e6a0329",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/inference/kernel.py": "59b325083d7103975cba025bd0d60ea343bb82d8fff53088afb7c04bd380c0c2",
+      "/home/lcpu/57682329/workspace/llaisys/src/backends/tilelang/native_kernel.hpp": "3ea17a2047399558f1759bf036ba206af42432f8fb576205635e0590b4b9cb03",
+      "/home/lcpu/57682329/workspace/llaisys/src/backends/tilelang/native_kernel.cpp": "cd5ecad58f1cf5a3edabb960f614c94bd006e4fe8b863bf14031bba6719eed4b",
+      "/home/lcpu/57682329/workspace/llaisys/test/tilelang_native_standalone.cpp": "5b0cd219b75b2fdd8f0b522ac745795603a10a8dab5b2f6e88e5a86688d18c65",
+      "/home/lcpu/57682329/workspace/llaisys/python/llaisys/libllaisys/libllaisys.so": "43302daa19357dfb8eff84c15c1557d4e1dd33d112a8810903015dc1de6f44a2",
+      "/home/lcpu/57682329/.local/deepseek-v4-tilelang-compat/tvm_ffi/lib/libtvm_ffi.so": "e18844e96ff3f1054e769a1d685eb3178cf878d1ac411378f6a72c2d8c153884",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/lib/libtvm.so": "0321038d48fed213e5432186f87d1c145f66911278b98752c92c99496bc54e7d",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/lib/libtilelang.so": "949b98558468329afeb03cd91218331ca28ec59143bbdeb57901a915f688ef6a",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-core.a": "f63f95e5b1a5fae20d613d489df0d833dab444b4637eb386d08a2d0e4fa0d4c4",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-device.a": "a557bb9c31d19fd7a868cfdb7a025a2f3141d38c60a759998ed82f14b8d1e529",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-device-cpu.a": "7bde43509365929e0f99d167e5858adc36e2dc3a7fd70d62c05477f41d9fcecd",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-utils.a": "f5080f3550727cba814457c93c4bf9b8088e4adb6c5a6738dee6b303e5ab5a02",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-native-tensor.a": "6dafc36b2d0244f536668ecb58f26fb4aab86bbf08c844bf7482ca2f3a0943b1",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-deepseek-v4-native.a": "cc7adc54fcf3a03e78fbeafd37f8191c0d29cc79363790f4d812eb470d218fb7",
+      "/home/lcpu/57682329/workspace/llaisys/src/backends/native/kernel.hpp": "a5419ec3a7a3bea08772cb3dc3cb801353394c756bc750092c3c30d7497d8dad",
+      "/home/lcpu/57682329/workspace/llaisys/src/backends/native/tensor.cpp": "40a65c76f58f0f43bcddccbd962b95acc04eae7c8d0fba6003457d25f23ed8f7",
+      "/home/lcpu/57682329/workspace/llaisys/src/backends/native/tensor.hpp": "73248a59c5a3999bcda7c97bd4c2d03db6d25eb23104b46ab3325d4c9f2ca33f",
+      "/home/lcpu/57682329/workspace/llaisys/src/models/deepseek_v4/linear.hpp": "12e3dda26b2bad717b8af1f88f3c6d0707d5b0801beeee155a70f55f49beb0b4",
+      "/home/lcpu/57682329/workspace/llaisys/src/models/deepseek_v4/linear.cpp": "6296e464e648a383af29cddaba40c93883099c7b3096562382e6a00b0fde80d7",
+      "/home/lcpu/57682329/workspace/llaisys/xmake.lua": "9825adcf7b65c1d8f94e5baefb356271a74c9f0d28fa84f119fc7d7377458b23",
+      "/home/lcpu/57682329/workspace/llaisys/xmake/tilelang.lua": "55e7124d1fd04d09fc56e16e62cd0e97ceb4e775928af18909a683601bc1f9d6",
+      "/home/lcpu/57682329/workspace/llaisys/xmake/native_tensor.lua": "a3ad7cdb1d7d0b65004de69bca01e6af4a6749676a26e88956388a8329337640",
+      "/home/lcpu/57682329/workspace/llaisys/xmake/native_model.lua": "421108d6c585bbce40e77b582877bc8e33369c1de072c9c7098b276fc7978e1a",
+      "/home/lcpu/57682329/workspace/llaisys/tools/deepseek_v4_reference/run_independent.py": "7d5700d474f7010d712675a3eec0c168e563b38e9fffe5de798628a45edf3ff1",
+      "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_model/weights.py": "dca89ee4c624b7806de3329ade4e62f9b49d1e9dbb19b5d6975dc34e1391af45",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-tilelang-native.a": "6fe1194e5c4ba15cb4d47d8b39ca34e0466de4326dd5be8bb26024655d55aabb"
+    },
+    "commit": "05784b4da6483f77821a061e521ea1b98fa271e1",
+    "dirty": true
+  }
+}

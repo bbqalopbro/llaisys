@@ -47,16 +47,24 @@ PrefixMatch BlockPrefixCache::match(const int64_t *tokens, size_t num_tokens) {
     PrefixMatch result;
     uint64_t parent_hash = 0;
     const size_t full_blocks = num_tokens / block_size_;
-    for (size_t block = 0; block < full_blocks; ++block) {
-        const uint64_t hash = hashBlock(parent_hash,
-                                        tokens + block * block_size_,
-                                        block_size_, cache_salt_);
-        const int block_id = blocks_.findCached(hash);
-        if (block_id < 0) break;
-        result.block_ids.push_back(block_id);
-        result.matched_tokens += block_size_;
-        result.terminal_hash = hash;
-        parent_hash = hash;
+    // Reserve before findCached retains anything. Otherwise a growing vector
+    // can throw after a retain and strand references outside the result.
+    result.block_ids.reserve(full_blocks);
+    try {
+        for (size_t block = 0; block < full_blocks; ++block) {
+            const uint64_t hash = hashBlock(parent_hash,
+                                            tokens + block * block_size_,
+                                            block_size_, cache_salt_);
+            const int block_id = blocks_.findCached(hash);
+            if (block_id < 0) break;
+            result.block_ids.push_back(block_id);
+            result.matched_tokens += block_size_;
+            result.terminal_hash = hash;
+            parent_hash = hash;
+        }
+    } catch (...) {
+        release(result);
+        throw;
     }
     return result;
 }

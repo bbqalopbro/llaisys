@@ -11,6 +11,11 @@
 namespace py = pybind11;
 using namespace llaisys::engine;
 
+void bindCache(py::module_ &module);
+#ifdef LLAISYS_ENABLE_DLPACK_CACHE
+void bindPagedStorage(py::module_ &module);
+#endif
+
 namespace {
 
 class Qwen2BatchRuntime {
@@ -169,6 +174,13 @@ private:
 
 PYBIND11_MODULE(_C, module) {
     module.doc() = "Safe Python bindings for the llaisys scheduling/runtime boundary";
+    bindCache(module);
+#ifdef LLAISYS_ENABLE_DLPACK_CACHE
+    bindPagedStorage(module);
+    module.attr("v4_native_storage_available") = true;
+#else
+    module.attr("v4_native_storage_available") = false;
+#endif
 
     py::class_<SamplingParams>(module, "SamplingParams")
         .def(py::init<>())

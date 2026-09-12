@@ -1,0 +1,55 @@
+{
+  "scope": "existing_pybind_build_and_schedule_contract_smoke_no_model_inference",
+  "slurm_job_id": "22960",
+  "gpu": "NVIDIA B300 SXM6 AC",
+  "compute_capability": [
+    10,
+    3
+  ],
+  "cuda_arch": "sm_103",
+  "torch": "2.13.0+cu130",
+  "cuda": "13.0",
+  "python": "3.12.3 (main, Jan 22 2026, 20:57:42) [GCC 13.3.0]",
+  "python_executable": "/usr/bin/python3",
+  "extra_python_system_include": "/home/lcpu/57682329/.local/deepseek-v4-python-dev/usr/include",
+  "commands": [
+    [
+      "/home/lcpu/62385178/.local/bin/xmake",
+      "f",
+      "-y",
+      "--nv-gpu=y",
+      "--flashinfer=y",
+      "--cuda-arch=sm_103",
+      "--python-bindings=y",
+      "--python-include=/home/lcpu/57682329/.local/deepseek-v4-python-dev/usr/include/python3.12",
+      "--pybind11-include=/home/lcpu/57682329/.local/deepseek-v4-reference/torch/include"
+    ],
+    [
+      "/home/lcpu/62385178/.local/bin/xmake",
+      "build",
+      "-j",
+      "8",
+      "llaisys-python"
+    ]
+  ],
+  "success": true,
+  "module": "/home/lcpu/57682329/workspace/llaisys/python/llaisys/_C.so",
+  "module_sha256": "dbb451e9817309be953e8cb1643ad95a19007cb7b8682eea09abbd182868cad3",
+  "schedule_plan_roundtrip": true,
+  "model_inference_tested": false,
+  "source_sha256": {
+    "/home/lcpu/57682329/workspace/llaisys/tools/deepseek_v4_reference/build_python_runtime.py": "ebd440789a227c8baeac707408bc9d2914b6d82c74fb35891ea6b3b9ab84396c",
+    "/home/lcpu/57682329/workspace/llaisys/python/bindings/cache.cpp": "40f98632d8ba7a1794fb40c4e0704b488176de2c6d69b756650c756dbf45170e",
+    "/home/lcpu/57682329/workspace/llaisys/python/bindings/module.cpp": "7988e8f7427e53723c7fc90d3f71c83ad3240cc98063cbc101ece56427a64464",
+    "/home/lcpu/57682329/workspace/llaisys/src/core/cache/block_manager.cpp": "5a3e580dea12cac197aa7b6c124230cbdbcceb5bcffe07927fef02b260b951cc",
+    "/home/lcpu/57682329/workspace/llaisys/src/core/cache/block_manager.hpp": "7a8d93328bf97316a087f64d61d88f916fab3968b45f68e8d2f2c817694d7dfe",
+    "/home/lcpu/57682329/workspace/llaisys/src/core/cache/block_prefix_cache.cpp": "f5483ccb7532441e75932907b1e3c5318a9babf2b2d68305b5f735aa666aa53b",
+    "/home/lcpu/57682329/workspace/llaisys/src/core/cache/block_prefix_cache.hpp": "8eb651eb4e44f412a471ad1968c254afd8deaad7652d394ad14ed6d5e8c624ef",
+    "/home/lcpu/57682329/workspace/llaisys/src/core/cache/cache_layout.cpp": "be100e47357845328cf1ade1db4c053529d1d19cbded4cac98d6a29cb4211df0",
+    "/home/lcpu/57682329/workspace/llaisys/src/core/cache/cache_layout.hpp": "17c532de79be04d2b7c166c3b8c47212696251d6bdd1bc5e405c52e79f3c3999",
+    "/home/lcpu/57682329/workspace/llaisys/src/core/cache/paged_cache_storage.cpp": "2967defe7c55e577d589d7d4d2328a4fff82e41432faf8f8bc2fee4e87142f59",
+    "/home/lcpu/57682329/workspace/llaisys/src/core/cache/paged_cache_storage.hpp": "e5ef7c2eec6c6b4580ab16e9b7bcaad09313a291309fac6050b51b20442637b4",
+    "/home/lcpu/57682329/workspace/llaisys/xmake.lua": "9b9db5a86f54a9d90746b00ac27bad036136d37ab0d5e448ba557bd16952db85",
+    "/home/lcpu/57682329/workspace/llaisys/xmake/nvidia.lua": "9c655c7f285d3fdef64854538905619972ca044084dafe1f161701b2c3ffcbbc"
+  }
+}

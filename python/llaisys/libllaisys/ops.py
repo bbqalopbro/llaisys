@@ -62,3 +62,52 @@ def load_ops(lib):
         llaisysTensor_t,  # residual or None
     ]
     lib.llaisysLinearInt4.restype = None
+
+    lib.llaisysDeepSeekV4SparseAttentionReference.argtypes = [
+        ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+        ctypes.c_void_p, ctypes.c_void_p,
+        ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
+        ctypes.c_int, ctypes.c_int, c_float, ctypes.c_int,
+    ]
+    lib.llaisysDeepSeekV4SparseAttentionReference.restype = None
+
+    lib.llaisysDeepSeekV4SparseAttentionReferenceTyped.argtypes = [
+        ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+        ctypes.c_void_p, ctypes.c_void_p,
+        ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
+        ctypes.c_int, ctypes.c_int, c_float, ctypes.c_int, ctypes.c_int,
+    ]
+    lib.llaisysDeepSeekV4SparseAttentionReferenceTyped.restype = None
+
+    lib.llaisysDeepSeekV4RouterReference.argtypes = [
+        ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+        ctypes.c_int, ctypes.c_int, ctypes.c_int, c_float, ctypes.c_int,
+    ]
+    lib.llaisysDeepSeekV4RouterReference.restype = None
+
+    lib.llaisysDeepSeekV4HyperconnectionSplitReference.argtypes = [
+        ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+        ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+        ctypes.c_int, ctypes.c_int, ctypes.c_int, c_float, ctypes.c_int,
+    ]
+    lib.llaisysDeepSeekV4HyperconnectionSplitReference.restype = None
+
+    lib.llaisysDeepSeekV4ActivationQuantReference.argtypes = [
+        ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_int,
+        ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
+    ]
+    lib.llaisysDeepSeekV4ActivationQuantReference.restype = None
+
+    lib.llaisysDeepSeekV4QuantizedLinearReference.argtypes = [
+        ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+        ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
+        ctypes.c_int, ctypes.c_int,
+    ]
+    lib.llaisysDeepSeekV4QuantizedLinearReference.restype = None
+
+    lib.llaisysDeepSeekV4QuantizedLinearCublas.argtypes = [
+        ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+        ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
+        ctypes.c_int, ctypes.c_int,
+    ]
+    lib.llaisysDeepSeekV4QuantizedLinearCublas.restype = None

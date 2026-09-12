@@ -1,6 +1,8 @@
 #include "paged_cache_storage.hpp"
 
 #include <cstdint>
+#include <cstdio>
+#include <exception>
 #include <stdexcept>
 #include <utility>
 
@@ -39,10 +41,26 @@ PagedCacheStorage::PagedCacheStorage(size_t num_blocks, cache_layout_t layout,
 }
 
 PagedCacheStorage::~PagedCacheStorage() {
-    for (auto &pool : pools_) {
-        if (pool.data) api_->free_device(pool.data);
-        pool.data = nullptr;
+    try {
+        release();
+    } catch (const std::exception &error) {
+        std::fprintf(stderr, "PagedCacheStorage destruction failed: %s\n", error.what());
+    } catch (...) {
+        std::fputs("PagedCacheStorage destruction failed with an unknown allocator error\n", stderr);
     }
+}
+
+void PagedCacheStorage::release() {
+    std::exception_ptr error;
+    for (auto &pool : pools_) {
+        try {
+            if (pool.data) api_->free_device(pool.data);
+            pool.data = nullptr;
+        } catch (...) {
+            if (!error) error = std::current_exception();
+        }
+    }
+    if (error) std::rethrow_exception(error);
 }
 
 void PagedCacheStorage::validate(size_t component, int block_id, size_t layer) const {
@@ -50,6 +68,7 @@ void PagedCacheStorage::validate(size_t component, int block_id, size_t layer) c
     if (block_id < 0 || static_cast<size_t>(block_id) >= num_blocks_)
         throw std::out_of_range("cache block id out of range");
     if (layer >= layout_->numLayers()) throw std::out_of_range("cache layer out of range");
+    if (!pools_[component].data) throw std::logic_error("cache storage is released");
 }
 
 void *PagedCacheStorage::componentPtr(size_t component, int block_id, size_t layer) {
@@ -70,7 +89,9 @@ const void *PagedCacheStorage::componentPtr(size_t component, int block_id,
 }
 
 void *PagedCacheStorage::componentPool(size_t component) const {
-    return pools_.at(component).data;
+    void *pointer = pools_.at(component).data;
+    if (!pointer) throw std::logic_error("cache storage is released");
+    return pointer;
 }
 
 int PagedCacheStorage::componentIndex(const std::string &name) const {

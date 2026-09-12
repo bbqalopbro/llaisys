@@ -12,8 +12,9 @@
 - `python/llaisys/models/deepseek_v4_model_ops.py`：结构算子参考实现及 `ExpertDispatch`。
 - `python/llaisys/models/deepseek_v4_model/`：接口的真实模型调用方。
 
-这仍是独立 Python 正确性执行器，不等于 C++/pybind 模型 batch runtime。新增显式
-适配器已连接既有 InferenceEngine，见文末；未连接 HTTP 入口，也不是真正 fused batch。
+本节的 19 类 Python 契约描述独立 Python 正确性执行器；另有已实现的 C++/pybind
+整模型与原生 serving 接口，见文末。两种执行器均已连接既有 InferenceEngine，
+未连接 HTTP 入口，也不是真正 fused batch。
 另有显式 paged latent 路径和四类 cache 算子契约，见文末。把 Python 中的专家执行
 循环提取为接口，也不等于完成 grouped GEMM
 或高性能 GPU dispatch。
@@ -924,7 +925,7 @@ reset、prefill、decode；先验证完整计划再修改状态。若执行中�
 独立 `_v4_native.so` 暴露 `Session.execute(plan, capture_logits=False)`，plan 使用
 与上述 C++ 合同一致的 dict。Python 在一次调用外组织计划；C++ 内完成完整模型
 执行，无逐算子 Python callback。正常输出为 request/slot/token IDs；仅诊断模式
-下载整份 logits。构建产物暂留 build 目录，尚未接回现有 serving facade。
+下载整份 logits。构建产物暂留 build 目录；现有 serving facade 的原生接入见下节。
 
 当前 Session 默认仅接受 greedy；多 slot 串行、连续/ring cache，不冒充 mixed
 GPU batch。关闭、构造失败及所有 tensor/kernel 析构发生在拥有 runtime 的执行
@@ -940,3 +941,31 @@ prompt 的两 slot、部分结束回收、GIL 释放与跨调用线程 close。�
 现有 CLI `run_native_chat.py` 演示编码、原生 prefill/decode、EOS、解析与资源回收；
 Slurm 23094 的新问题自由生成已通过。上游 kernel DSO 是可执行代码，只加载可信
 本地产物；模型/硬件/ABI/摘要检查用于防止误配，不等于恶意代码沙箱。
+
+## 原生 serving facade 与可观测性（2026-09-12）
+
+`DeepSeekV4NativeServingModel` 消费已加载的 Session，不复制模型、不引入算子级
+Python 往返。一次多 slot decode 转为一份原生 SchedulePlan。用法如下：
+
+```python
+from llaisys.models.deepseek_v4_model.native_batch import DeepSeekV4NativeServingModel
+from server.engine import InferenceEngine, SamplingParams
+
+facade = DeepSeekV4NativeServingModel(session, eos_id=codec.eos_id)
+capacity = session.info()["capacity"]
+engine = InferenceEngine(facade, max_batch_size=2, max_seq_per_slot=capacity,
+                         prefill_chunk_size=capacity, enable_block_prefix_cache=False)
+engine.start()
+# 在 asyncio event loop 中 submit / 消费 stream_tokens / await future。
+# 先停止 engine，再关闭调用方拥有的 session；不要并发直接操作同一 Session。
+```
+
+`Session.info()["operators"]` 按 backend/version/operation/contract_revision 聚合
+真实调用数和失败数。同一个 Kernel 对象绑定到多层时只计一次，避免重复累加。
+每次绑定都是显式选择，运行中不自动切换后端。正常路径只返回 token；仅提供
+observer 时下载 logits，不能用这种观察模式报告正式 TTFT/TPOT。
+
+当前原生 facade 明确报告 continuous/ring、paged=false、Prefix=false、preemption=false、
+fused_gpu_batch=false；未支持的 engine 策略提前报错。Slurm 23097 的现有 worker
+流式执行已对齐 352 步官方 logits，并通过取消/异常后恢复；Slurm 26564 提供首组
+无观察器性能矩阵。详见中文工程记录，长输入波动与采样显存限制均保留。

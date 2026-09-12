@@ -20,6 +20,10 @@ public:
     PagedCacheStorage(const PagedCacheStorage &) = delete;
     PagedCacheStorage &operator=(const PagedCacheStorage &) = delete;
 
+    // Explicit teardown can report allocator errors. Successfully freed pools
+    // are nulled immediately; retry/destruction cannot double-free them.
+    void release();
+
     void *componentPtr(size_t component, int block_id, size_t layer);
     const void *componentPtr(size_t component, int block_id, size_t layer) const;
     void *componentPool(size_t component) const;

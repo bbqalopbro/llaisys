@@ -1,0 +1,226 @@
+{
+  "gpu": "NVIDIA B300 SXM6 AC",
+  "compute_capability": [
+    10,
+    3
+  ],
+  "torch": "2.13.0+cu130",
+  "cuda": "13.0",
+  "backend": "dequantized-pytorch-linear+native-bf16-sparse-attention+torch-hc-reference",
+  "source_model": "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731",
+  "converted_model": "/tmp/llaisys-deepseek-v4-flash-mp1",
+  "weight_load_seconds": 28.19814172014594,
+  "cases": [
+    {
+      "prompt": "The capital of France is",
+      "prompt_tokens": 5,
+      "accuracy": {
+        "full_prefill_argmax": 11111,
+        "token_replay_argmax": 11111,
+        "argmax_equal": true,
+        "logits_max_abs_error": 0.861058235168457,
+        "logits_mean_abs_error": 0.12750084698200226,
+        "logits_cosine_similarity": 0.9996151924133301
+      },
+      "layer_diagnostics": null,
+      "generated_ids": [
+        11111,
+        16,
+        455,
+        6102
+      ],
+      "generated_text": " Paris. The capital",
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 5,
+          "next_token": 11111,
+          "max_logit": 24.719480514526367,
+          "latency_ms": 953.3935580402613
+        },
+        {
+          "start_pos": 5,
+          "input_tokens": 1,
+          "next_token": 16,
+          "max_logit": 23.070785522460938,
+          "latency_ms": 352.6409608311951
+        },
+        {
+          "start_pos": 6,
+          "input_tokens": 1,
+          "next_token": 455,
+          "max_logit": 22.415008544921875,
+          "latency_ms": 352.8421688824892
+        },
+        {
+          "start_pos": 7,
+          "input_tokens": 1,
+          "next_token": 6102,
+          "max_logit": 24.405181884765625,
+          "latency_ms": 371.1229143664241
+        }
+      ],
+      "expected_contains": "Paris",
+      "expected_match": true
+    },
+    {
+      "prompt": "1 + 1 =",
+      "prompt_tokens": 5,
+      "accuracy": {
+        "full_prefill_argmax": 223,
+        "token_replay_argmax": 223,
+        "argmax_equal": true,
+        "logits_max_abs_error": 0.9543123245239258,
+        "logits_mean_abs_error": 0.15194883942604065,
+        "logits_cosine_similarity": 0.9993399381637573
+      },
+      "layer_diagnostics": null,
+      "generated_ids": [
+        223,
+        20,
+        1718,
+        8308
+      ],
+      "generated_text": " 2</code",
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 5,
+          "next_token": 223,
+          "max_logit": 23.19122314453125,
+          "latency_ms": 918.8759066164494
+        },
+        {
+          "start_pos": 5,
+          "input_tokens": 1,
+          "next_token": 20,
+          "max_logit": 23.068201065063477,
+          "latency_ms": 351.67075507342815
+        },
+        {
+          "start_pos": 6,
+          "input_tokens": 1,
+          "next_token": 1718,
+          "max_logit": 19.028657913208008,
+          "latency_ms": 351.8726057372987
+        },
+        {
+          "start_pos": 7,
+          "input_tokens": 1,
+          "next_token": 8308,
+          "max_logit": 24.94892120361328,
+          "latency_ms": 371.0830071941018
+        }
+      ],
+      "expected_contains": "2",
+      "expected_match": true
+    },
+    {
+      "prompt": "The opposite of hot is",
+      "prompt_tokens": 5,
+      "accuracy": {
+        "full_prefill_argmax": 8147,
+        "token_replay_argmax": 8147,
+        "argmax_equal": true,
+        "logits_max_abs_error": 0.6021280288696289,
+        "logits_mean_abs_error": 0.08595077693462372,
+        "logits_cosine_similarity": 0.9997892379760742
+      },
+      "layer_diagnostics": null,
+      "generated_ids": [
+        8147,
+        16,
+        455,
+        12236
+      ],
+      "generated_text": " cold. The opposite",
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 5,
+          "next_token": 8147,
+          "max_logit": 23.928585052490234,
+          "latency_ms": 1034.225670620799
+        },
+        {
+          "start_pos": 5,
+          "input_tokens": 1,
+          "next_token": 16,
+          "max_logit": 22.615705490112305,
+          "latency_ms": 351.9993391819298
+        },
+        {
+          "start_pos": 6,
+          "input_tokens": 1,
+          "next_token": 455,
+          "max_logit": 19.8572940826416,
+          "latency_ms": 352.12612710893154
+        },
+        {
+          "start_pos": 7,
+          "input_tokens": 1,
+          "next_token": 12236,
+          "max_logit": 23.749919891357422,
+          "latency_ms": 370.622037909925
+        }
+      ],
+      "expected_contains": "cold",
+      "expected_match": true
+    },
+    {
+      "prompt": "中国的首都是",
+      "prompt_tokens": 3,
+      "accuracy": {
+        "full_prefill_argmax": 6127,
+        "token_replay_argmax": 6127,
+        "argmax_equal": true,
+        "logits_max_abs_error": 0.47690296173095703,
+        "logits_mean_abs_error": 0.05046851187944412,
+        "logits_cosine_similarity": 0.9998874664306641
+      },
+      "layer_diagnostics": null,
+      "generated_ids": [
+        6127,
+        303,
+        867,
+        6127
+      ],
+      "generated_text": "北京，而北京",
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 3,
+          "next_token": 6127,
+          "max_logit": 19.862648010253906,
+          "latency_ms": 715.7616596668959
+        },
+        {
+          "start_pos": 3,
+          "input_tokens": 1,
+          "next_token": 303,
+          "max_logit": 20.957677841186523,
+          "latency_ms": 369.4066610187292
+        },
+        {
+          "start_pos": 4,
+          "input_tokens": 1,
+          "next_token": 867,
+          "max_logit": 16.62908935546875,
+          "latency_ms": 350.8297479711473
+        },
+        {
+          "start_pos": 5,
+          "input_tokens": 1,
+          "next_token": 6127,
+          "max_logit": 16.30744743347168,
+          "latency_ms": 352.1982952952385
+        }
+      ],
+      "expected_contains": "北京",
+      "expected_match": true
+    }
+  ],
+  "all_argmax_equal": true,
+  "all_expected_match": true,
+  "peak_memory_bytes": 179363362816
+}

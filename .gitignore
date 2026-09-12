@@ -29,6 +29,87 @@ cache/
 
 # JSON
 *.json
+!test/data/deepseek_v4_accuracy_cases.json
+!test/data/deepseek_v4_chat_cases.json
+!benchmark_results/deepseek_v4_b300_chat_published.json
+!benchmark_results/deepseek_v4_b300_chat_independent.json
+!benchmark_results/deepseek_v4_b300_chat_regression.json
+!benchmark_results/deepseek_v4_b300_chat_standalone.json
+!benchmark_results/deepseek_v4_b300_prefix_build.json
+!benchmark_results/deepseek_v4_b300_prefix_regression.json
+!benchmark_results/deepseek_v4_b300_prefix_fixed_top512.json
+!benchmark_results/deepseek_v4_b300_prefix_published_top512.json
+!benchmark_results/deepseek_v4_b300_prefix_published_boundary2048.json
+!benchmark_results/deepseek_v4_b300_serving_regression.json
+!benchmark_results/deepseek_v4_b300_serving_top512.json
+!benchmark_results/deepseek_v4_b300_serving_preemption.json
+!test/data/deepseek_v4_long_context_case.json
+!test/data/deepseek_v4_indexer_long_case.json
+!benchmark_results/deepseek_v4_b300_accuracy.json
+!benchmark_results/deepseek_v4_b300_long_context_accuracy.json
+!benchmark_results/deepseek_v4_b300_layer_diagnostics.json
+!benchmark_results/deepseek_v4_b300_native_sparse_accuracy.json
+!benchmark_results/deepseek_v4_b300_native_structural_accuracy.json
+!benchmark_results/deepseek_v4_b300_native_router_accuracy.json
+!benchmark_results/deepseek_v4_b300_native_quant_boundary_accuracy.json
+!benchmark_results/deepseek_v4_b300_native_linear_smoke.json
+!benchmark_results/deepseek_v4_b300_corrected_dequant_smoke.json
+!benchmark_results/deepseek_v4_b300_native_linear_accuracy.json
+!benchmark_results/deepseek_v4_b300_tilelang_accuracy.json
+!benchmark_results/deepseek_v4_b300_native_tilelang.json
+!benchmark_results/deepseek_v4_b300_native_structure.json
+# Native verification artifacts include extensionless executables/manifests.
+/benchmark_results/native_tilelang_*/
+/benchmark_results/native_structure_*/
+/benchmark_results/native_moe_*/
+/benchmark_results/native_compressor_*/
+/benchmark_results/native_indexer_*/
+/benchmark_results/native_attention_*/
+/benchmark_results/native_hc_*/
+/benchmark_results/native_block_*/
+/benchmark_results/native_model_*/
+/benchmark_results/native_backend_*/
+!benchmark_results/deepseek_v4_b300_native_model_top512.json
+!benchmark_results/deepseek_v4_b300_native_model_current.json
+!benchmark_results/deepseek_v4_b300_native_session_chat.json
+!benchmark_results/deepseek_v4_b300_native_chat_smoke.json
+!benchmark_results/deepseek_v4_b300_native_serving_chat.json
+!benchmark_results/deepseek_v4_b300_native_serving_benchmark.json
+!benchmark_results/deepseek_v4_b300_native_moe.json
+!benchmark_results/deepseek_v4_b300_native_compressor.json
+!benchmark_results/deepseek_v4_b300_native_indexer.json
+!benchmark_results/deepseek_v4_b300_native_attention.json
+!benchmark_results/deepseek_v4_b300_native_hc.json
+!benchmark_results/deepseek_v4_b300_native_block.json
+!benchmark_results/deepseek_v4_b300_deepgemm_tilelang_comparison.json
+!benchmark_results/deepseek_v4_b300_tilelang_reproducibility.json
+!benchmark_results/deepseek_v4_b300_tilelang_long_accuracy.json
+!benchmark_results/deepseek_v4_b300_independent_accuracy.json
+!benchmark_results/deepseek_v4_b300_independent_full_recheck.json
+!benchmark_results/deepseek_v4_b300_independent_chunk65_accuracy.json
+!benchmark_results/deepseek_v4_b300_independent_chunk65_ordered_accuracy.json
+!benchmark_results/deepseek_v4_independent_chunk65_layer_comparison.json
+!benchmark_results/deepseek_v4_independent_chunk65_ordered_layer_comparison.json
+!benchmark_results/deepseek_v4_b300_fixed_rms_profile_accuracy.json
+!benchmark_results/deepseek_v4_b300_model_ops_accuracy.json
+!benchmark_results/deepseek_v4_b300_model_ops_chunk2_accuracy.json
+!benchmark_results/deepseek_v4_b300_tilelang_top512_accuracy.json
+!benchmark_results/deepseek_v4_b300_independent_top512_accuracy.json
+!benchmark_results/deepseek_v4_b300_cache_bindings_recheck.json
+!benchmark_results/deepseek_v4_b300_paged_bindings_build.json
+!benchmark_results/deepseek_v4_b300_paged_top512_accuracy.json
+!benchmark_results/deepseek_v4_b300_paged_chunk257_accuracy.json
+!benchmark_results/deepseek_v4_b300_paged_regression.json
+!benchmark_results/deepseek_v4_longchunk_default_trace.json
+!benchmark_results/deepseek_v4_longchunk_fixed_trace.json
+!benchmark_results/deepseek_v4_b300_fixed_oracle_regression.json
+!benchmark_results/deepseek_v4_b300_final_chunk_regression.json
+!benchmark_results/deepseek_v4_b300_fixed_oracle_top512.json
+!benchmark_results/deepseek_v4_b300_fixed_oracle_chunk257.json
+!benchmark_results/deepseek_v4_b300_native_storage_build.json
+!benchmark_results/deepseek_v4_b300_native_storage_regression.json
+!benchmark_results/deepseek_v4_b300_native_storage_top512.json
+!benchmark_results/deepseek_v4_b300_native_storage_chunk257.json
 
 #GGUF
 *.gguf
@@ -101,6 +182,9 @@ quantized_model_int4/
 # Profiling reports
 *.ncu-rep
 *.nsys-rep
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
 
 # Temp files
 nohup.out

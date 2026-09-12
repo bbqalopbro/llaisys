@@ -1,0 +1,305 @@
+{
+  "gpu": "NVIDIA B300 SXM6 AC",
+  "compute_capability": [
+    10,
+    3
+  ],
+  "torch": "2.13.0+cu130",
+  "cuda": "13.0",
+  "backend": "dequantized-pytorch-reference",
+  "source_model": "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731",
+  "converted_model": "/tmp/llaisys-deepseek-v4-flash-mp1",
+  "weight_load_seconds": 28.745303694624454,
+  "cases": [
+    {
+      "prompt": "The capital of France is",
+      "prompt_tokens": 5,
+      "accuracy": {
+        "full_prefill_argmax": 11111,
+        "token_replay_argmax": 11111,
+        "argmax_equal": true,
+        "logits_max_abs_error": 0.6734423637390137,
+        "logits_mean_abs_error": 0.11737295240163803,
+        "logits_cosine_similarity": 0.999679446220398
+      },
+      "layer_diagnostics": [
+        {
+          "layer": 0,
+          "max_abs_error": 0.00390625,
+          "mean_abs_error": 1.4504243154078722e-05,
+          "cosine_similarity": 0.9999987483024597
+        },
+        {
+          "layer": 1,
+          "max_abs_error": 0.00390625,
+          "mean_abs_error": 9.216587932314724e-05,
+          "cosine_similarity": 0.9999958872795105
+        },
+        {
+          "layer": 2,
+          "max_abs_error": 0.00390625,
+          "mean_abs_error": 0.00013885984662920237,
+          "cosine_similarity": 0.9999924302101135
+        },
+        {
+          "layer": 3,
+          "max_abs_error": 0.00390625,
+          "mean_abs_error": 0.00023244664771482348,
+          "cosine_similarity": 0.9999843835830688
+        },
+        {
+          "layer": 4,
+          "max_abs_error": 0.00390625,
+          "mean_abs_error": 0.00035602832213044167,
+          "cosine_similarity": 0.9999741911888123
+        },
+        {
+          "layer": 5,
+          "max_abs_error": 0.006591796875,
+          "mean_abs_error": 0.0007671120692975819,
+          "cosine_similarity": 0.9999082684516907
+        },
+        {
+          "layer": 6,
+          "max_abs_error": 0.0107421875,
+          "mean_abs_error": 0.0011786352843046188,
+          "cosine_similarity": 0.9998401403427124
+        },
+        {
+          "layer": 7,
+          "max_abs_error": 0.0126953125,
+          "mean_abs_error": 0.0013842064654454589,
+          "cosine_similarity": 0.9998127818107605
+        },
+        {
+          "layer": 8,
+          "max_abs_error": 0.02197265625,
+          "mean_abs_error": 0.001804956467822194,
+          "cosine_similarity": 0.9997043013572693
+        },
+        {
+          "layer": 9,
+          "max_abs_error": 0.0302734375,
+          "mean_abs_error": 0.0021334143821150064,
+          "cosine_similarity": 0.999754786491394
+        },
+        {
+          "layer": 10,
+          "max_abs_error": 0.01953125,
+          "mean_abs_error": 0.0026184809394180775,
+          "cosine_similarity": 0.999758780002594
+        },
+        {
+          "layer": 11,
+          "max_abs_error": 0.02685546875,
+          "mean_abs_error": 0.0029613596852868795,
+          "cosine_similarity": 0.9997031688690186
+        },
+        {
+          "layer": 12,
+          "max_abs_error": 0.029296875,
+          "mean_abs_error": 0.0032615438103675842,
+          "cosine_similarity": 0.9996724128723145
+        },
+        {
+          "layer": 13,
+          "max_abs_error": 0.041015625,
+          "mean_abs_error": 0.004196501336991787,
+          "cosine_similarity": 0.9996781349182129
+        },
+        {
+          "layer": 14,
+          "max_abs_error": 0.04443359375,
+          "mean_abs_error": 0.004701918922364712,
+          "cosine_similarity": 0.9996442794799805
+        },
+        {
+          "layer": 15,
+          "max_abs_error": 0.1015625,
+          "mean_abs_error": 0.005434038117527962,
+          "cosine_similarity": 0.999731719493866
+        },
+        {
+          "layer": 16,
+          "max_abs_error": 0.099609375,
+          "mean_abs_error": 0.0070283543318510056,
+          "cosine_similarity": 0.9995965361595154
+        },
+        {
+          "layer": 17,
+          "max_abs_error": 0.21875,
+          "mean_abs_error": 0.00803600437939167,
+          "cosine_similarity": 0.9995589256286621
+        },
+        {
+          "layer": 18,
+          "max_abs_error": 0.16015625,
+          "mean_abs_error": 0.010207464918494225,
+          "cosine_similarity": 0.9996370673179626
+        },
+        {
+          "layer": 19,
+          "max_abs_error": 0.14453125,
+          "mean_abs_error": 0.011294223368167877,
+          "cosine_similarity": 0.9996351003646851
+        },
+        {
+          "layer": 20,
+          "max_abs_error": 0.1875,
+          "mean_abs_error": 0.01325155608355999,
+          "cosine_similarity": 0.9996964931488037
+        },
+        {
+          "layer": 21,
+          "max_abs_error": 0.19140625,
+          "mean_abs_error": 0.015485710464417934,
+          "cosine_similarity": 0.9996960759162903
+        },
+        {
+          "layer": 22,
+          "max_abs_error": 0.234375,
+          "mean_abs_error": 0.01802893728017807,
+          "cosine_similarity": 0.999704122543335
+        },
+        {
+          "layer": 23,
+          "max_abs_error": 0.21875,
+          "mean_abs_error": 0.01935199648141861,
+          "cosine_similarity": 0.9997020959854126
+        },
+        {
+          "layer": 24,
+          "max_abs_error": 0.255859375,
+          "mean_abs_error": 0.042626526206731796,
+          "cosine_similarity": 0.9991461634635925
+        },
+        {
+          "layer": 25,
+          "max_abs_error": 0.265625,
+          "mean_abs_error": 0.047343168407678604,
+          "cosine_similarity": 0.9991778135299683
+        },
+        {
+          "layer": 26,
+          "max_abs_error": 0.3125,
+          "mean_abs_error": 0.0499441958963871,
+          "cosine_similarity": 0.999113917350769
+        },
+        {
+          "layer": 27,
+          "max_abs_error": 0.34375,
+          "mean_abs_error": 0.05443818122148514,
+          "cosine_similarity": 0.9990983009338379
+        },
+        {
+          "layer": 28,
+          "max_abs_error": 0.375,
+          "mean_abs_error": 0.05964728817343712,
+          "cosine_similarity": 0.99898362159729
+        },
+        {
+          "layer": 29,
+          "max_abs_error": 0.3486328125,
+          "mean_abs_error": 0.06558987498283386,
+          "cosine_similarity": 0.9989336133003235
+        },
+        {
+          "layer": 30,
+          "max_abs_error": 0.421875,
+          "mean_abs_error": 0.0704408809542656,
+          "cosine_similarity": 0.998921811580658
+        },
+        {
+          "layer": 31,
+          "max_abs_error": 0.4375,
+          "mean_abs_error": 0.07390306144952774,
+          "cosine_similarity": 0.9988818764686584
+        },
+        {
+          "layer": 32,
+          "max_abs_error": 0.4375,
+          "mean_abs_error": 0.07815869152545929,
+          "cosine_similarity": 0.9988481998443604
+        },
+        {
+          "layer": 33,
+          "max_abs_error": 0.875,
+          "mean_abs_error": 0.09001407772302628,
+          "cosine_similarity": 0.9987086057662964
+        },
+        {
+          "layer": 34,
+          "max_abs_error": 0.75,
+          "mean_abs_error": 0.09233617782592773,
+          "cosine_similarity": 0.9987151622772217
+        },
+        {
+          "layer": 35,
+          "max_abs_error": 0.875,
+          "mean_abs_error": 0.096636101603508,
+          "cosine_similarity": 0.9986647963523865
+        },
+        {
+          "layer": 36,
+          "max_abs_error": 0.841796875,
+          "mean_abs_error": 0.13113340735435486,
+          "cosine_similarity": 0.9984860420227051
+        },
+        {
+          "layer": 37,
+          "max_abs_error": 1.25,
+          "mean_abs_error": 0.14134493470191956,
+          "cosine_similarity": 0.9984376430511475
+        },
+        {
+          "layer": 38,
+          "max_abs_error": 0.8125,
+          "mean_abs_error": 0.14368563890457153,
+          "cosine_similarity": 0.9984689354896545
+        },
+        {
+          "layer": 39,
+          "max_abs_error": 0.9091796875,
+          "mean_abs_error": 0.14969822764396667,
+          "cosine_similarity": 0.9984904527664185
+        },
+        {
+          "layer": 40,
+          "max_abs_error": 0.96484375,
+          "mean_abs_error": 0.15293584764003754,
+          "cosine_similarity": 0.9984650015830994
+        },
+        {
+          "layer": 41,
+          "max_abs_error": 1.140625,
+          "mean_abs_error": 0.16374987363815308,
+          "cosine_similarity": 0.9984768629074097
+        },
+        {
+          "layer": 42,
+          "max_abs_error": 9.0,
+          "mean_abs_error": 0.20513394474983215,
+          "cosine_similarity": 0.999126672744751
+        }
+      ],
+      "generated_ids": [
+        11111
+      ],
+      "generated_text": " Paris",
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 5,
+          "next_token": 11111,
+          "max_logit": 24.69985580444336,
+          "latency_ms": 944.5193926803768
+        }
+      ],
+      "expected_contains": null,
+      "expected_match": null
+    }
+  ],
+  "all_argmax_equal": true,
+  "all_expected_match": true,
+  "peak_memory_bytes": 179366115328
+}

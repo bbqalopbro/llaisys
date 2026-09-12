@@ -1,0 +1,234 @@
+{
+  "gpu": "NVIDIA B300 SXM6 AC",
+  "compute_capability": [
+    10,
+    3
+  ],
+  "torch": "2.13.0+cu130",
+  "cuda": "13.0",
+  "backend": "native-fp8-fp4-linear+native-bf16-attention-hc-router-actquant",
+  "source_model": "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731",
+  "converted_model": "/tmp/llaisys-deepseek-v4-flash-mp1",
+  "weight_load_seconds": 27.803250508382916,
+  "cases": [
+    {
+      "prompt": "The capital of France is",
+      "prompt_tokens": 5,
+      "accuracy": {
+        "full_prefill_argmax": 11111,
+        "token_replay_argmax": 11111,
+        "argmax_equal": true,
+        "logits_max_abs_error": 0.8139820098876953,
+        "logits_mean_abs_error": 0.14519348740577698,
+        "logits_cosine_similarity": 0.9995194673538208
+      },
+      "layer_diagnostics": null,
+      "generated_ids": [
+        11111,
+        16,
+        455,
+        6102
+      ],
+      "generated_text": " Paris. The capital",
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 5,
+          "next_token": 11111,
+          "max_logit": 24.68352508544922,
+          "latency_ms": 503.66024300456047
+        },
+        {
+          "start_pos": 5,
+          "input_tokens": 1,
+          "next_token": 16,
+          "max_logit": 22.89890480041504,
+          "latency_ms": 178.36317466571927
+        },
+        {
+          "start_pos": 6,
+          "input_tokens": 1,
+          "next_token": 455,
+          "max_logit": 22.39287757873535,
+          "latency_ms": 176.14290257915854
+        },
+        {
+          "start_pos": 7,
+          "input_tokens": 1,
+          "next_token": 6102,
+          "max_logit": 24.47308921813965,
+          "latency_ms": 240.75951799750328
+        }
+      ],
+      "expected_contains": "Paris",
+      "expected_match": true
+    },
+    {
+      "prompt": "1 + 1 =",
+      "prompt_tokens": 5,
+      "accuracy": {
+        "full_prefill_argmax": 223,
+        "token_replay_argmax": 223,
+        "argmax_equal": true,
+        "logits_max_abs_error": 0.7351188659667969,
+        "logits_mean_abs_error": 0.10532909631729126,
+        "logits_cosine_similarity": 0.9996756911277771
+      },
+      "layer_diagnostics": null,
+      "generated_ids": [
+        223,
+        20,
+        201,
+        361
+      ],
+      "generated_text": " 2\n   ",
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 5,
+          "next_token": 223,
+          "max_logit": 23.47260093688965,
+          "latency_ms": 496.3845247402787
+        },
+        {
+          "start_pos": 5,
+          "input_tokens": 1,
+          "next_token": 20,
+          "max_logit": 22.887569427490234,
+          "latency_ms": 181.72511691227555
+        },
+        {
+          "start_pos": 6,
+          "input_tokens": 1,
+          "next_token": 201,
+          "max_logit": 19.05063247680664,
+          "latency_ms": 178.99783002212644
+        },
+        {
+          "start_pos": 7,
+          "input_tokens": 1,
+          "next_token": 361,
+          "max_logit": 18.432714462280273,
+          "latency_ms": 189.788110088557
+        }
+      ],
+      "expected_contains": "2",
+      "expected_match": true
+    },
+    {
+      "prompt": "The opposite of hot is",
+      "prompt_tokens": 5,
+      "accuracy": {
+        "full_prefill_argmax": 8147,
+        "token_replay_argmax": 8147,
+        "argmax_equal": true,
+        "logits_max_abs_error": 1.0126123428344727,
+        "logits_mean_abs_error": 0.15112483501434326,
+        "logits_cosine_similarity": 0.9993433952331543
+      },
+      "layer_diagnostics": null,
+      "generated_ids": [
+        8147,
+        16,
+        455,
+        12236
+      ],
+      "generated_text": " cold. The opposite",
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 5,
+          "next_token": 8147,
+          "max_logit": 24.005781173706055,
+          "latency_ms": 523.1540841050446
+        },
+        {
+          "start_pos": 5,
+          "input_tokens": 1,
+          "next_token": 16,
+          "max_logit": 22.52076530456543,
+          "latency_ms": 174.32491900399327
+        },
+        {
+          "start_pos": 6,
+          "input_tokens": 1,
+          "next_token": 455,
+          "max_logit": 19.622554779052734,
+          "latency_ms": 174.32451900094748
+        },
+        {
+          "start_pos": 7,
+          "input_tokens": 1,
+          "next_token": 12236,
+          "max_logit": 23.656221389770508,
+          "latency_ms": 189.20953571796417
+        }
+      ],
+      "expected_contains": "cold",
+      "expected_match": true
+    },
+    {
+      "prompt": "中国的首都是",
+      "prompt_tokens": 3,
+      "accuracy": {
+        "full_prefill_argmax": 6127,
+        "token_replay_argmax": 6127,
+        "argmax_equal": true,
+        "logits_max_abs_error": 0.7934150695800781,
+        "logits_mean_abs_error": 0.11779261380434036,
+        "logits_cosine_similarity": 0.9994033575057983
+      },
+      "layer_diagnostics": null,
+      "generated_ids": [
+        6127,
+        303,
+        867,
+        6127
+      ],
+      "generated_text": "北京，而北京",
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 3,
+          "next_token": 6127,
+          "max_logit": 19.90448570251465,
+          "latency_ms": 349.43782119080424
+        },
+        {
+          "start_pos": 3,
+          "input_tokens": 1,
+          "next_token": 303,
+          "max_logit": 21.32369613647461,
+          "latency_ms": 184.44577511399984
+        },
+        {
+          "start_pos": 4,
+          "input_tokens": 1,
+          "next_token": 867,
+          "max_logit": 16.745941162109375,
+          "latency_ms": 173.01571974530816
+        },
+        {
+          "start_pos": 5,
+          "input_tokens": 1,
+          "next_token": 6127,
+          "max_logit": 16.2042179107666,
+          "latency_ms": 173.5639050602913
+        }
+      ],
+      "expected_contains": "北京",
+      "expected_match": true
+    }
+  ],
+  "all_argmax_equal": true,
+  "all_expected_match": true,
+  "peak_memory_bytes": 170254715392,
+  "native_operation_counts": {
+    "sparse_attention": 1634,
+    "hyperconnection": 3268,
+    "sqrt_softplus_router": 1520,
+    "activation_quant": 59428,
+    "fp8_linear": 12236,
+    "fp4_linear": 44214
+  }
+}

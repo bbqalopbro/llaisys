@@ -1,0 +1,327 @@
+{
+  "gpu": "NVIDIA B300 SXM6 AC",
+  "compute_capability": [
+    10,
+    3
+  ],
+  "torch": "2.13.0+cu130",
+  "cuda": "13.0",
+  "backend": "published-tilelang",
+  "reference_mode": "full-only",
+  "checkpoint_identity": {
+    "path": "/tmp/llaisys-deepseek-v4-flash-mp1/model0-mp1.safetensors",
+    "size_bytes": 168430204680,
+    "sha256": "024836b412ccd5c539bb130842842247d9c427f99c3a1e21ed35ea08ddcc0aa2",
+    "scope": "entire_file_including_header_and_tensor_payload",
+    "signature": {
+      "st_dev": 64772,
+      "st_ino": 1870444,
+      "st_size": 168430204680,
+      "st_mtime_ns": 1788196907364762897,
+      "st_ctime_ns": 1788196907366762884
+    }
+  },
+  "weight_key_validation": {
+    "missing": [],
+    "unexpected": []
+  },
+  "golden_file_sha256": {
+    "case_0.safetensors": "86ae149a3e019e8737266dcdda44f701eb20d0f4f03cfafc692cc37fc4fa9915"
+  },
+  "operator_backends": {
+    "act_quant": {
+      "backend": "tilelang",
+      "version": "0.1.8",
+      "contract": {
+        "revision": 1,
+        "inputs": "BF16 [...,K]; block=128; FP32/UE8M0 scales",
+        "outputs": "FP8 [...,K], scale [...,K/128] or BF16 QDQ",
+        "mutation": "x only when inplace=True"
+      },
+      "calls": 52727,
+      "failures": 0,
+      "fallback": false
+    },
+    "fp4_act_quant": {
+      "backend": "tilelang",
+      "version": "0.1.8",
+      "contract": {
+        "revision": 1,
+        "inputs": "BF16 [...,K]; block=32; UE8M0 scales",
+        "outputs": "packed E2M1 [...,K/2], scale [...,K/32] or BF16 QDQ",
+        "mutation": "x only when inplace=True"
+      },
+      "calls": 483,
+      "failures": 0,
+      "fallback": false
+    },
+    "fp8_gemm": {
+      "backend": "tilelang",
+      "version": "0.1.8",
+      "contract": {
+        "revision": 1,
+        "inputs": "FP8 A[...,K], B[N,K]; scales A[...,K/128], B[ceil(N/128),K/128]",
+        "outputs": "BF16 [...,N]; FP32 accumulation; no activation requantization",
+        "mutation": "none"
+      },
+      "calls": 5474,
+      "failures": 0,
+      "fallback": false
+    },
+    "fp4_gemm": {
+      "backend": "tilelang",
+      "version": "0.1.8",
+      "contract": {
+        "revision": 1,
+        "inputs": "FP8 A[...,K], packed E2M1 B[N,K/2]; scales A[...,K/128], B[N,K/32]",
+        "outputs": "BF16 [...,N]; FP32 accumulation; W4A8, not W4A4",
+        "mutation": "none"
+      },
+      "calls": 46356,
+      "failures": 0,
+      "fallback": false
+    },
+    "sparse_attn": {
+      "backend": "tilelang",
+      "version": "0.1.8",
+      "contract": {
+        "revision": 1,
+        "inputs": "BF16 Q[B,S,H,D], latent[B,L,D]; FP32 sink[H]; int32 indices[B,S,T], -1=invalid",
+        "outputs": "BF16 [B,S,H,D]; indexed attention with sink in softmax denominator",
+        "mutation": "none"
+      },
+      "calls": 731,
+      "failures": 0,
+      "fallback": false
+    },
+    "hc_split_sinkhorn": {
+      "backend": "tilelang",
+      "version": "0.1.8",
+      "contract": {
+        "revision": 1,
+        "inputs": "FP32 mixes[B,S,(2+HC)*HC], scale[3], base[(2+HC)*HC]",
+        "outputs": "FP32 pre[B,S,HC], post[B,S,HC], combine[B,S,HC,HC]",
+        "mutation": "none"
+      },
+      "calls": 1462,
+      "failures": 0,
+      "fallback": false
+    }
+  },
+  "hadamard": {
+    "backend": "cuda",
+    "calls": 483,
+    "fallback": false,
+    "extension": "/home/lcpu/57682329/.local/deepseek-v4-hadamard/fast_hadamard_transform_cuda.so"
+  },
+  "tilelang": "0.1.8",
+  "tvm_ffi": "0.1.8.post2",
+  "indexer_tie_policy": "published torch.topk",
+  "provenance": {
+    "commit": "05784b4da6483f77821a061e521ea1b98fa271e1",
+    "branch": "feat/vllm-paged-attention",
+    "worktree_dirty": true,
+    "file_sha256": {
+      "/home/lcpu/57682329/workspace/llaisys/tools/deepseek_v4_reference/run_single_gpu.py": "7ec4c83735bac93e5548956bf98c16260525f9f4409c9fb694e523161d04b22c",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/inference/model.py": "c0c19e6c9fa439bac7fbb1c5bc1868232dfd5aa2f439a548d0e33dcc2a9edd3f",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/inference/kernel.py": "59b325083d7103975cba025bd0d60ea343bb82d8fff53088afb7c04bd380c0c2",
+      "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_evidence.py": "d94d0afe68747a3876231f922868a752c26eb396f100456bf90f0ce6646de6a8",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/inference/config.json": "c90861f3d10a9e4ef5954f8f1a34c529d480da1c5799f84660028f4e38e14e71",
+      "/home/lcpu/57682329/workspace/llaisys/tools/deepseek_v4_reference/fast_hadamard_transform.py": "89e8c4002ed50b34283506f544e1a53d94aa5611eaa32b3231639ef46c1bf1da",
+      "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_backends.py": "e83c52c7977f0bf0c221a0ebcc621a9178791e852513f82c53378c7b21be40c9",
+      "/home/lcpu/57682329/.local/deepseek-v4-hadamard/fast_hadamard_transform_cuda.so": "854f75c763ce3a9698b4e31dde765490ecc57d31a7bf87c074bf99378937ad88"
+    },
+    "command": [
+      "tools/deepseek_v4_reference/run_single_gpu.py",
+      "--source-model",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731",
+      "--converted-model",
+      "/tmp/llaisys-deepseek-v4-flash-mp1",
+      "--cases-file",
+      "test/data/deepseek_v4_indexer_long_case.json",
+      "--max-new-tokens",
+      "16",
+      "--max-seq-len",
+      "4096",
+      "--gemm-backend",
+      "tilelang",
+      "--hadamard-backend",
+      "cuda",
+      "--reference-mode",
+      "full-only",
+      "--hash-checkpoint",
+      "--dump-logits-dir",
+      "benchmark_results/deepseek_v4_tilelang_top512_golden",
+      "--output",
+      "benchmark_results/deepseek_v4_b300_tilelang_top512_accuracy.json"
+    ]
+  },
+  "measurement": {
+    "kind": "correctness_runner_step_latency_not_serving_ttft_tpot",
+    "batch_size": 1,
+    "concurrency": 1,
+    "cuda_graph": false,
+    "prefix_cache": false,
+    "warmup": "one full prefill per case; no token replay",
+    "timed_repeats": 1,
+    "fallback": false,
+    "weights": "FP8 E4M3 dense, FP4 E2M1 experts, E8M0 scales",
+    "activation_dtype": "BF16 with explicit QAT boundaries"
+  },
+  "source_model": "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731",
+  "converted_model": "/tmp/llaisys-deepseek-v4-flash-mp1",
+  "weight_load_seconds": 33.46315677417442,
+  "cases": [
+    {
+      "prompt": "The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is",
+      "prompt_tokens": 2105,
+      "token_replay_tested": false,
+      "accuracy": null,
+      "layer_diagnostics": null,
+      "generated_ids": [
+        11111,
+        16,
+        455,
+        6102,
+        294,
+        8760,
+        344,
+        11111,
+        16,
+        455,
+        6102,
+        294,
+        8760,
+        344,
+        11111,
+        16
+      ],
+      "generated_text": " Paris. The capital of France is Paris. The capital of France is Paris.",
+      "teacher_forced_ids": null,
+      "golden_comparison": null,
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 2105,
+          "next_token": 11111,
+          "max_logit": 36.31941223144531,
+          "latency_ms": 4439.182498957962
+        },
+        {
+          "start_pos": 2105,
+          "input_tokens": 1,
+          "next_token": 16,
+          "max_logit": 33.37921142578125,
+          "latency_ms": 443.4039620682597
+        },
+        {
+          "start_pos": 2106,
+          "input_tokens": 1,
+          "next_token": 455,
+          "max_logit": 32.83919143676758,
+          "latency_ms": 236.67737422510982
+        },
+        {
+          "start_pos": 2107,
+          "input_tokens": 1,
+          "next_token": 6102,
+          "max_logit": 37.38917541503906,
+          "latency_ms": 243.5914590023458
+        },
+        {
+          "start_pos": 2108,
+          "input_tokens": 1,
+          "next_token": 294,
+          "max_logit": 35.46949005126953,
+          "latency_ms": 232.22812172025442
+        },
+        {
+          "start_pos": 2109,
+          "input_tokens": 1,
+          "next_token": 8760,
+          "max_logit": 36.24279022216797,
+          "latency_ms": 231.67810682207346
+        },
+        {
+          "start_pos": 2110,
+          "input_tokens": 1,
+          "next_token": 344,
+          "max_logit": 36.36939239501953,
+          "latency_ms": 231.79370490834117
+        },
+        {
+          "start_pos": 2111,
+          "input_tokens": 1,
+          "next_token": 11111,
+          "max_logit": 37.09151077270508,
+          "latency_ms": 244.43345330655575
+        },
+        {
+          "start_pos": 2112,
+          "input_tokens": 1,
+          "next_token": 16,
+          "max_logit": 33.523948669433594,
+          "latency_ms": 232.29651199653745
+        },
+        {
+          "start_pos": 2113,
+          "input_tokens": 1,
+          "next_token": 455,
+          "max_logit": 33.195281982421875,
+          "latency_ms": 233.43641497194767
+        },
+        {
+          "start_pos": 2114,
+          "input_tokens": 1,
+          "next_token": 6102,
+          "max_logit": 38.1744499206543,
+          "latency_ms": 231.32936796173453
+        },
+        {
+          "start_pos": 2115,
+          "input_tokens": 1,
+          "next_token": 294,
+          "max_logit": 35.056304931640625,
+          "latency_ms": 243.15606988966465
+        },
+        {
+          "start_pos": 2116,
+          "input_tokens": 1,
+          "next_token": 8760,
+          "max_logit": 37.12335205078125,
+          "latency_ms": 232.06226294860244
+        },
+        {
+          "start_pos": 2117,
+          "input_tokens": 1,
+          "next_token": 344,
+          "max_logit": 36.03213119506836,
+          "latency_ms": 231.31913784891367
+        },
+        {
+          "start_pos": 2118,
+          "input_tokens": 1,
+          "next_token": 11111,
+          "max_logit": 36.479068756103516,
+          "latency_ms": 231.21812799945474
+        },
+        {
+          "start_pos": 2119,
+          "input_tokens": 1,
+          "next_token": 16,
+          "max_logit": 33.80303192138672,
+          "latency_ms": 241.57437216490507
+        }
+      ],
+      "expected_contains": "Paris",
+      "expected_match": true
+    }
+  ],
+  "all_argmax_equal": null,
+  "all_expected_match": true,
+  "all_golden_comparisons_pass": null,
+  "all_compressor_comparisons_pass": null,
+  "all_indexer_comparisons_pass": null,
+  "peak_memory_bytes": 171367815680,
+  "native_operation_counts": null
+}

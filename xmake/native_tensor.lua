@@ -1,0 +1,42 @@
+-- Shared native tensor ownership for independently optional operator backends.
+if has_config("tilelang-native") or has_config("aten-native") then
+    local dlpack = get_config("dlpack-include")
+    if not dlpack or dlpack == "" then
+        dlpack = path.join(get_config("tvm-ffi-root") or "", "include")
+    end
+    target("llaisys-native-tensor")
+        set_kind("static")
+        set_default(false)
+        set_languages("cxx17")
+        set_warnings("all", "error")
+        add_cxflags("-fPIC")
+        add_deps("llaisys-core")
+        add_includedirs("..", {public = true})
+        add_includedirs(dlpack, {system = true, public = true})
+        add_files("../src/backends/native/tensor.cpp", "../src/backends/native/paged_storage.cpp")
+        add_syslinks("cudart", {public = true})
+        on_load(function (target)
+            if not has_config("nv-gpu") or not os.isfile(path.join(dlpack, "dlpack/dlpack.h")) then
+                raise("native tensors require --nv-gpu=y and current DLPack headers")
+            end
+            import("detect.sdks.find_cuda")
+            local cuda = find_cuda()
+            assert(cuda, "native storage requires a detected CUDA toolkit")
+            target:add("includedirs", cuda.includedirs, {system = true, public = true})
+            target:add("linkdirs", cuda.linkdirs, {public = true})
+        end)
+    target_end()
+    target("llaisys-native-paged-storage-test")
+        set_kind("binary")
+        set_default(false)
+        set_languages("cxx17")
+        set_warnings("all", "error")
+        add_deps("llaisys-native-tensor")
+        add_files("../test/native_paged_storage_test.cpp")
+        local runtime_lib = path.join(os.projectdir(), "python/llaisys/libllaisys")
+        add_linkdirs(runtime_lib)
+        add_links("llaisys")
+        add_rpathdirs(runtime_lib)
+        add_syslinks("pthread")
+    target_end()
+end

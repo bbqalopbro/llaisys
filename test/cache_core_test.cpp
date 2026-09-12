@@ -21,6 +21,19 @@ int main() {
     assert(mla.layerBytes(0, 1) == 8U * 512U * 2U);
     assert(mla.layerBytes(1, 1) == 8U * 64U * 2U);
 
+    DeepSeekV4CacheLayout v4(16, 512, 128, 2, {0, 4, 128});
+    assert(v4.numComponents() == 3);
+    assert(v4.componentName(0) == "window_latent");
+    assert(v4.componentName(1) == "compressed_latent");
+    assert(v4.componentName(2) == "index_latent");
+    assert(v4.layerBytes(0, 0) == 16U * 512U * 2U);
+    assert(v4.layerBytes(1, 0) == 0U);
+    assert(v4.layerBytes(1, 1) == 4U * 512U * 2U);
+    assert(v4.layerBytes(1, 2) == 1U * 512U * 2U);
+    assert(v4.layerBytes(2, 0) == 0U);
+    assert(v4.layerBytes(2, 1) == 4U * 128U * 2U);
+    assert(v4.layerBytes(2, 2) == 0U);
+
     BlockManager blocks(4);
     std::vector<int> block_ids;
     for (int i = 0; i < 2; ++i) block_ids.push_back(blocks.allocate());

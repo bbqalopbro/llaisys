@@ -70,4 +70,68 @@ size_t MLACacheLayout::layerBytes(size_t component, size_t layer) const {
     return tokens * dim * element_size_;
 }
 
+DeepSeekV4CacheLayout::DeepSeekV4CacheLayout(
+    size_t block_size, size_t latent_dim, size_t index_dim,
+    size_t element_size, std::vector<size_t> compression_ratios)
+    : block_size_(block_size), latent_dim_(latent_dim), index_dim_(index_dim),
+      element_size_(element_size),
+      compression_ratios_(std::move(compression_ratios)) {
+    if (block_size_ == 0 || latent_dim_ == 0 || element_size_ == 0 ||
+        compression_ratios_.empty()) {
+        throw std::invalid_argument(
+            "DeepSeekV4CacheLayout: dimensions and layers must be non-zero");
+    }
+    bool has_compressed = false;
+    bool has_index = false;
+    for (const size_t ratio : compression_ratios_) {
+        if (ratio != 0 && ratio != 4 && ratio != 128) {
+            throw std::invalid_argument(
+                "DeepSeekV4CacheLayout: compression ratio must be 0, 4, or 128");
+        }
+        has_compressed = has_compressed || ratio != 0;
+        has_index = has_index || ratio == 4;
+    }
+    if (has_compressed) component_names_.push_back("compressed_latent");
+    if (has_index) {
+        if (index_dim_ == 0) {
+            throw std::invalid_argument(
+                "DeepSeekV4CacheLayout: ratio-4 layers require index_dim");
+        }
+        component_names_.push_back("index_latent");
+    }
+}
+
+const std::string &
+DeepSeekV4CacheLayout::componentName(size_t component) const {
+    return component_names_.at(component);
+}
+
+size_t DeepSeekV4CacheLayout::compressionRatio(size_t layer) const {
+    return compression_ratios_.at(layer);
+}
+
+size_t DeepSeekV4CacheLayout::layerBytes(size_t component,
+                                         size_t layer) const {
+    if (component >= component_names_.size() ||
+        layer >= compression_ratios_.size()) {
+        throw std::out_of_range("DeepSeekV4CacheLayout: index out of range");
+    }
+    const auto &name = component_names_[component];
+    if (name == "window_latent") {
+        return block_size_ * latent_dim_ * element_size_;
+    }
+    const size_t ratio = compression_ratios_[layer];
+    if (name == "compressed_latent") {
+        if (ratio == 0) return 0;
+        return ((block_size_ + ratio - 1) / ratio) * latent_dim_ *
+               element_size_;
+    }
+    if (name == "index_latent") {
+        if (ratio != 4) return 0;
+        return ((block_size_ + ratio - 1) / ratio) * index_dim_ *
+               element_size_;
+    }
+    throw std::logic_error("DeepSeekV4CacheLayout: unknown component");
+}
+
 } // namespace llaisys::core

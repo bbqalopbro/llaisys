@@ -36,11 +36,15 @@ import logging
 import threading
 import time
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 from typing import AsyncGenerator, Dict, List, Optional, Sequence
 
 logger = logging.getLogger("llaisys.engine")
+
+
+class _RequestCancelled(Exception):
+    pass
 
 
 # ── 请求状态 ──────────────────────────────────────────────────────
@@ -93,6 +97,8 @@ class InferenceRequest:
 
     # 错误信息
     error_message: str = ""
+    cancelled: threading.Event = field(default_factory=threading.Event, repr=False)
+    completion_scheduled: bool = field(default=False, repr=False)
 
     def __post_init__(self):
         if not self.request_id:
@@ -130,6 +136,7 @@ class RequestQueue:
         with self._lock:
             if len(self._waiting) >= self._max_size:
                 return False
+            self._active.pop(request.request_id, None)
             self._waiting.append(request)
             self._not_empty.notify()
             return True
@@ -161,15 +168,18 @@ class RequestQueue:
     def cancel(self, request_id: str) -> bool:
         """取消请求. 返回是否成功."""
         with self._lock:
-            # 从等待队列中移除
-            for i, req in enumerate(self._waiting):
+            # Let the worker perform completion and snapshot cleanup even for
+            # waiting requests; removing them here strands futures/streams.
+            for req in self._waiting:
                 if req.request_id == request_id:
+                    req.cancelled.set()
                     req.status = RequestStatus.CANCELLED
-                    self._waiting.pop(i)
+                    self._not_empty.notify()
                     return True
             # 标记活跃请求为取消
             req = self._active.get(request_id)
             if req:
+                req.cancelled.set()
                 req.status = RequestStatus.CANCELLED
                 return True
             return False
@@ -187,6 +197,20 @@ class RequestQueue:
     def is_empty(self) -> bool:
         with self._lock:
             return len(self._waiting) == 0 and len(self._active) == 0
+
+    def take_cancelled(self):
+        with self._lock:
+            cancelled = [req for req in self._waiting if req.cancelled.is_set()]
+            self._waiting = [req for req in self._waiting if not req.cancelled.is_set()]
+            return cancelled
+
+    def drain(self):
+        with self._lock:
+            requests = {req.request_id: req for req in self._waiting}
+            requests.update(self._active)
+            self._waiting.clear()
+            self._active.clear()
+            return list(requests.values())
 
 
 # ── 推理引擎 ─────────────────────────────────────────────────────
@@ -221,9 +245,19 @@ class InferenceEngine:
         self.prefill_chunk_size = max(1, prefill_chunk_size)
         self.enable_block_prefix_cache = enable_block_prefix_cache
 
+        # Optional model capability check. Unsupported policies must fail before
+        # admission, not silently become a different cache/execution strategy.
+        validate_engine = getattr(model, "validate_engine_config", None)
+        if validate_engine is not None:
+            validate_engine(max_batch_size=max_batch_size, max_seq_per_slot=max_seq_per_slot,
+                            prefill_chunk_size=self.prefill_chunk_size,
+                            enable_block_prefix_cache=enable_block_prefix_cache)
+
         self.queue = RequestQueue(max_size=max_queue_size)
         self._worker_thread: Optional[threading.Thread] = None
         self._running = False
+        self._ready = threading.Event()
+        self._worker_error = None
         self._eos_token_id = getattr(model, '_end_token', 151643)
 
         # 统计
@@ -235,6 +269,10 @@ class InferenceEngine:
         """启动后台 worker 线程."""
         if self._running:
             return
+        if self._worker_thread is not None and self._worker_thread.is_alive():
+            raise RuntimeError("previous inference worker has not exited")
+        self._ready.clear()
+        self._worker_error = None
         self._running = True
         self._worker_thread = threading.Thread(
             target=self._worker_loop,
@@ -242,13 +280,19 @@ class InferenceEngine:
             daemon=True,
         )
         self._worker_thread.start()
+        if not self._ready.wait(timeout=30):
+            raise TimeoutError("inference worker initialization is still running")
+        if self._worker_error is not None:
+            raise RuntimeError("inference worker initialization failed") from self._worker_error
         logger.info(f"Inference engine started (max_batch_size={self.max_batch_size})")
 
-    def stop(self):
+    def stop(self, timeout: float = 30):
         """停止后台 worker."""
         self._running = False
         if self._worker_thread:
-            self._worker_thread.join(timeout=5.0)
+            self._worker_thread.join(timeout=timeout)
+            if self._worker_thread.is_alive():
+                raise TimeoutError("inference worker is still finishing an in-flight execution")
             self._worker_thread = None
         logger.info("Inference engine stopped")
 
@@ -274,8 +318,8 @@ class InferenceEngine:
 
         request = InferenceRequest(
             request_id=f"req-{uuid.uuid4().hex[:12]}",
-            input_ids=input_ids,
-            params=params,
+            input_ids=list(input_ids),
+            params=replace(params),
             session_id=session_id,
             stream=stream,
             future=loop.create_future(),
@@ -283,26 +327,39 @@ class InferenceEngine:
             loop=loop,
         )
 
-        if not self.queue.submit(request):
-            request.status = RequestStatus.ERROR
-            request.error_message = "Request queue is full"
-            loop.call_soon_threadsafe(
-                request.future.set_exception,
-                RuntimeError("Request queue is full"),
-            )
+        try:
+            if self._worker_error is not None:
+                raise RuntimeError("inference worker is unavailable") from self._worker_error
+            if not request.input_ids or type(params.max_tokens) is not int or params.max_tokens <= 0:
+                raise ValueError("nonempty input_ids and positive max_tokens are required")
+            if len(request.input_ids) + params.max_tokens - 1 > self.max_seq_per_slot:
+                raise ValueError("request exceeds its slot sequence capacity")
+            validator = getattr(self.model, "validate_request", None)
+            if validator is not None:
+                validator(request.input_ids, request.params, self.max_seq_per_slot)
+            if not self.queue.submit(request):
+                raise RuntimeError("Request queue is full")
+        except Exception as error:
+            self._finish_request(request, error=error)
         else:
             logger.debug(f"Request {request.request_id} submitted (queue={self.queue.waiting_count})")
+            request.future.add_done_callback(
+                lambda future: self.cancel(request.request_id) if future.cancelled() else None)
 
         return request
+
+    def cancel(self, request_id: str) -> bool:
+        return self.queue.cancel(request_id)
 
     # ── 连续批处理 Worker 循环 ───────────────────────────────────
 
     def _estimate_blocks_needed(self, prompt_len: int, max_tokens: int, block_size: int) -> int:
         """Estimate blocks needed for a new request."""
-        total_tokens = prompt_len + max_tokens
+        # The last sampled token is returned, not fed through another decode.
+        total_tokens = prompt_len + max_tokens - 1
         return (total_tokens + block_size - 1) // block_size
 
-    def _can_admit(self, batch_ctx, prompt_len: int, max_tokens: int) -> bool:
+    def _can_admit(self, batch_ctx, prompt_len: int, max_tokens: int, reserved_blocks: int = 0) -> bool:
         """Check if there are enough free blocks to admit a new request."""
         block_size = batch_ctx.get_block_size()
         if block_size <= 0:
@@ -311,7 +368,21 @@ class InferenceEngine:
         free = batch_ctx.get_free_blocks()
         total = batch_ctx.get_total_blocks()
         watermark = int(total * self.block_watermark)
-        return free >= needed + watermark
+        return free >= needed + watermark + reserved_blocks
+
+    def _reserved_growth(self, batch_ctx, running):
+        position = getattr(batch_ctx, "slot_get_pos", None)
+        size = batch_ctx.get_block_size()
+        if position is None or size <= 0:
+            return 0
+        return sum(max(0, self._estimate_blocks_needed(len(req.input_ids), req.params.max_tokens, size)
+                       - (position(slot_id) + size - 1) // size) for slot_id, req in running.items())
+
+    def _requeue(self, req):
+        req.status = RequestStatus.WAITING
+        if not self.queue.submit(req):
+            self._finish_request(req, error=RuntimeError("request requeue is full"))
+            self.queue.mark_done(req.request_id)
 
     def _prefill_prompt(self, batch_ctx, slot_id: int,
                         req: InferenceRequest, start_pos: int = 0) -> int:
@@ -320,6 +391,8 @@ class InferenceEngine:
         if not all_tokens or start_pos < 0 or start_pos >= len(all_tokens):
             raise ValueError("input_ids must not be empty")
         tokens = all_tokens[start_pos:]
+        if req.cancelled.is_set():
+            raise _RequestCancelled()
         chunk_fn = getattr(batch_ctx, "prefill_chunk", None)
         if start_pos == 0 and (chunk_fn is None or
                                len(tokens) <= self.prefill_chunk_size):
@@ -338,6 +411,8 @@ class InferenceEngine:
         cursor = start_pos
         result = None
         while cursor < len(all_tokens):
+            if req.cancelled.is_set() or (hasattr(self, "_running") and not self._running):
+                raise _RequestCancelled()
             end_pos = min(cursor + self.prefill_chunk_size, len(all_tokens))
             result = chunk_fn(
                 slot_id=slot_id,
@@ -378,7 +453,9 @@ class InferenceEngine:
             victim_req.kv_cache_snapshot = snapshot
         except Exception as e:
             logger.error(f"Failed to save snapshot for preemption: {e}")
-            victim_req.kv_cache_snapshot = None
+            return False
+        if snapshot is None:
+            return False
 
         # Release the slot
         batch_ctx.slot_reset(victim_slot)
@@ -386,8 +463,7 @@ class InferenceEngine:
         free_slots.append(victim_slot)
 
         # Re-queue the preempted request
-        victim_req.status = RequestStatus.WAITING
-        self.queue.submit(victim_req)
+        self._requeue(victim_req)
         self._total_preemptions += 1
 
         return True
@@ -396,28 +472,73 @@ class InferenceEngine:
         """后台 worker 主循环 — 连续批处理 with dynamic admission + preemption."""
         logger.info("Continuous batching worker loop started (paged mode)")
 
-        batch_ctx = self.model.create_batch_context(
-            self.max_batch_size, self.max_seq_per_slot
-        )
-
+        batch_ctx = None
         running: Dict[int, InferenceRequest] = {}
         free_slots: List[int] = list(range(self.max_batch_size))
+        try:
+            batch_ctx = self.model.create_batch_context(self.max_batch_size, self.max_seq_per_slot)
+            self._ready.set()
+            self._run_batches(batch_ctx, running, free_slots)
+        except Exception as error:
+            self._worker_error = error
+            logger.exception("Inference worker failed")
+        finally:
+            self._running = False
+            self._ready.set()
+            if batch_ctx is not None:
+                for slot_id in range(self.max_batch_size):
+                    try:
+                        batch_ctx.slot_reset(slot_id)
+                    except Exception as error:
+                        self._worker_error = error
+                        logger.exception("Failed to reset slot during worker shutdown")
+            for req in self.queue.drain():
+                self._finish_request(req, error=self._worker_error or RuntimeError("inference engine stopped"))
+            close = getattr(batch_ctx, "close", None)
+            if close is not None:
+                try:
+                    close()
+                except Exception as error:
+                    self._worker_error = error
+                    logger.exception("Failed to close batch context")
+
+    def _run_batches(self, batch_ctx, running, free_slots):
 
         while self._running:
+            for req in self.queue.take_cancelled():
+                self._finish_request(req)
+            for slot_id, req in list(running.items()):
+                if req.cancelled.is_set():
+                    batch_ctx.slot_reset(slot_id)
+                    running.pop(slot_id)
+                    free_slots.append(slot_id)
+                    self._finish_request(req)
+                    self.queue.mark_done(req.request_id)
             # ── 1. Admit: dynamic admission based on block availability ──
-            while free_slots and self.queue.waiting_count > 0:
+            while self._running and free_slots and self.queue.waiting_count > 0:
                 # Peek at next request to check block budget
                 new_requests = self.queue.get_pending(max_count=1)
                 if not new_requests:
                     break
                 req = new_requests[0]
 
-                if req.status == RequestStatus.CANCELLED:
+                if req.cancelled.is_set() or req.status == RequestStatus.CANCELLED:
+                    req.cancelled.set()
+                    self._finish_request(req)
+                    self.queue.mark_done(req.request_id)
+                    continue
+
+                block_size = batch_ctx.get_block_size()
+                if block_size > 0 and self._estimate_blocks_needed(len(req.input_ids), req.params.max_tokens, block_size) > (
+                        batch_ctx.get_total_blocks() - int(batch_ctx.get_total_blocks() * self.block_watermark)):
+                    self._finish_request(req, error=ValueError("request budget exceeds total cache capacity"))
                     self.queue.mark_done(req.request_id)
                     continue
 
                 # Dynamic admission: check block capacity
-                if not self._can_admit(batch_ctx, len(req.input_ids), req.params.max_tokens):
+                preempted = False
+                if not self._can_admit(batch_ctx, len(req.input_ids), req.params.max_tokens,
+                                       self._reserved_growth(batch_ctx, running)):
                     # Try preemption to free blocks
                     needed = self._estimate_blocks_needed(
                         len(req.input_ids), req.params.max_tokens,
@@ -425,24 +546,26 @@ class InferenceEngine:
                     )
                     if not self._try_preempt(batch_ctx, running, free_slots, needed):
                         # Cannot admit even after preemption — put back
-                        req.status = RequestStatus.WAITING
-                        self.queue.submit(req)
+                        self._requeue(req)
                         break
+                    preempted = True
 
                     # Re-check after preemption
-                    if not self._can_admit(batch_ctx, len(req.input_ids), req.params.max_tokens):
-                        req.status = RequestStatus.WAITING
-                        self.queue.submit(req)
+                    if not self._can_admit(batch_ctx, len(req.input_ids), req.params.max_tokens,
+                                           self._reserved_growth(batch_ctx, running)):
+                        self._requeue(req)
                         break
 
                 slot_id = free_slots.pop(0)
-                req.started_at = time.time()
+                if req.started_at == 0:
+                    req.started_at = time.time()
                 req.status = RequestStatus.PREFILLING
 
                 try:
                     # Check if this request was preempted and has a snapshot
                     if req.kv_cache_snapshot is not None:
                         batch_ctx.slot_restore(slot_id, req.kv_cache_snapshot)
+                        self._release_snapshot(req)
                         req.kv_cache_snapshot = None
                         # Already prefilled, just resume decoding
                         req.status = RequestStatus.DECODING
@@ -450,6 +573,8 @@ class InferenceEngine:
                         logger.debug(
                             f"Request {req.request_id}: resumed from preemption snapshot"
                         )
+                        if preempted:
+                            break
                         continue
 
                     # Block-granular prefix matching. The runtime attaches
@@ -469,11 +594,17 @@ class InferenceEngine:
                         prefix_publish(slot_id, req.input_ids)
 
                     first_token = int(first_token)
+                    if req.cancelled.is_set():
+                        raise _RequestCancelled()
 
                 except Exception as e:
-                    logger.error(f"Prefill error for {req.request_id}: {e}", exc_info=True)
+                    if not isinstance(e, _RequestCancelled):
+                        logger.error(f"Prefill error for {req.request_id}: {e}", exc_info=True)
+                    else:
+                        req.cancelled.set()
+                    batch_ctx.slot_reset(slot_id)
                     free_slots.append(slot_id)
-                    self._finish_request(req, error=e)
+                    self._finish_request(req, error=None if isinstance(e, _RequestCancelled) else e)
                     self.queue.mark_done(req.request_id)
                     continue
 
@@ -492,8 +623,14 @@ class InferenceEngine:
                     self.queue.mark_done(req.request_id)
                 else:
                     running[slot_id] = req
+                # Allow execution to make progress before considering the victim
+                # again; otherwise admission can endlessly swap two requests.
+                if preempted:
+                    break
 
             # ── 2. Decode with per-request sampling parameters ──
+            if not self._running:
+                break
             if running:
                 active_slots = list(running.keys())
                 current_tokens = [running[s].last_token for s in active_slots]
@@ -509,6 +646,8 @@ class InferenceEngine:
                         top_ks=top_ks,
                         top_ps=top_ps,
                     )
+                    if len(next_tokens) != len(active_slots):
+                        raise RuntimeError("batch runtime returned an incorrect number of tokens")
                 except Exception as e:
                     logger.error(f"Batch decode error: {e}", exc_info=True)
                     for sid in list(running.keys()):
@@ -523,6 +662,9 @@ class InferenceEngine:
                 finished_slots: List[int] = []
                 for slot_id, next_tok in zip(active_slots, next_tokens):
                     req = running[slot_id]
+                    if req.cancelled.is_set():
+                        finished_slots.append(slot_id)
+                        continue
                     next_tok = int(next_tok)
                     req.generated_tokens.append(next_tok)
                     req.last_token = next_tok
@@ -556,23 +698,37 @@ class InferenceEngine:
 
     def _finish_request(self, req: InferenceRequest, error: Exception = None):
         """标记请求完成, 设置 future 结果."""
+        if req.completion_scheduled:
+            return
+        req.completion_scheduled = True
         req.finished_at = time.time()
-
-        if error:
+        try:
+            self._release_snapshot(req)
+        except Exception as cleanup_error:
+            error = error or cleanup_error
+            logger.exception("Failed to release request snapshot")
+        if req.cancelled.is_set():
+            req.status = RequestStatus.CANCELLED
+        elif error:
             req.status = RequestStatus.ERROR
             req.error_message = str(error)
-            if req.loop and req.future and not req.future.done():
-                req.loop.call_soon_threadsafe(req.future.set_exception, error)
         else:
             req.status = RequestStatus.DONE
-            if req.loop and req.future and not req.future.done():
-                req.loop.call_soon_threadsafe(
-                    req.future.set_result, req.generated_tokens
-                )
 
-        # 流式结束信号
-        if req.stream and req.output_queue and req.loop:
-            req.loop.call_soon_threadsafe(req.output_queue.put_nowait, None)
+        # Check done() on the event-loop thread, not before scheduling it: a
+        # client may cancel the future between those two operations.
+        def deliver():
+            if req.future is not None and not req.future.done():
+                if req.status == RequestStatus.CANCELLED:
+                    req.future.cancel()
+                elif error is not None:
+                    req.future.set_exception(error)
+                else:
+                    req.future.set_result(list(req.generated_tokens))
+            if req.stream and req.output_queue is not None:
+                req.output_queue.put_nowait(None)
+        if req.loop is not None and not req.loop.is_closed():
+            req.loop.call_soon_threadsafe(deliver)
 
         elapsed = req.finished_at - req.started_at if req.started_at > 0 else 0
         n_tokens = len(req.generated_tokens)
@@ -585,6 +741,18 @@ class InferenceEngine:
 
         self._total_requests += 1
         self._total_tokens += n_tokens
+
+    def _release_snapshot(self, req):
+        snapshot, req.kv_cache_snapshot = req.kv_cache_snapshot, None
+        if snapshot is None:
+            return
+        close = getattr(snapshot, "close", None)
+        if close is not None:
+            close()
+        else:
+            destroy = getattr(getattr(self, "model", None), "destroy_snapshot", None)
+            if destroy is not None:
+                destroy(snapshot)
 
     # ── 状态查询 ─────────────────────────────────────────────────
 

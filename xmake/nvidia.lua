@@ -12,7 +12,7 @@ target("llaisys-device-nvidia")
         add_cxflags("-fPIC", "-Wno-unknown-pragmas")
         add_cuflags("-Xcompiler=-fPIC", "-arch=" .. nvidia_cuda_arch,
                     "--default-stream=per-thread")
-        add_culdflags("-Xcompiler=-fPIC")
+        add_culdflags("-Xcompiler=-fPIC", "-arch=" .. nvidia_cuda_arch)
     end
 
     add_files("../src/device/nvidia/*.cu")
@@ -33,7 +33,7 @@ target("llaisys-flashinfer-nvidia")
         add_cxflags("-fPIC", "-Wno-unknown-pragmas")
         add_cuflags("-Xcompiler=-fPIC", "-arch=" .. nvidia_cuda_arch,
                     "--default-stream=per-thread", "-w")
-        add_culdflags("-Xcompiler=-fPIC")
+        add_culdflags("-Xcompiler=-fPIC", "-arch=" .. nvidia_cuda_arch)
     end
 
     add_files("../src/ops/self_attention/nvidia/flashinfer_adapter.cu")
@@ -59,7 +59,7 @@ target("llaisys-ops-nvidia")
         add_cxflags("-fPIC", "-Wno-unknown-pragmas")
         add_cuflags("-Xcompiler=-fPIC", "-arch=" .. nvidia_cuda_arch,
                     "--default-stream=per-thread")
-        add_culdflags("-Xcompiler=-fPIC")
+        add_culdflags("-Xcompiler=-fPIC", "-arch=" .. nvidia_cuda_arch)
     end
 
     add_files("../src/ops/*/nvidia/*.cu")

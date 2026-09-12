@@ -1,0 +1,2172 @@
+{
+  "executor": "llaisys-independent-python-reference",
+  "published_model_imported": false,
+  "model_config": {
+    "dim": 4096,
+    "vocab_size": 129280,
+    "n_layers": 43,
+    "n_heads": 64,
+    "head_dim": 512,
+    "q_lora_rank": 1024,
+    "o_groups": 8,
+    "o_lora_rank": 1024,
+    "moe_inter_dim": 2048,
+    "n_routed_experts": 256,
+    "n_activated_experts": 6,
+    "compress_ratios": [
+      0,
+      0,
+      4,
+      128,
+      4,
+      128,
+      4,
+      128,
+      4,
+      128,
+      4,
+      128,
+      4,
+      128,
+      4,
+      128,
+      4,
+      128,
+      4,
+      128,
+      4,
+      128,
+      4,
+      128,
+      4,
+      128,
+      4,
+      128,
+      4,
+      128,
+      4,
+      128,
+      4,
+      128,
+      4,
+      128,
+      4,
+      128,
+      4,
+      128,
+      4,
+      128,
+      4
+    ],
+    "rope_head_dim": 64,
+    "n_hash_layers": 3,
+    "n_shared_experts": 1,
+    "index_n_heads": 64,
+    "index_head_dim": 128,
+    "index_topk": 512,
+    "window_size": 128,
+    "max_seq_len": 512,
+    "norm_eps": 1e-06,
+    "hc_mult": 4,
+    "hc_sinkhorn_iters": 20,
+    "hc_eps": 1e-06,
+    "score_func": "sqrtsoftplus",
+    "route_scale": 1.5,
+    "swiglu_limit": 10.0,
+    "rope_theta": 10000,
+    "compress_rope_theta": 160000.0,
+    "original_seq_len": 65536,
+    "rope_factor": 16,
+    "beta_fast": 32,
+    "beta_slow": 1,
+    "weight_dtype": "fp8",
+    "expert_dtype": "fp4",
+    "mtp_stages": 3,
+    "dspark_target_layer_ids": [
+      40,
+      41,
+      42
+    ],
+    "dspark_markov_rank": 256
+  },
+  "weights": {
+    "format": "converted-mp1",
+    "checkpoint": "/tmp/llaisys-deepseek-v4-flash-mp1/model0-mp1.safetensors",
+    "checkpoint_size_bytes": 168430204680,
+    "header_sha256": "80fb82525d75f1580d3bfca8d0f5340fc8cc4a8f243a1e6ae3bb36cf6a6df22c",
+    "tensor_count": 67569,
+    "device_bytes": 159117270492,
+    "dtype_counts": {
+      "torch.float32": 766,
+      "torch.bfloat16": 108,
+      "torch.float8_e4m3fn": 322,
+      "torch.float8_e8m0fnu": 33346,
+      "torch.int32": 3,
+      "torch.float4_e2m1fn_x2": 33024
+    },
+    "explicit_dtype_conversions": [
+      {
+        "tensor": "layers.0.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.0.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.0.ffn.gate.tid2eid",
+        "source": "torch.int64",
+        "destination": "torch.int32"
+      },
+      {
+        "tensor": "layers.0.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.0.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.1.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.1.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.1.ffn.gate.tid2eid",
+        "source": "torch.int64",
+        "destination": "torch.int32"
+      },
+      {
+        "tensor": "layers.1.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.1.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.2.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.2.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.2.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.2.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.2.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.2.attn.indexer.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.2.attn.indexer.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.2.attn.indexer.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.2.ffn.gate.tid2eid",
+        "source": "torch.int64",
+        "destination": "torch.int32"
+      },
+      {
+        "tensor": "layers.2.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.2.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.3.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.3.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.3.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.3.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.3.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.3.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.3.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.4.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.4.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.4.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.4.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.4.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.4.attn.indexer.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.4.attn.indexer.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.4.attn.indexer.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.4.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.4.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.5.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.5.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.5.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.5.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.5.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.5.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.5.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.6.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.6.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.6.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.6.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.6.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.6.attn.indexer.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.6.attn.indexer.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.6.attn.indexer.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.6.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.6.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.7.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.7.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.7.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.7.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.7.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.7.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.7.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.8.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.8.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.8.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.8.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.8.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.8.attn.indexer.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.8.attn.indexer.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.8.attn.indexer.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.8.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.8.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.9.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.9.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.9.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.9.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.9.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.9.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.9.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.10.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.10.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.10.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.10.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.10.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.10.attn.indexer.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.10.attn.indexer.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.10.attn.indexer.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.10.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.10.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.11.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.11.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.11.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.11.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.11.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.11.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.11.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.12.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.12.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.12.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.12.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.12.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.12.attn.indexer.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.12.attn.indexer.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.12.attn.indexer.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.12.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.12.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.13.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.13.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.13.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.13.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.13.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.13.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.13.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.14.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.14.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.14.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.14.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.14.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.14.attn.indexer.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.14.attn.indexer.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.14.attn.indexer.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.14.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.14.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.15.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.15.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.15.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.15.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.15.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.15.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.15.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.16.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.16.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.16.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.16.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.16.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.16.attn.indexer.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.16.attn.indexer.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.16.attn.indexer.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.16.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.16.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.17.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.17.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.17.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.17.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.17.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.17.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.17.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.18.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.18.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.18.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.18.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.18.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.18.attn.indexer.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.18.attn.indexer.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.18.attn.indexer.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.18.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.18.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.19.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.19.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.19.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.19.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.19.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.19.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.19.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.20.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.20.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.20.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.20.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.20.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.20.attn.indexer.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.20.attn.indexer.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.20.attn.indexer.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.20.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.20.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.21.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.21.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.21.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.21.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.21.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.21.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.21.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.22.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.22.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.22.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.22.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.22.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.22.attn.indexer.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.22.attn.indexer.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.22.attn.indexer.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.22.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.22.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.23.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.23.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.23.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.23.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.23.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.23.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.23.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.24.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.24.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.24.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.24.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.24.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.24.attn.indexer.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.24.attn.indexer.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.24.attn.indexer.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.24.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.24.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.25.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.25.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.25.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.25.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.25.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.25.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.25.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.26.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.26.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.26.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.26.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.26.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.26.attn.indexer.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.26.attn.indexer.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.26.attn.indexer.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.26.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.26.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.27.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.27.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.27.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.27.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.27.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.27.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.27.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.28.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.28.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.28.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.28.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.28.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.28.attn.indexer.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.28.attn.indexer.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.28.attn.indexer.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.28.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.28.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.29.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.29.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.29.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.29.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.29.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.29.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.29.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.30.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.30.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.30.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.30.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.30.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.30.attn.indexer.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.30.attn.indexer.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.30.attn.indexer.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.30.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.30.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.31.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.31.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.31.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.31.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.31.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.31.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.31.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.32.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.32.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.32.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.32.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.32.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.32.attn.indexer.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.32.attn.indexer.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.32.attn.indexer.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.32.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.32.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.33.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.33.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.33.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.33.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.33.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.33.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.33.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.34.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.34.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.34.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.34.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.34.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.34.attn.indexer.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.34.attn.indexer.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.34.attn.indexer.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.34.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.34.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.35.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.35.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.35.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.35.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.35.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.35.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.35.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.36.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.36.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.36.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.36.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.36.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.36.attn.indexer.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.36.attn.indexer.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.36.attn.indexer.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.36.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.36.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.37.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.37.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.37.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.37.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.37.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.37.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.37.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.38.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.38.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.38.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.38.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.38.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.38.attn.indexer.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.38.attn.indexer.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.38.attn.indexer.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.38.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.38.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.39.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.39.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.39.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.39.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.39.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.39.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.39.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.40.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.40.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.40.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.40.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.40.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.40.attn.indexer.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.40.attn.indexer.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.40.attn.indexer.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.40.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.40.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.41.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.41.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.41.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.41.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.41.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.41.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.41.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.42.attn.q_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.42.attn.kv_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.42.attn.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.42.attn.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.42.attn.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.42.attn.indexer.compressor.wkv.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.42.attn.indexer.compressor.wgate.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.42.attn.indexer.compressor.norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.42.attn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "layers.42.ffn_norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "norm.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      },
+      {
+        "tensor": "head.weight",
+        "source": "torch.bfloat16",
+        "destination": "torch.float32"
+      }
+    ],
+    "ignored_mtp_tensors": 4702,
+    "mtp_execution": false,
+    "missing": [],
+    "unexpected": []
+  },
+  "weight_load_seconds": 24.301710416097194,
+  "gpu": "NVIDIA B300 SXM6 AC",
+  "compute_capability": [
+    10,
+    3
+  ],
+  "torch": "2.13.0+cu130",
+  "cuda": "13.0",
+  "tilelang": "0.1.8",
+  "tvm_ffi": "0.1.8.post2",
+  "global_default_dtype": "torch.float32",
+  "global_default_dtype_unchanged": true,
+  "operator_backends": {
+    "act_quant": {
+      "backend": "tilelang",
+      "version": "0.1.8",
+      "contract": {
+        "revision": 1,
+        "inputs": "BF16 [...,K]; block=128; FP32/UE8M0 scales",
+        "outputs": "FP8 [...,K], scale [...,K/128] or BF16 QDQ",
+        "mutation": "x only when inplace=True"
+      },
+      "calls": 27843,
+      "failures": 0,
+      "fallback": false
+    },
+    "fp4_act_quant": {
+      "backend": "tilelang",
+      "version": "0.1.8",
+      "contract": {
+        "revision": 1,
+        "inputs": "BF16 [...,K]; block=32; UE8M0 scales",
+        "outputs": "packed E2M1 [...,K/2], scale [...,K/32] or BF16 QDQ",
+        "mutation": "x only when inplace=True"
+      },
+      "calls": 357,
+      "failures": 0,
+      "fallback": false
+    },
+    "fp8_gemm": {
+      "backend": "tilelang",
+      "version": "0.1.8",
+      "contract": {
+        "revision": 1,
+        "inputs": "FP8 A[...,K], B[N,K]; scales A[...,K/128], B[ceil(N/128),K/128]",
+        "outputs": "BF16 [...,N]; FP32 accumulation; no activation requantization",
+        "mutation": "none"
+      },
+      "calls": 3220,
+      "failures": 0,
+      "fallback": false
+    },
+    "fp4_gemm": {
+      "backend": "tilelang",
+      "version": "0.1.8",
+      "contract": {
+        "revision": 1,
+        "inputs": "FP8 A[...,K], packed E2M1 B[N,K/2]; scales A[...,K/128], B[N,K/32]",
+        "outputs": "BF16 [...,N]; FP32 accumulation; W4A8, not W4A4",
+        "mutation": "none"
+      },
+      "calls": 24006,
+      "failures": 0,
+      "fallback": false
+    },
+    "sparse_attn": {
+      "backend": "tilelang",
+      "version": "0.1.8",
+      "contract": {
+        "revision": 1,
+        "inputs": "BF16 Q[B,S,H,D], latent[B,L,D]; FP32 sink[H]; int32 indices[B,S,T], -1=invalid",
+        "outputs": "BF16 [B,S,H,D]; indexed attention with sink in softmax denominator",
+        "mutation": "none"
+      },
+      "calls": 430,
+      "failures": 0,
+      "fallback": false
+    },
+    "hc_split_sinkhorn": {
+      "backend": "tilelang",
+      "version": "0.1.8",
+      "contract": {
+        "revision": 1,
+        "inputs": "FP32 mixes[B,S,(2+HC)*HC], scale[3], base[(2+HC)*HC]",
+        "outputs": "FP32 pre[B,S,HC], post[B,S,HC], combine[B,S,HC,HC]",
+        "mutation": "none"
+      },
+      "calls": 860,
+      "failures": 0,
+      "fallback": false
+    }
+  },
+  "hadamard": {
+    "backend": "cuda",
+    "calls": 357,
+    "fallback": false,
+    "extension": "/home/lcpu/57682329/.local/deepseek-v4-hadamard/fast_hadamard_transform_cuda.so"
+  },
+  "peak_memory_bytes": 159246523904,
+  "measurement": {
+    "kind": "correctness_step_latency_not_serving_ttft_tpot",
+    "batch_size": 1,
+    "concurrency": 1,
+    "warmup_per_case": 1,
+    "warmup_kind": "full prefill and one decode",
+    "repeats": 1,
+    "cuda_graph": false,
+    "prefix_cache": false,
+    "paged_cache": false,
+    "fallback": false,
+    "layer_capture_in_timing": true
+  },
+  "prefill_chunk_size": 65,
+  "baseline_identity_limit": "Legacy reports bind model paths and source hashes, not checkpoint payload hashes; this run additionally records checkpoint header hash and exact golden file hashes.",
+  "provenance": {
+    "commit": "05784b4da6483f77821a061e521ea1b98fa271e1",
+    "branch": "feat/vllm-paged-attention",
+    "worktree_dirty": true,
+    "command": [
+      "tools/deepseek_v4_reference/run_independent.py",
+      "--source-model",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731",
+      "--checkpoint",
+      "/tmp/llaisys-deepseek-v4-flash-mp1/model0-mp1.safetensors",
+      "--baseline",
+      "benchmark_results/deepseek_v4_b300_tilelang_long_accuracy.json",
+      "benchmark_results/deepseek_v4_tilelang_long_golden",
+      "--max-seq-len",
+      "512",
+      "--prefill-chunk-size",
+      "65",
+      "--dump-layer-dir",
+      "benchmark_results/deepseek_v4_independent_chunk65_ordered_layers",
+      "--output",
+      "benchmark_results/deepseek_v4_b300_independent_chunk65_ordered_accuracy.json"
+    ],
+    "file_sha256": {
+      "/home/lcpu/57682329/workspace/llaisys/tools/deepseek_v4_reference/run_independent.py": "e06e4a17074442a4323617daae9a6280c72f99a536b60600329df0507e3a22e1",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/config.json": "6c8f3d2d3b48707541b88f32f22ef3f0f8a6b57d8523281e2b8d3cdb0ae9a023",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/inference/config.json": "c90861f3d10a9e4ef5954f8f1a34c529d480da1c5799f84660028f4e38e14e71",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/inference/kernel.py": "59b325083d7103975cba025bd0d60ea343bb82d8fff53088afb7c04bd380c0c2",
+      "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4.py": "7cc24895f99187157490ece35e33179397af8750c9cf345268a6d1f07bfeae7d",
+      "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_backends.py": "5f0733c58dc3a0a00023c19fb51b2efaf7b3aac73409d112935a864ba68d2775",
+      "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_reference.py": "f7a7d9b5ac0cf7cb5182a6ade36202cf7485622081dc11cebe65f86d92bf8eb6",
+      "/home/lcpu/57682329/workspace/llaisys/tools/deepseek_v4_reference/fast_hadamard_transform.py": "89e8c4002ed50b34283506f544e1a53d94aa5611eaa32b3231639ef46c1bf1da",
+      "/home/lcpu/57682329/.local/deepseek-v4-hadamard/fast_hadamard_transform_cuda.so": "854f75c763ce3a9698b4e31dde765490ecc57d31a7bf87c074bf99378937ad88",
+      "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_model/__init__.py": "a50372e69e48a0cfb7ce4eaa73e02e2e4934e05c9351b5069609b95482dd5ba0",
+      "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_model/config.py": "a6fbeebfb8893d1df1a18a72411b15ff0185accd2c587b8d9c88bb6de1490cab",
+      "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_model/layers.py": "7d3803872029eba047423677d0f229d9c0aacf40f9cb9a48ddab84f89cb38063",
+      "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_model/model.py": "80cbc81f9d5f2138fdd4f34cecb7e1733039b0b1958d10a3f4cb2fa347a149e9",
+      "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_model/state.py": "627f36dbd6c62c3b93bcde17c47c1d644c97573b225c6a09181a60ca4f34272f",
+      "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_model/weights.py": "dca89ee4c624b7806de3329ade4e62f9b49d1e9dbb19b5d6975dc34e1391af45"
+    }
+  },
+  "numerical_gate": {
+    "min_cosine": 0.999,
+    "max_relative_l2": 0.01,
+    "require_same_argmax": true
+  },
+  "cases": [
+    {
+      "prompt": "hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello",
+      "expected_contains": null,
+      "golden_file": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/deepseek_v4_tilelang_long_golden/case_0.safetensors",
+      "golden_sha256": "a8e755113959a64be11ad009f309f53f566d8fa7f94163022d1beefa6f67dadd",
+      "baseline_report": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/deepseek_v4_b300_tilelang_long_accuracy.json",
+      "baseline_report_sha256": "43349ce96b30da857b766c1e20c26520a12106def3999a67755c6a1ca2b38e2d",
+      "input_tokens": 134,
+      "output_tokens": 4,
+      "generated_ids": [
+        44388,
+        44388,
+        44388,
+        44388
+      ],
+      "generated_text": " hello hello hello hello",
+      "teacher_forced_ids": [
+        44388,
+        44388,
+        44388,
+        44388
+      ],
+      "expected_match": null,
+      "steps": [
+        {
+          "step": 0,
+          "phase": "prefill",
+          "position": 0,
+          "input_tokens": 134,
+          "latency_ms": 2296.1675082333386,
+          "finite": true,
+          "argmax_equal": true,
+          "max_abs_error": 2.8048362731933594,
+          "relative_l2": 0.06718875467777252,
+          "cosine_similarity": 0.9979065656661987,
+          "exact_equal": false
+        },
+        {
+          "step": 1,
+          "phase": "decode",
+          "position": 134,
+          "input_tokens": 1,
+          "latency_ms": 218.87915721163154,
+          "finite": true,
+          "argmax_equal": true,
+          "max_abs_error": 1.5720062255859375,
+          "relative_l2": 0.05543283373117447,
+          "cosine_similarity": 0.998467743396759,
+          "exact_equal": false
+        },
+        {
+          "step": 2,
+          "phase": "decode",
+          "position": 135,
+          "input_tokens": 1,
+          "latency_ms": 226.63869801908731,
+          "finite": true,
+          "argmax_equal": true,
+          "max_abs_error": 2.2926712036132812,
+          "relative_l2": 0.07549677044153214,
+          "cosine_similarity": 0.9974279999732971,
+          "exact_equal": false
+        },
+        {
+          "step": 3,
+          "phase": "decode",
+          "position": 136,
+          "input_tokens": 1,
+          "latency_ms": 216.58732322975993,
+          "finite": true,
+          "argmax_equal": true,
+          "max_abs_error": 2.1895599365234375,
+          "relative_l2": 0.06425590068101883,
+          "cosine_similarity": 0.997963547706604,
+          "exact_equal": false
+        }
+      ],
+      "numerical_gate_passed": false,
+      "all_logits_exact": false
+    }
+  ],
+  "all_passed": false,
+  "all_logits_exact": false
+}

@@ -80,4 +80,33 @@ private:
     std::vector<std::string> component_names_;
 };
 
+// DeepSeek-V4-Flash stores one 512-wide latent vector per token (the RoPE
+// dimensions are part of that vector), plus optional learned-compression
+// streams.  This is deliberately separate from MLACacheLayout: V4's window +
+// compressed cache cannot be represented as the classic latent/decoupled-RoPE
+// pair without changing its semantics.
+class DeepSeekV4CacheLayout final : public CacheLayout {
+public:
+    DeepSeekV4CacheLayout(size_t block_size, size_t latent_dim,
+                          size_t index_dim, size_t element_size,
+                          std::vector<size_t> compression_ratios);
+
+    const char *name() const override { return "deepseek-v4-latent"; }
+    size_t numLayers() const override { return compression_ratios_.size(); }
+    size_t blockSize() const override { return block_size_; }
+    size_t numComponents() const override { return component_names_.size(); }
+    const std::string &componentName(size_t component) const override;
+    size_t layerBytes(size_t component, size_t layer) const override;
+
+    size_t compressionRatio(size_t layer) const;
+
+private:
+    size_t block_size_;
+    size_t latent_dim_;
+    size_t index_dim_;
+    size_t element_size_;
+    std::vector<size_t> compression_ratios_;
+    std::vector<std::string> component_names_{"window_latent"};
+};
+
 } // namespace llaisys::core

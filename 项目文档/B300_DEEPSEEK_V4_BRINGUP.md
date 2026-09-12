@@ -1,6 +1,6 @@
 # B300 DeepSeek-V4-Flash 适配工程记录
 
-日期：2026-09-01 UTC；最近续接：2026-09-08 UTC
+日期：2026-09-01 UTC；最近续接：2026-09-12 UTC
 
 ## 工作范围与基线
 
@@ -10,7 +10,17 @@
 - GPU 通过 Slurm 的 `gpu` 分区分配；当前 QOS 限制每个用户最多使用一张 GPU。
 - 根据项目所有者要求，本轮没有重复执行 Qwen 测试。
 
-## 当前摘要（2026-09-08）
+## 当前摘要（2026-09-12）
+
+- 完整 C++ 主模型、严格 MP1 权重装载和 pybind Session 已接通现有 InferenceEngine。
+  Slurm 23097：不同 prompt 两两组合，352 步 logits 和流式生成全部对齐官方；
+  取消/诊断错误后恢复、slot 回收通过，原生模型与算子可独立替换。
+- Slurm 26564 已完成 32/256/2105 输入、16 输出、并发 1/2 的首组暖态 serving
+  性能矩阵；每组 warmup=1、repeat=3。完整数据与长输入波动说明见文末。
+- 当前原生 Session 为连续/ring cache、串行 slot、greedy；原生 paged/Prefix/快照、
+  原始 full/chunk 门槛、HTTP 与多卡 TP/EP 仍未完成。下面保留旧阶段摘要作为历史。
+
+## 组件与 Python 参考执行器历史摘要（2026-09-08）
 
 - 独立主模型 43 层已加载真实 MP1 权重；默认 TileLang 核心 + PyTorch 模型算子。
 - 已接入实际 V4 对话编码与无 golden 依赖的 greedy CLI；8 例对话、352 步 logits
@@ -2578,3 +2588,74 @@ python3 tools/deepseek_v4_reference/verify_native_serving.py \
 
 尚待完成：原生 paged/Prefix 与请求快照、原始 full/chunk 数值门槛、HTTP 接入、
 正式性能矩阵和多卡 TP/EP。上述原生 serving 链路不是完整适配目标的终点。
+
+## 首组原生 serving 性能矩阵（2026-09-12）
+
+Slurm **26564**，报告 `benchmark_results/deepseek_v4_b300_native_serving_benchmark.json`。
+执行链路是既有 InferenceEngine → pybind SchedulePlan → C++ 完整 43 层模型；
+没有 logits observer、没有喂 golden token、没有 Python 逐算子回调。
+
+- HEAD `05784b4da6483f77821a061e521ea1b98fa271e1`，工作区包含未提交适配修改；
+  报告绑定本次源码、模块、kernel bundle 和完整 checkpoint SHA256，运行后摘要一致。
+- B300 SXM6 AC ×1，UUID `GPU-dadf9f3b-df58-d3fa-07b0-5fe223423db1`，CC 10.3；
+  driver 580.126.09，显存由 nvidia-smi 报告为 275040 MiB。
+- Python 3.12.3，Torch 2.13.0+cu130，CUDA 13.0，TileLang 0.1.8，TVM-FFI
+  0.1.8.post2；当前 Torch NCCL 为 **2.29.7**，不混用初始系统 NCCL 2.29.3 记录。
+- dense/shared W8A8、routed experts W4A8，UE8M0 scale，BF16 hidden/cache，
+  FP32/BF16 结构算术按官方合同保留。核心算子为 TileLang，结构为 ATen C++，
+  Hadamard 为上游 CUDA。逐算子计数、失败数与版本写入每组 runtime 报告。
+- 固定合成 raw-completion 输入，不是任务精度评测；实际 input IDs 和 generated
+  IDs 均保存。所有请求实际生成 16 token，EOS 策略保留，未人为强制继续生成。
+- 每个长度/并发组合预热 1 轮、测量 3 轮；并发 1 为 3 个请求样本，并发 2 为
+  6 个请求样本。GPU batch 仍为单 slot 串行执行，不能称为 fused/mixed GPU batch。
+- 每轮新请求 cache；Prefix Cache、原生 paged、CUDA Graph 均关闭，无 fallback。
+  模型装载 27.225 秒单独记录，不计入 TTFT；tokenization 和 kernel 离线编译不计入。
+
+| 输入 token | 并发 | TTFT 平均 / P95 (ms) | TPOT 平均 / P95 (ms/token) | 采样 GPU 已用显存峰值 (GiB) |
+|---:|---:|---:|---:|---:|
+| 32 | 1 | 1229.240 / 1234.876 | 161.855 / 163.416 | 155.287 |
+| 256 | 1 | 2273.152 / 2276.078 | 162.575 / 163.335 | 161.752 |
+| 2105 | 1 | 8172.569 / 9661.479 | 303.584 / 384.074 | 220.369 |
+| 32 | 2 | 2279.256 / 3595.401 | 370.214 / 427.038 | 155.334 |
+| 256 | 2 | 3407.731 / 4562.710 | 398.519 / 476.916 | 161.799 |
+| 2105 | 2 | 5602.829 / 7549.138 | 459.842 / 592.243 | 220.504 |
+
+口径与限制：
+
+1. TTFT 从 submit 到 asyncio 收到首 token，包含等待其他请求 prefill 的队列时间。
+   TPOT 先计算单个请求首 token 后的平均到达间隔，再对请求统计；表内 P95 是
+   请求均值的分位数，不是所有 token 的 P95。逐 token 间隔另有独立统计。
+2. 分位数采用线性插值；3/6 个请求样本只适合首组基线描述，不能据此承诺服务 SLO。
+3. 2105-token、并发 1 明显不稳定：三轮 TTFT 为 8200.510、9823.809、6493.389 ms，
+   TPOT 为 359.193、386.838、164.719 ms。保留全部样本，不择优；并发 2 的 TTFT
+   更低不能直接解释为吞吐优化或线性扩展，需要补充独立复测与 CPU/GPU profiler。
+4. 显存由 nvidia-smi 每 100 ms 采样，覆盖 native allocation，但属于整个目标 GPU
+   的 memory.used，不是模型独占分配计数，也不是精确 allocator high-water mark。
+   采样包含 CUDA context、模型、cache 和 workspace，可能遗漏短时峰值。报告验证
+   采样器未提前退出、窗口两端与内部最大间隔不超过 500 ms；本次全部满足。
+5. input_tokens/TTFT 是有效 serving prompt 处理速率，不是独立 kernel prefill
+   throughput；每请求 decode 速率不能相加冒充并发吞吐。报告分别保存请求级与
+   cohort 级 output tokens/s、requests/s。当前实现仍是正确性参考后端，不宣称
+   已完成专家 grouped GEMM、device-only dispatch、workspace 池化或 B300 性能优化。
+
+```bash
+# Slurm 分配内，PYTHONPATH 使用前述已验证的隔离环境。
+python3 tools/deepseek_v4_reference/bench_native_serving.py \
+  --source-model /home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731 \
+  --checkpoint /tmp/llaisys-deepseek-v4-flash-mp1/model0-mp1.safetensors \
+  --bundle benchmark_results/native_backend_20260909_cpp/bundle.json \
+  --module build/linux/x86_64/release/_v4_native.so \
+  --lengths 32 256 2105 --concurrency 1 2 --output-tokens 16 \
+  --warmup 1 --repeats 3 \
+  --output benchmark_results/deepseek_v4_b300_native_serving_benchmark.json
+```
+
+Slurm **26578**：新性能脚本的 14 项 CPU 合同测试、原生 serving facade 的 12 项
+合同/调度测试及既有 7 项 scheduler 测试，共 **33 项通过**。覆盖显存采样中断与
+缺测、启动/清理失败、EOS 实际长度、TPOT 空值、分位数、预热排除等。双替身测试
+不是 GPU 数值证据。新沙箱中一份旧 CPU unittest 在事件等待中未完成，确认 PID 后
+已终止；不计为通过，也未修改模型/调度代码来绕过该环境问题。
+
+下一步优先原生 paged 接入：把既有 pybind 内的 block lease/prefix 生命周期实现
+提取为可复用 C++ core 接口，并让 native Tensor 安全引用已有 PagedCacheStorage。
+不得另写 block allocator，也不把 latent payload 复制回连续 cache 伪装分页。

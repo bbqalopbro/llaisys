@@ -61,6 +61,18 @@ option("python-include")
     set_description("Path to Python headers (required when python-bindings=y)")
 option_end()
 
+option("dlpack-include")
+    set_default("")
+    set_showmenu(true)
+    set_description("Optional DLPack include root for native V4 paged storage views (DLPack >= 1.0)")
+option_end()
+
+-- Optional native TileLang kernel backend --
+includes("xmake/tilelang.lua")
+includes("xmake/aten.lua")
+includes("xmake/native_tensor.lua")
+includes("xmake/native_model.lua")
+
 -- MetaX (沐曦) --
 option("metax-gpu")
     set_default(false)
@@ -196,7 +208,10 @@ target("llaisys")
         add_links("cublas", "cudart")
         add_linkdirs("/usr/local/cuda/lib64")
         set_toolset("cu", "nvcc")
-        add_cuflags("-Xcompiler=-fPIC", "--default-stream=per-thread")
+        local cuda_arch = get_config("cuda-arch") or "sm_80"
+        add_cuflags("-Xcompiler=-fPIC", "-arch=" .. cuda_arch,
+                    "--default-stream=per-thread")
+        add_culdflags("-arch=" .. cuda_arch)
         add_files("src/device/nvidia/*.cu")
         add_files("src/ops/self_attention/paged_attention.cpp")
         add_files("src/ops/cache/cache_ops.cpp")
@@ -261,7 +276,7 @@ if has_config("python-bindings") then
         set_kind("shared")
         set_languages("cxx17")
         add_deps("llaisys")
-        add_files("python/bindings/module.cpp")
+        add_files("python/bindings/module.cpp", "python/bindings/cache.cpp")
         add_includedirs(".")
         set_targetdir("python/llaisys")
         set_filename("_C.so")
@@ -274,9 +289,46 @@ if has_config("python-bindings") then
             raise("python-bindings requires --pybind11-include=<pybind11 include directory>")
         end
         add_includedirs(py_inc, bind_inc)
+        local dlpack_inc = get_config("dlpack-include")
+        if dlpack_inc and dlpack_inc ~= "" then
+            if not os.isfile(path.join(dlpack_inc, "dlpack/dlpack.h")) then
+                raise("dlpack-include must contain dlpack/dlpack.h")
+            end
+            add_files("python/bindings/paged_storage.cpp")
+            add_defines("LLAISYS_ENABLE_DLPACK_CACHE")
+            add_includedirs(dlpack_inc)
+            if has_config("nv-gpu") then
+                add_links("cudart")
+                on_load(function (target)
+                    import("detect.sdks.find_cuda")
+                    local cuda = find_cuda()
+                    assert(cuda, "native CUDA storage requires a detected CUDA toolkit")
+                    target:add("includedirs", cuda.includedirs)
+                    target:add("linkdirs", cuda.linkdirs)
+                end)
+            end
+        end
         add_rpathdirs("$ORIGIN/libllaisys")
     target_end()
 end
+
+target("llaisys-cache-storage-test")
+    set_kind("binary")
+    set_languages("cxx17")
+    add_includedirs(".")
+    add_files("test/paged_storage_lifecycle_test.cpp")
+    add_deps("llaisys-core")
+target_end()
+
+target("llaisys-cache-lease-test")
+    set_kind("binary")
+    set_default(false)
+    set_languages("cxx17")
+    set_warnings("all", "error")
+    add_includedirs(".")
+    add_files("test/block_lease_test.cpp")
+    add_deps("llaisys-core")
+target_end()
 
 target("llaisys-dist-smoke")
     set_kind("binary")

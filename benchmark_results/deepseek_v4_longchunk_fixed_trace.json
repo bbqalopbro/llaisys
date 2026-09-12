@@ -1,0 +1,1891 @@
+{
+  "scope": "partial_real_weight_layer_diagnostic_not_full_model_accuracy",
+  "layers": 3,
+  "loaded_tensors": 4704,
+  "header_sha256": "80fb82525d75f1580d3bfca8d0f5340fc8cc4a8f243a1e6ae3bb36cf6a6df22c",
+  "gpu": "NVIDIA B300 SXM6 AC",
+  "torch": "2.13.0+cu130",
+  "cuda": "13.0",
+  "fp32_matmul_precision": "highest",
+  "allow_tf32": false,
+  "allow_bf16_reduced_precision_reduction": true,
+  "tokens": 2105,
+  "chunk_size": 257,
+  "frozen_modules": [],
+  "max_seq_len": 4096,
+  "slurm_job_id": "22978",
+  "diagnostic_fixed_fp32_rows": 0,
+  "indexer_tie_policy": "index_ascending",
+  "attention_metadata_policy": "fixed",
+  "command": [
+    "tools/deepseek_v4_reference/diagnose_independent_chunks.py",
+    "--source-model",
+    "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731",
+    "--checkpoint",
+    "/tmp/llaisys-deepseek-v4-flash-mp1/model0-mp1.safetensors",
+    "--tokens",
+    "benchmark_results/deepseek_v4_tilelang_top512_golden/case_0.safetensors",
+    "--layers",
+    "3",
+    "--max-seq-len",
+    "4096",
+    "--chunk-size",
+    "257",
+    "--model-linear-backend",
+    "torch-fixed32",
+    "--indexer-tie-policy",
+    "index_ascending",
+    "--attention-metadata-policy",
+    "fixed",
+    "--output",
+    "benchmark_results/deepseek_v4_longchunk_fixed_trace.json"
+  ],
+  "file_sha256": {
+    "/home/lcpu/57682329/workspace/llaisys/tools/deepseek_v4_reference/diagnose_independent_chunks.py": "44545a733558ba5fe41531a42ae04b445e49aa6e46150847c825f2ba283f9179",
+    "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/inference/kernel.py": "59b325083d7103975cba025bd0d60ea343bb82d8fff53088afb7c04bd380c0c2",
+    "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/config.json": "6c8f3d2d3b48707541b88f32f22ef3f0f8a6b57d8523281e2b8d3cdb0ae9a023",
+    "benchmark_results/deepseek_v4_tilelang_top512_golden/case_0.safetensors": "86ae149a3e019e8737266dcdda44f701eb20d0f4f03cfafc692cc37fc4fa9915",
+    "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_backends.py": "e83c52c7977f0bf0c221a0ebcc621a9178791e852513f82c53378c7b21be40c9",
+    "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_model_ops.py": "9c244f60488058f064582930abaf5556a05d5081003a26acca50234212706795",
+    "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_reference.py": "f7a7d9b5ac0cf7cb5182a6ade36202cf7485622081dc11cebe65f86d92bf8eb6",
+    "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_model/__init__.py": "b635e0e590d584eb23251f877a816cff035d8676517141fc99bf800afda71900",
+    "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_model/config.py": "c16d141ca56040b8a0c4c4915add4d56a94b4358ea3e2de31dc789a4785ea3b9",
+    "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_model/layers.py": "036fbb6e13416bcdce0474b16c26e130bb7264e264a3a6a6e6fd48b404705ba4",
+    "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_model/model.py": "129e48f0667e9deabcfc44ff94c68f8767970085d8834766f1150beae22706ea",
+    "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_model/paged.py": "77767d95ad7db10be57e4224a95e6f307be599ba7865893547a506c9e55ff879",
+    "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_model/state.py": "6295ae39264d64f1f6b979dae4780452db6e5faa16b269b5b42179d30079624a",
+    "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_model/weights.py": "dca89ee4c624b7806de3329ade4e62f9b49d1e9dbb19b5d6975dc34e1391af45"
+  },
+  "operator_backends": {
+    "act_quant": {
+      "backend": "tilelang",
+      "version": "0.1.8",
+      "contract": {
+        "revision": 1,
+        "inputs": "BF16 [...,K]; block=128; FP32/UE8M0 scales",
+        "outputs": "FP8 [...,K], scale [...,K/128] or BF16 QDQ",
+        "mutation": "x only when inplace=True"
+      },
+      "calls": 3704,
+      "failures": 0,
+      "fallback": false
+    },
+    "fp4_act_quant": {
+      "backend": "tilelang",
+      "version": "0.1.8",
+      "contract": {
+        "revision": 1,
+        "inputs": "BF16 [...,K]; block=32; UE8M0 scales",
+        "outputs": "packed E2M1 [...,K/2], scale [...,K/32] or BF16 QDQ",
+        "mutation": "x only when inplace=True"
+      },
+      "calls": 20,
+      "failures": 0,
+      "fallback": false
+    },
+    "fp8_gemm": {
+      "backend": "tilelang",
+      "version": "0.1.8",
+      "contract": {
+        "revision": 1,
+        "inputs": "FP8 A[...,K], B[N,K]; scales A[...,K/128], B[ceil(N/128),K/128]",
+        "outputs": "BF16 [...,N]; FP32 accumulation; no activation requantization",
+        "mutation": "none"
+      },
+      "calls": 220,
+      "failures": 0,
+      "fallback": false
+    },
+    "fp4_gemm": {
+      "backend": "tilelang",
+      "version": "0.1.8",
+      "contract": {
+        "revision": 1,
+        "inputs": "FP8 A[...,K], packed E2M1 B[N,K/2]; scales A[...,K/128], B[N,K/32]",
+        "outputs": "BF16 [...,N]; FP32 accumulation; W4A8, not W4A4",
+        "mutation": "none"
+      },
+      "calls": 3444,
+      "failures": 0,
+      "fallback": false
+    },
+    "sparse_attn": {
+      "backend": "tilelang",
+      "version": "0.1.8",
+      "contract": {
+        "revision": 1,
+        "inputs": "BF16 Q[B,S,H,D], latent[B,L,D]; FP32 sink[H]; int32 indices[B,S,T], -1=invalid",
+        "outputs": "BF16 [B,S,H,D]; indexed attention with sink in softmax denominator",
+        "mutation": "none"
+      },
+      "calls": 30,
+      "failures": 0,
+      "fallback": false
+    },
+    "hc_split_sinkhorn": {
+      "backend": "tilelang",
+      "version": "0.1.8",
+      "contract": {
+        "revision": 1,
+        "inputs": "FP32 mixes[B,S,(2+HC)*HC], scale[3], base[(2+HC)*HC]",
+        "outputs": "FP32 pre[B,S,HC], post[B,S,HC], combine[B,S,HC,HC]",
+        "mutation": "none"
+      },
+      "calls": 60,
+      "failures": 0,
+      "fallback": false
+    },
+    "rms_norm": {
+      "backend": "torch-fixed32",
+      "version": "2.13.0+cu130;fixed_rows=32",
+      "contract": {
+        "revision": 1,
+        "inputs": "BF16/FP32 X[...,D], FP32 weight[D], epsilon",
+        "outputs": "X dtype [...,D]; FP32 normalization and weight multiplication",
+        "mutation": "none"
+      },
+      "calls": 140,
+      "failures": 0,
+      "fallback": false
+    },
+    "dense_linear": {
+      "backend": "torch-fixed32",
+      "version": "2.13.0+cu130;fixed_rows=32",
+      "contract": {
+        "revision": 1,
+        "inputs": "BF16/FP32 X[...,K], matching W[N,K]; same device",
+        "outputs": "matching dtype [...,N]; no weight or activation quantization",
+        "mutation": "none"
+      },
+      "calls": 140,
+      "failures": 0,
+      "fallback": false
+    },
+    "moe_combine": {
+      "backend": "torch-fixed32",
+      "version": "2.13.0+cu130;fixed_rows=32",
+      "contract": {
+        "revision": 1,
+        "inputs": "BF16 expert outputs[R,D] in ExpertDispatch order; dispatch metadata",
+        "outputs": "FP32 [T,D]; accumulate in ascending expert ID, no route reweighting or shared expert",
+        "mutation": "none"
+      },
+      "calls": 30,
+      "failures": 0,
+      "fallback": false
+    },
+    "row_inv_rms": {
+      "backend": "torch-fixed32",
+      "version": "2.13.0+cu130;fixed_rows=32",
+      "contract": {
+        "revision": 1,
+        "inputs": "BF16/FP32 X[...,D], epsilon; square/mean in the input dtype",
+        "outputs": "same dtype [...,1], rsqrt(mean(square(X))+epsilon)",
+        "mutation": "none"
+      },
+      "calls": 90,
+      "failures": 0,
+      "fallback": false
+    },
+    "indexer_topk": {
+      "backend": "torch-fixed32",
+      "version": "2.13.0+cu130;fixed_rows=32",
+      "contract": {
+        "revision": 1,
+        "inputs": "BF16/FP32 scores[B,S,C], k<=C, explicit published/index_ascending tie policy",
+        "outputs": "integer indices[B,S,k], descending scores; tie policy must be honored",
+        "mutation": "none"
+      },
+      "calls": 10,
+      "failures": 0,
+      "fallback": false
+    },
+    "hc_sum": {
+      "backend": "torch-fixed32",
+      "version": "2.13.0+cu130;fixed_rows=32",
+      "contract": {
+        "revision": 1,
+        "inputs": "FP32 HC weighted terms, explicit reduction axis",
+        "outputs": "FP32 sum with that axis removed; no dtype conversion",
+        "mutation": "none"
+      },
+      "calls": 120,
+      "failures": 0,
+      "fallback": false
+    },
+    "grouped_linear": {
+      "backend": "torch-fixed32",
+      "version": "2.13.0+cu130;fixed_rows=32",
+      "contract": {
+        "revision": 1,
+        "inputs": "BF16/FP32 X[B,S,G,K], matching W[G,N,K]; same device",
+        "outputs": "matching dtype [B,S,G,N]; separate weight matrix per group",
+        "mutation": "none"
+      },
+      "calls": 30,
+      "failures": 0,
+      "fallback": false
+    },
+    "moe_dispatch": {
+      "backend": "torch-fixed32",
+      "version": "2.13.0+cu130;fixed_rows=32",
+      "contract": {
+        "revision": 1,
+        "inputs": "BF16 X[T,D], FP32 weights[T,K], distinct in-range integer expert IDs[T,K], E",
+        "outputs": "ExpertDispatch: owned packed hidden/weights/token IDs and device offsets; expert-ID-major stable order",
+        "mutation": "none"
+      },
+      "calls": 30,
+      "failures": 0,
+      "fallback": false
+    },
+    "router": {
+      "backend": "torch-fixed32",
+      "version": "2.13.0+cu130;fixed_rows=32",
+      "contract": {
+        "revision": 1,
+        "inputs": "FP32 logits[T,E]; score function, top-k, scale; FP32 bias[E] or hash IDs[T,K]",
+        "outputs": "FP32 weights[T,K], integer expert IDs[T,K]; bias affects selection only",
+        "mutation": "none"
+      },
+      "calls": 30,
+      "failures": 0,
+      "fallback": false
+    },
+    "indexer_scores": {
+      "backend": "torch-fixed32",
+      "version": "2.13.0+cu130;fixed_rows=32",
+      "contract": {
+        "revision": 1,
+        "inputs": "BF16 Q[B,S,H,D], K[B,C,D], weights[B,S,H]",
+        "outputs": "BF16 [B,S,C]; BF16 dot/ReLU/product/reduction; no causal mask",
+        "mutation": "none"
+      },
+      "calls": 10,
+      "failures": 0,
+      "fallback": false
+    },
+    "compressor_pool": {
+      "backend": "torch-fixed32",
+      "version": "2.13.0+cu130;fixed_rows=32",
+      "contract": {
+        "revision": 1,
+        "inputs": "FP32 projected values/scores[B,(G),R,D], scores may contain -inf",
+        "outputs": "FP32 [B,G,D] or decode [B,1,D]; softmax/reduction on R preserving input rank",
+        "mutation": "none"
+      },
+      "calls": 20,
+      "failures": 0,
+      "fallback": false
+    },
+    "rotary_inplace": {
+      "backend": "torch-fixed32",
+      "version": "2.13.0+cu130;fixed_rows=32",
+      "contract": {
+        "revision": 1,
+        "inputs": "BF16/FP32 X[B,S,(H),R], complex64 frequencies[S,R/2], inverse flag",
+        "outputs": "same X storage; adjacent-pair FP32 complex rotation",
+        "mutation": "X, including strided RoPE slices"
+      },
+      "calls": 120,
+      "failures": 0,
+      "fallback": false
+    },
+    "expert_activation": {
+      "backend": "torch-fixed32",
+      "version": "2.13.0+cu130;fixed_rows=32",
+      "contract": {
+        "revision": 1,
+        "inputs": "BF16 gate/up[T,I], clamp limit; optional FP32 routing weights[T,1]",
+        "outputs": "BF16 [T,I]; FP32 SwiGLU, route scaling BEFORE BF16 cast and down projection",
+        "mutation": "none"
+      },
+      "calls": 1178,
+      "failures": 0,
+      "fallback": false
+    }
+  },
+  "comparisons": {
+    "chunk": {
+      "layers.0.attn_norm.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.attn_norm.output": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.attn.wq_a.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.attn.wq_a.output": {
+        "shape": [
+          2105,
+          1024
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.attn.q_norm.input": {
+        "shape": [
+          2105,
+          1024
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.attn.q_norm.output": {
+        "shape": [
+          2105,
+          1024
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.attn.wq_b.input": {
+        "shape": [
+          2105,
+          1024
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.attn.wq_b.output": {
+        "shape": [
+          2105,
+          32768
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.attn.wkv.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.attn.wkv.output": {
+        "shape": [
+          2105,
+          512
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.attn.kv_norm.input": {
+        "shape": [
+          2105,
+          512
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.attn.kv_norm.output": {
+        "shape": [
+          2105,
+          512
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.attn.wo_b.input": {
+        "shape": [
+          2105,
+          8192
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.attn.wo_b.output": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.attn.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.attn.output": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.ffn_norm.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.ffn_norm.output": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.ffn.gate.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.ffn.gate.output_0": {
+        "shape": [
+          2105,
+          6
+        ],
+        "dtype": "torch.float32",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.ffn.gate.output_1": {
+        "shape": [
+          2105,
+          6
+        ],
+        "dtype": "torch.int32",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.ffn.shared_experts.w1.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.ffn.shared_experts.w1.output": {
+        "shape": [
+          2105,
+          2048
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.ffn.shared_experts.w3.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.ffn.shared_experts.w3.output": {
+        "shape": [
+          2105,
+          2048
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.ffn.shared_experts.w2.input": {
+        "shape": [
+          2105,
+          2048
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.ffn.shared_experts.w2.output": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.ffn.shared_experts.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.ffn.shared_experts.output": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.ffn.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.ffn.output": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.input": {
+        "shape": [
+          2105,
+          4,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.0.output": {
+        "shape": [
+          2105,
+          4,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.attn_norm.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.attn_norm.output": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.attn.wq_a.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.attn.wq_a.output": {
+        "shape": [
+          2105,
+          1024
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.attn.q_norm.input": {
+        "shape": [
+          2105,
+          1024
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.attn.q_norm.output": {
+        "shape": [
+          2105,
+          1024
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.attn.wq_b.input": {
+        "shape": [
+          2105,
+          1024
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.attn.wq_b.output": {
+        "shape": [
+          2105,
+          32768
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.attn.wkv.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.attn.wkv.output": {
+        "shape": [
+          2105,
+          512
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.attn.kv_norm.input": {
+        "shape": [
+          2105,
+          512
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.attn.kv_norm.output": {
+        "shape": [
+          2105,
+          512
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.attn.wo_b.input": {
+        "shape": [
+          2105,
+          8192
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.attn.wo_b.output": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.attn.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.attn.output": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.ffn_norm.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.ffn_norm.output": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.ffn.gate.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.ffn.gate.output_0": {
+        "shape": [
+          2105,
+          6
+        ],
+        "dtype": "torch.float32",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.ffn.gate.output_1": {
+        "shape": [
+          2105,
+          6
+        ],
+        "dtype": "torch.int32",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.ffn.shared_experts.w1.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.ffn.shared_experts.w1.output": {
+        "shape": [
+          2105,
+          2048
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.ffn.shared_experts.w3.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.ffn.shared_experts.w3.output": {
+        "shape": [
+          2105,
+          2048
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.ffn.shared_experts.w2.input": {
+        "shape": [
+          2105,
+          2048
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.ffn.shared_experts.w2.output": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.ffn.shared_experts.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.ffn.shared_experts.output": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.ffn.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.ffn.output": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.input": {
+        "shape": [
+          2105,
+          4,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.1.output": {
+        "shape": [
+          2105,
+          4,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn_norm.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn_norm.output": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.wq_a.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.wq_a.output": {
+        "shape": [
+          2105,
+          1024
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.q_norm.input": {
+        "shape": [
+          2105,
+          1024
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.q_norm.output": {
+        "shape": [
+          2105,
+          1024
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.wq_b.input": {
+        "shape": [
+          2105,
+          1024
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.wq_b.output": {
+        "shape": [
+          2105,
+          32768
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.wkv.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.wkv.output": {
+        "shape": [
+          2105,
+          512
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.kv_norm.input": {
+        "shape": [
+          2105,
+          512
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.kv_norm.output": {
+        "shape": [
+          2105,
+          512
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.indexer.wq_b.input": {
+        "shape": [
+          2105,
+          1024
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.indexer.wq_b.output": {
+        "shape": [
+          2105,
+          8192
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.indexer.compressor.wkv.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.float32",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.indexer.compressor.wkv.output": {
+        "shape": [
+          2105,
+          256
+        ],
+        "dtype": "torch.float32",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.indexer.compressor.wgate.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.float32",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.indexer.compressor.wgate.output": {
+        "shape": [
+          2105,
+          256
+        ],
+        "dtype": "torch.float32",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.indexer.compressor.norm.input": {
+        "shape": [
+          526,
+          128
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.indexer.compressor.norm.output": {
+        "shape": [
+          526,
+          128
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.indexer.compressor.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.indexer.compressor.output": {
+        "shape": [
+          526,
+          128
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.indexer.weights_proj.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.indexer.weights_proj.output": {
+        "shape": [
+          2105,
+          64
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.indexer.topk.scores": {
+        "shape": [
+          2105,
+          526
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.indexer.topk.indices": {
+        "shape": [
+          2105,
+          512
+        ],
+        "dtype": "torch.int64",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.compressor.wkv.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.float32",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.compressor.wkv.output": {
+        "shape": [
+          2105,
+          1024
+        ],
+        "dtype": "torch.float32",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.compressor.wgate.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.float32",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.compressor.wgate.output": {
+        "shape": [
+          2105,
+          1024
+        ],
+        "dtype": "torch.float32",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.compressor.norm.input": {
+        "shape": [
+          526,
+          512
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.compressor.norm.output": {
+        "shape": [
+          526,
+          512
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.compressor.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.compressor.output": {
+        "shape": [
+          526,
+          512
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.wo_b.input": {
+        "shape": [
+          2105,
+          8192
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.wo_b.output": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.attn.output": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.ffn_norm.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.ffn_norm.output": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.ffn.gate.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.ffn.gate.output_0": {
+        "shape": [
+          2105,
+          6
+        ],
+        "dtype": "torch.float32",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.ffn.gate.output_1": {
+        "shape": [
+          2105,
+          6
+        ],
+        "dtype": "torch.int32",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.ffn.shared_experts.w1.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.ffn.shared_experts.w1.output": {
+        "shape": [
+          2105,
+          2048
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.ffn.shared_experts.w3.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.ffn.shared_experts.w3.output": {
+        "shape": [
+          2105,
+          2048
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.ffn.shared_experts.w2.input": {
+        "shape": [
+          2105,
+          2048
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.ffn.shared_experts.w2.output": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.ffn.shared_experts.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.ffn.shared_experts.output": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.ffn.input": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.ffn.output": {
+        "shape": [
+          2105,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.input": {
+        "shape": [
+          2105,
+          4,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      },
+      "layers.2.output": {
+        "shape": [
+          2105,
+          4,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "exact_equal": true,
+        "max_abs_error": 0.0,
+        "relative_l2": 0.0,
+        "changed_tokens": 0,
+        "first_changed_tokens": [],
+        "last_token_relative_l2": 0.0
+      }
+    }
+  }
+}
