@@ -1,0 +1,682 @@
+{
+  "gpu": "NVIDIA B300 SXM6 AC",
+  "compute_capability": [
+    10,
+    3
+  ],
+  "torch": "2.13.0+cu130",
+  "cuda": "13.0",
+  "backend": "cublas-fp32-gemm+native-quant-decode-attention-hc-router-actquant+native-streaming-compressor+cublas-bf16-indexer+cub-stable-topk",
+  "indexer_tie_policy": "score descending, candidate index ascending",
+  "provenance": {
+    "commit": "05784b4da6483f77821a061e521ea1b98fa271e1",
+    "branch": "feat/vllm-paged-attention",
+    "worktree_dirty": true,
+    "file_sha256": {
+      "/home/lcpu/57682329/workspace/llaisys/tools/deepseek_v4_reference/run_single_gpu.py": "3f566d80f93dea2d7a1f45465ebff6ae051dc07846015afd52797be985601900",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/inference/model.py": "c0c19e6c9fa439bac7fbb1c5bc1868232dfd5aa2f439a548d0e33dcc2a9edd3f",
+      "python/llaisys/libllaisys/libllaisys.so": "466351000af0a265b0313acb0cc1bfebf62e5a478da9ff1e14b1f3b8d572aa51",
+      "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_native.py": "456a6b5d653c7b1c24017ef3f5eebc2c7e89721d651295280c243d0150cf052d"
+    },
+    "command": [
+      "tools/deepseek_v4_reference/run_single_gpu.py",
+      "--source-model",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731",
+      "--converted-model",
+      "/tmp/llaisys-deepseek-v4-flash-mp1",
+      "--cases-file",
+      "test/data/deepseek_v4_indexer_cases.json",
+      "--max-new-tokens",
+      "4",
+      "--max-seq-len",
+      "3072",
+      "--torch-reference-structural-ops",
+      "--dequantized-pytorch-linear",
+      "--native-structural-library",
+      "python/llaisys/libllaisys/libllaisys.so",
+      "--operator-library-linear",
+      "--native-compressor",
+      "--native-indexer",
+      "--compare-indexer",
+      "--output",
+      "benchmark_results/deepseek_v4_b300_native_indexer_accuracy.json"
+    ]
+  },
+  "measurement": {
+    "kind": "correctness_runner_step_latency_not_serving_ttft_tpot",
+    "batch_size": 1,
+    "concurrency": 1,
+    "cuda_graph": false,
+    "prefix_cache": false,
+    "warmup": "one full prefill and one token replay per case",
+    "timed_repeats": 1,
+    "fallback": false,
+    "weights": "FP8 E4M3 dense, FP4 E2M1 experts, E8M0 scales",
+    "activation_dtype": "BF16 with explicit QAT boundaries"
+  },
+  "source_model": "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731",
+  "converted_model": "/tmp/llaisys-deepseek-v4-flash-mp1",
+  "weight_load_seconds": 32.20700582256541,
+  "cases": [
+    {
+      "prompt": "The capital of France is",
+      "prompt_tokens": 5,
+      "accuracy": {
+        "full_prefill_argmax": 11111,
+        "token_replay_argmax": 11111,
+        "argmax_equal": true,
+        "logits_max_abs_error": 1.465743064880371,
+        "logits_mean_abs_error": 0.23774807155132294,
+        "logits_cosine_similarity": 0.998677134513855
+      },
+      "layer_diagnostics": null,
+      "generated_ids": [
+        11111,
+        16,
+        455,
+        6102
+      ],
+      "generated_text": " Paris. The capital",
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 5,
+          "next_token": 11111,
+          "max_logit": 24.798803329467773,
+          "latency_ms": 558.0233731307089
+        },
+        {
+          "start_pos": 5,
+          "input_tokens": 1,
+          "next_token": 16,
+          "max_logit": 22.943918228149414,
+          "latency_ms": 217.70528610795736
+        },
+        {
+          "start_pos": 6,
+          "input_tokens": 1,
+          "next_token": 455,
+          "max_logit": 22.7324161529541,
+          "latency_ms": 218.39558286592364
+        },
+        {
+          "start_pos": 7,
+          "input_tokens": 1,
+          "next_token": 6102,
+          "max_logit": 24.613807678222656,
+          "latency_ms": 229.91045424714684
+        }
+      ],
+      "expected_contains": "Paris",
+      "expected_match": true,
+      "indexer_comparison": [
+        {
+          "phase": "prefill",
+          "step": 0,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0
+        },
+        {
+          "phase": "decode",
+          "step": 1,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 0.9999999403953552
+        },
+        {
+          "phase": "decode",
+          "step": 2,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0
+        },
+        {
+          "phase": "decode",
+          "step": 3,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0000001192092896
+        }
+      ]
+    },
+    {
+      "prompt": "1 + 1 =",
+      "prompt_tokens": 5,
+      "accuracy": {
+        "full_prefill_argmax": 223,
+        "token_replay_argmax": 223,
+        "argmax_equal": true,
+        "logits_max_abs_error": 0.7986135482788086,
+        "logits_mean_abs_error": 0.12103557586669922,
+        "logits_cosine_similarity": 0.999577522277832
+      },
+      "layer_diagnostics": null,
+      "generated_ids": [
+        223,
+        20,
+        201,
+        361
+      ],
+      "generated_text": " 2\n   ",
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 5,
+          "next_token": 223,
+          "max_logit": 23.305923461914062,
+          "latency_ms": 544.2504705861211
+        },
+        {
+          "start_pos": 5,
+          "input_tokens": 1,
+          "next_token": 20,
+          "max_logit": 23.15773582458496,
+          "latency_ms": 215.96081415191293
+        },
+        {
+          "start_pos": 6,
+          "input_tokens": 1,
+          "next_token": 201,
+          "max_logit": 19.278709411621094,
+          "latency_ms": 216.20301296934485
+        },
+        {
+          "start_pos": 7,
+          "input_tokens": 1,
+          "next_token": 361,
+          "max_logit": 18.539583206176758,
+          "latency_ms": 226.4216081239283
+        }
+      ],
+      "expected_contains": "2",
+      "expected_match": true,
+      "indexer_comparison": [
+        {
+          "phase": "prefill",
+          "step": 0,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 0.9999999403953552
+        },
+        {
+          "phase": "decode",
+          "step": 1,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0
+        },
+        {
+          "phase": "decode",
+          "step": 2,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 0.9999999403953552
+        },
+        {
+          "phase": "decode",
+          "step": 3,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0
+        }
+      ]
+    },
+    {
+      "prompt": "The opposite of hot is",
+      "prompt_tokens": 5,
+      "accuracy": {
+        "full_prefill_argmax": 8147,
+        "token_replay_argmax": 8147,
+        "argmax_equal": true,
+        "logits_max_abs_error": 1.0022531747817993,
+        "logits_mean_abs_error": 0.17885400354862213,
+        "logits_cosine_similarity": 0.9992042183876038
+      },
+      "layer_diagnostics": null,
+      "generated_ids": [
+        8147,
+        16,
+        455,
+        12236
+      ],
+      "generated_text": " cold. The opposite",
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 5,
+          "next_token": 8147,
+          "max_logit": 24.08645248413086,
+          "latency_ms": 598.5841206274927
+        },
+        {
+          "start_pos": 5,
+          "input_tokens": 1,
+          "next_token": 16,
+          "max_logit": 22.821380615234375,
+          "latency_ms": 215.17628990113735
+        },
+        {
+          "start_pos": 6,
+          "input_tokens": 1,
+          "next_token": 455,
+          "max_logit": 20.06606674194336,
+          "latency_ms": 215.61035886406898
+        },
+        {
+          "start_pos": 7,
+          "input_tokens": 1,
+          "next_token": 12236,
+          "max_logit": 23.863771438598633,
+          "latency_ms": 226.41302132979035
+        }
+      ],
+      "expected_contains": "cold",
+      "expected_match": true,
+      "indexer_comparison": [
+        {
+          "phase": "prefill",
+          "step": 0,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0
+        },
+        {
+          "phase": "decode",
+          "step": 1,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0
+        },
+        {
+          "phase": "decode",
+          "step": 2,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0000001192092896
+        },
+        {
+          "phase": "decode",
+          "step": 3,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0
+        }
+      ]
+    },
+    {
+      "prompt": "中国的首都是",
+      "prompt_tokens": 3,
+      "accuracy": {
+        "full_prefill_argmax": 6127,
+        "token_replay_argmax": 6127,
+        "argmax_equal": true,
+        "logits_max_abs_error": 0.8470430374145508,
+        "logits_mean_abs_error": 0.13100048899650574,
+        "logits_cosine_similarity": 0.999265193939209
+      },
+      "layer_diagnostics": null,
+      "generated_ids": [
+        6127,
+        303,
+        867,
+        6127
+      ],
+      "generated_text": "北京，而北京",
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 3,
+          "next_token": 6127,
+          "max_logit": 20.02202796936035,
+          "latency_ms": 422.20561718568206
+        },
+        {
+          "start_pos": 3,
+          "input_tokens": 1,
+          "next_token": 303,
+          "max_logit": 21.02300453186035,
+          "latency_ms": 222.97587804496288
+        },
+        {
+          "start_pos": 4,
+          "input_tokens": 1,
+          "next_token": 867,
+          "max_logit": 16.662431716918945,
+          "latency_ms": 213.52043002843857
+        },
+        {
+          "start_pos": 5,
+          "input_tokens": 1,
+          "next_token": 6127,
+          "max_logit": 16.37053108215332,
+          "latency_ms": 213.9551076106727
+        }
+      ],
+      "expected_contains": "北京",
+      "expected_match": true,
+      "indexer_comparison": [
+        {
+          "phase": "prefill",
+          "step": 0,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 0.9999998807907104
+        },
+        {
+          "phase": "decode",
+          "step": 1,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 0.9999998211860657
+        },
+        {
+          "phase": "decode",
+          "step": 2,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0
+        },
+        {
+          "phase": "decode",
+          "step": 3,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0000001192092896
+        }
+      ]
+    },
+    {
+      "prompt": "hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello",
+      "prompt_tokens": 134,
+      "accuracy": {
+        "full_prefill_argmax": 44388,
+        "token_replay_argmax": 44388,
+        "argmax_equal": true,
+        "logits_max_abs_error": 1.778411865234375,
+        "logits_mean_abs_error": 0.2987489700317383,
+        "logits_cosine_similarity": 0.9976123571395874
+      },
+      "layer_diagnostics": null,
+      "generated_ids": [
+        44388,
+        44388,
+        44388,
+        44388
+      ],
+      "generated_text": " hello hello hello hello",
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 134,
+          "next_token": 44388,
+          "max_logit": 34.28218460083008,
+          "latency_ms": 1813.117051962763
+        },
+        {
+          "start_pos": 134,
+          "input_tokens": 1,
+          "next_token": 44388,
+          "max_logit": 33.9924201965332,
+          "latency_ms": 322.55729427561164
+        },
+        {
+          "start_pos": 135,
+          "input_tokens": 1,
+          "next_token": 44388,
+          "max_logit": 33.80815887451172,
+          "latency_ms": 330.3139372728765
+        },
+        {
+          "start_pos": 136,
+          "input_tokens": 1,
+          "next_token": 44388,
+          "max_logit": 34.57429122924805,
+          "latency_ms": 323.4809711575508
+        }
+      ],
+      "expected_contains": null,
+      "expected_match": null,
+      "indexer_comparison": [
+        {
+          "phase": "prefill",
+          "step": 0,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 0.9999999403953552
+        },
+        {
+          "phase": "decode",
+          "step": 1,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0
+        },
+        {
+          "phase": "decode",
+          "step": 2,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0
+        },
+        {
+          "phase": "decode",
+          "step": 3,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 0.9999998807907104
+        }
+      ]
+    },
+    {
+      "prompt": "hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello",
+      "prompt_tokens": 259,
+      "accuracy": {
+        "full_prefill_argmax": 44388,
+        "token_replay_argmax": 44388,
+        "argmax_equal": true,
+        "logits_max_abs_error": 1.9814038276672363,
+        "logits_mean_abs_error": 0.40410828590393066,
+        "logits_cosine_similarity": 0.9958246946334839
+      },
+      "layer_diagnostics": null,
+      "generated_ids": [
+        44388,
+        44388,
+        44388,
+        44388
+      ],
+      "generated_text": " hello hello hello hello",
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 259,
+          "next_token": 44388,
+          "max_logit": 34.92892074584961,
+          "latency_ms": 2910.218284931034
+        },
+        {
+          "start_pos": 259,
+          "input_tokens": 1,
+          "next_token": 44388,
+          "max_logit": 34.97063064575195,
+          "latency_ms": 343.8263237476349
+        },
+        {
+          "start_pos": 260,
+          "input_tokens": 1,
+          "next_token": 44388,
+          "max_logit": 34.73196029663086,
+          "latency_ms": 332.4084999039769
+        },
+        {
+          "start_pos": 261,
+          "input_tokens": 1,
+          "next_token": 44388,
+          "max_logit": 33.801151275634766,
+          "latency_ms": 332.2870088741183
+        }
+      ],
+      "expected_contains": null,
+      "expected_match": null,
+      "indexer_comparison": [
+        {
+          "phase": "prefill",
+          "step": 0,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0
+        },
+        {
+          "phase": "decode",
+          "step": 1,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0
+        },
+        {
+          "phase": "decode",
+          "step": 2,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0
+        },
+        {
+          "phase": "decode",
+          "step": 3,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0
+        }
+      ]
+    },
+    {
+      "prompt": "The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is",
+      "prompt_tokens": 2105,
+      "accuracy": {
+        "full_prefill_argmax": 11111,
+        "token_replay_argmax": 11111,
+        "argmax_equal": true,
+        "logits_max_abs_error": 8.113855361938477,
+        "logits_mean_abs_error": 1.2610182762145996,
+        "logits_cosine_similarity": 0.974877119064331
+      },
+      "layer_diagnostics": null,
+      "generated_ids": [
+        11111,
+        16,
+        455,
+        6102
+      ],
+      "generated_text": " Paris. The capital",
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 2105,
+          "next_token": 11111,
+          "max_logit": 38.10352325439453,
+          "latency_ms": 33040.29728611931
+        },
+        {
+          "start_pos": 2105,
+          "input_tokens": 1,
+          "next_token": 16,
+          "max_logit": 33.79715347290039,
+          "latency_ms": 513.9886368997395
+        },
+        {
+          "start_pos": 2106,
+          "input_tokens": 1,
+          "next_token": 455,
+          "max_logit": 33.33346176147461,
+          "latency_ms": 511.56886108219624
+        },
+        {
+          "start_pos": 2107,
+          "input_tokens": 1,
+          "next_token": 6102,
+          "max_logit": 37.73094940185547,
+          "latency_ms": 530.207450967282
+        }
+      ],
+      "expected_contains": "Paris",
+      "expected_match": true,
+      "indexer_comparison": [
+        {
+          "phase": "prefill",
+          "step": 0,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 0.9999999403953552
+        },
+        {
+          "phase": "decode",
+          "step": 1,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 0.9999999403953552
+        },
+        {
+          "phase": "decode",
+          "step": 2,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 0.9999998807907104
+        },
+        {
+          "phase": "decode",
+          "step": 3,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0000001192092896
+        }
+      ]
+    }
+  ],
+  "all_argmax_equal": true,
+  "all_expected_match": true,
+  "all_compressor_comparisons_pass": null,
+  "all_indexer_comparisons_pass": true,
+  "peak_memory_bytes": 171293393920,
+  "native_operation_counts": {
+    "sparse_attention": 112101,
+    "hyperconnection": 224202,
+    "sqrt_softplus_router": 104280,
+    "activation_quant": 3195134,
+    "fp8_linear": 0,
+    "fp4_linear": 0,
+    "fp8_cublas_linear": 839454,
+    "fp4_cublas_linear": 2160030,
+    "compress_projected": 161634,
+    "indexer_scores_cublas": 53655,
+    "indexer_topk_cub": 53655
+  }
+}

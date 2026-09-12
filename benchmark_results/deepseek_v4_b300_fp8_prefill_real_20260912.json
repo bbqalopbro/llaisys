@@ -1,0 +1,2240 @@
+{
+  "all_passed": true,
+  "scope": "B300 FP8 GEMM operator benchmark; synthetic activations",
+  "slurm_job_id": "26587",
+  "gpu": "NVIDIA B300 SXM6 AC",
+  "capability": [
+    10,
+    3
+  ],
+  "torch": "2.13.0+cu130",
+  "cuda": "13.0",
+  "provenance": {
+    "/home/lcpu/57682329/workspace/llaisys/tools/deepseek_v4_cuda/bench_fp8_prefill.py": "a193b5c42d0380ec5c60ba8f5a7c6323fe29e894b49b4b3b24b1cd69937fb2c4",
+    "build/libv4_fp8_prefill_sm103_v2.so": "4546df4cce27f0ad63fea618fc04b95b9e326f166c3dbd08876d60b569b9d1a3",
+    "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/inference/kernel.py": "59b325083d7103975cba025bd0d60ea343bb82d8fff53088afb7c04bd380c0c2",
+    "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/inference/config.json": "c90861f3d10a9e4ef5954f8f1a34c529d480da1c5799f84660028f4e38e14e71",
+    "/home/lcpu/57682329/workspace/llaisys/src/ops/deepseek_v4/nvidia/fp8_prefill_sm103.cu": "be8df0b0e75b522b95467dce4b2a2cdfed7c9f003d6b76a61ebf5cde80a5a311",
+    "/home/lcpu/57682329/workspace/llaisys/src/ops/deepseek_v4/nvidia/fp8_prefill_sm103.h": "60abc4de1e0b94235c4984f40717253c56d68234fc957ee8baac256fb50667a0"
+  },
+  "cases": [
+    {
+      "m": 32,
+      "n": 1024,
+      "k": 4096,
+      "passed": true,
+      "data": "real MP1 E4M3 B and UE8M0 B scales; synthetic E4M3 A and UE8M0 A scales",
+      "versus_tilelang": {
+        "relative_l2": 4.453890142031014e-05,
+        "max_absolute": 0.03125,
+        "cosine": 1.0,
+        "finite": true
+      },
+      "versus_fp32": {
+        "relative_l2": 0.0016799350269138813,
+        "max_absolute": 0.060916900634765625,
+        "cosine": 0.9999985694885254,
+        "finite": true
+      },
+      "tilelang_versus_fp32": {
+        "relative_l2": 0.0016799350269138813,
+        "max_absolute": 0.060916900634765625,
+        "cosine": 0.9999985694885254,
+        "finite": true
+      },
+      "graph_replay_equal": true,
+      "tilelang_graph_replay_equal": true,
+      "changed_a_scales_graph_passed": true,
+      "changed_a_scales_native": {
+        "relative_l2": 0.0016799350269138813,
+        "max_absolute": 0.12183380126953125,
+        "cosine": 0.9999985694885254,
+        "finite": true
+      },
+      "changed_a_scales_tilelang": {
+        "relative_l2": 0.0016799350269138813,
+        "max_absolute": 0.12183380126953125,
+        "cosine": 0.9999985694885254,
+        "finite": true
+      },
+      "selected_weights": {
+        "path": "/tmp/llaisys-deepseek-v4-flash-mp1/model0-mp1.safetensors",
+        "scope": "selected weight/scale payloads plus full header; not entire checkpoint payload",
+        "header_sha256": "80fb82525d75f1580d3bfca8d0f5340fc8cc4a8f243a1e6ae3bb36cf6a6df22c",
+        "file_size": 168430204680,
+        "tensors": {
+          "layers.2.attn.wq_a.weight": {
+            "dtype": "F8_E4M3",
+            "shape": [
+              1024,
+              4096
+            ],
+            "bytes": 4194304,
+            "sha256": "499b59d537b50b82ff0a7dd249329a68298d852549368f05fe033d429c7f5740"
+          },
+          "layers.2.attn.wq_a.scale": {
+            "dtype": "F8_E8M0",
+            "shape": [
+              8,
+              32
+            ],
+            "bytes": 256,
+            "sha256": "7c758a491cb97a5e838fa97532f340e973de98a2d2fbe9b27a7e1e5381cc2fe1"
+          }
+        }
+      },
+      "rejected_invalid_arguments": {
+        "partial_output_alias": true,
+        "misaligned_output": true
+      },
+      "aligned_16b_views_equal": true,
+      "cublaslt_version": 130101,
+      "algorithm_candidates": 3,
+      "selected_algorithm_index": 0,
+      "tuning_us": [
+        {
+          "index": 0,
+          "microseconds": 7.226880192756653
+        },
+        {
+          "index": 1,
+          "microseconds": 10.335999727249146
+        },
+        {
+          "index": 2,
+          "microseconds": 10.7315194606781
+        }
+      ],
+      "native_with_a_scale_preparation": {
+        "median_us": 8.37119996547699,
+        "samples_us": [
+          8.355439901351929,
+          8.37119996547699,
+          8.373839855194092,
+          8.365839719772339,
+          8.37984025478363
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "native_gemm": {
+        "median_us": 6.830559968948364,
+        "samples_us": [
+          6.832640171051025,
+          6.830559968948364,
+          6.812800168991089,
+          6.8272799253463745,
+          6.842560172080994
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "a_scale_preparation": {
+        "median_us": 1.4393599331378937,
+        "samples_us": [
+          1.4390400052070618,
+          1.4394399523735046,
+          1.4395999908447266,
+          1.438719928264618,
+          1.4393599331378937
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": false
+      },
+      "tilelang": {
+        "median_us": 22.565441131591797,
+        "samples_us": [
+          22.576639652252197,
+          22.56495952606201,
+          22.581520080566406,
+          22.56432056427002,
+          22.565441131591797
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "speedup_including_a_scale": 2.6956041218286706,
+      "effective_tflops": 32.06654447475077,
+      "b_scale_preparation": "once before measurement; FP8 B payload unchanged",
+      "m_padding": 0,
+      "workspace_bytes": 33554432,
+      "projection": "query_a"
+    },
+    {
+      "m": 256,
+      "n": 1024,
+      "k": 4096,
+      "passed": true,
+      "data": "real MP1 E4M3 B and UE8M0 B scales; synthetic E4M3 A and UE8M0 A scales",
+      "versus_tilelang": {
+        "relative_l2": 4.028677722089924e-05,
+        "max_absolute": 0.0625,
+        "cosine": 1.0000001192092896,
+        "finite": true
+      },
+      "versus_fp32": {
+        "relative_l2": 0.0016595092602074146,
+        "max_absolute": 0.062175750732421875,
+        "cosine": 0.9999986886978149,
+        "finite": true
+      },
+      "tilelang_versus_fp32": {
+        "relative_l2": 0.0016595092602074146,
+        "max_absolute": 0.062175750732421875,
+        "cosine": 0.9999986886978149,
+        "finite": true
+      },
+      "graph_replay_equal": true,
+      "tilelang_graph_replay_equal": true,
+      "changed_a_scales_graph_passed": true,
+      "changed_a_scales_native": {
+        "relative_l2": 0.0016595092602074146,
+        "max_absolute": 0.12435150146484375,
+        "cosine": 0.9999986886978149,
+        "finite": true
+      },
+      "changed_a_scales_tilelang": {
+        "relative_l2": 0.0016595092602074146,
+        "max_absolute": 0.12435150146484375,
+        "cosine": 0.9999986886978149,
+        "finite": true
+      },
+      "selected_weights": {
+        "path": "/tmp/llaisys-deepseek-v4-flash-mp1/model0-mp1.safetensors",
+        "scope": "selected weight/scale payloads plus full header; not entire checkpoint payload",
+        "header_sha256": "80fb82525d75f1580d3bfca8d0f5340fc8cc4a8f243a1e6ae3bb36cf6a6df22c",
+        "file_size": 168430204680,
+        "tensors": {
+          "layers.2.attn.wq_a.weight": {
+            "dtype": "F8_E4M3",
+            "shape": [
+              1024,
+              4096
+            ],
+            "bytes": 4194304,
+            "sha256": "499b59d537b50b82ff0a7dd249329a68298d852549368f05fe033d429c7f5740"
+          },
+          "layers.2.attn.wq_a.scale": {
+            "dtype": "F8_E8M0",
+            "shape": [
+              8,
+              32
+            ],
+            "bytes": 256,
+            "sha256": "7c758a491cb97a5e838fa97532f340e973de98a2d2fbe9b27a7e1e5381cc2fe1"
+          }
+        }
+      },
+      "rejected_invalid_arguments": {
+        "partial_output_alias": true,
+        "misaligned_output": true
+      },
+      "aligned_16b_views_equal": true,
+      "cublaslt_version": 130101,
+      "algorithm_candidates": 3,
+      "selected_algorithm_index": 0,
+      "tuning_us": [
+        {
+          "index": 0,
+          "microseconds": 7.914239764213562
+        },
+        {
+          "index": 1,
+          "microseconds": 11.14367961883545
+        },
+        {
+          "index": 2,
+          "microseconds": 11.530239582061768
+        }
+      ],
+      "native_with_a_scale_preparation": {
+        "median_us": 9.118080139160156,
+        "samples_us": [
+          9.118800163269043,
+          9.118080139160156,
+          9.12168025970459,
+          9.117040038108826,
+          9.111520051956177
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "native_gemm": {
+        "median_us": 7.5832802057266235,
+        "samples_us": [
+          7.575039863586426,
+          7.5832802057266235,
+          7.594320178031921,
+          7.569360136985779,
+          7.58512020111084
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "a_scale_preparation": {
+        "median_us": 1.4496800303459167,
+        "samples_us": [
+          1.44896000623703,
+          1.4496800303459167,
+          1.4583200216293335,
+          1.443759948015213,
+          1.4539200067520142
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": false
+      },
+      "tilelang": {
+        "median_us": 22.641921043395996,
+        "samples_us": [
+          22.643120288848877,
+          22.629361152648926,
+          22.641921043395996,
+          22.637760639190674,
+          22.642719745635986
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "speedup_including_a_scale": 2.4831895199246943,
+      "effective_tflops": 235.51927765769773,
+      "b_scale_preparation": "once before measurement; FP8 B payload unchanged",
+      "m_padding": 0,
+      "workspace_bytes": 33554432,
+      "projection": "query_a"
+    },
+    {
+      "m": 2105,
+      "n": 1024,
+      "k": 4096,
+      "passed": true,
+      "data": "real MP1 E4M3 B and UE8M0 B scales; synthetic E4M3 A and UE8M0 A scales",
+      "versus_tilelang": {
+        "relative_l2": 7.43114942451939e-05,
+        "max_absolute": 0.125,
+        "cosine": 1.0,
+        "finite": true
+      },
+      "versus_fp32": {
+        "relative_l2": 0.0016586583806201816,
+        "max_absolute": 0.06250762939453125,
+        "cosine": 0.9999986290931702,
+        "finite": true
+      },
+      "tilelang_versus_fp32": {
+        "relative_l2": 0.001658658147789538,
+        "max_absolute": 0.06249237060546875,
+        "cosine": 0.9999986886978149,
+        "finite": true
+      },
+      "graph_replay_equal": true,
+      "tilelang_graph_replay_equal": true,
+      "changed_a_scales_graph_passed": true,
+      "changed_a_scales_native": {
+        "relative_l2": 0.0016586583806201816,
+        "max_absolute": 0.1250152587890625,
+        "cosine": 0.9999986290931702,
+        "finite": true
+      },
+      "changed_a_scales_tilelang": {
+        "relative_l2": 0.001658658147789538,
+        "max_absolute": 0.1249847412109375,
+        "cosine": 0.9999986886978149,
+        "finite": true
+      },
+      "selected_weights": {
+        "path": "/tmp/llaisys-deepseek-v4-flash-mp1/model0-mp1.safetensors",
+        "scope": "selected weight/scale payloads plus full header; not entire checkpoint payload",
+        "header_sha256": "80fb82525d75f1580d3bfca8d0f5340fc8cc4a8f243a1e6ae3bb36cf6a6df22c",
+        "file_size": 168430204680,
+        "tensors": {
+          "layers.2.attn.wq_a.weight": {
+            "dtype": "F8_E4M3",
+            "shape": [
+              1024,
+              4096
+            ],
+            "bytes": 4194304,
+            "sha256": "499b59d537b50b82ff0a7dd249329a68298d852549368f05fe033d429c7f5740"
+          },
+          "layers.2.attn.wq_a.scale": {
+            "dtype": "F8_E8M0",
+            "shape": [
+              8,
+              32
+            ],
+            "bytes": 256,
+            "sha256": "7c758a491cb97a5e838fa97532f340e973de98a2d2fbe9b27a7e1e5381cc2fe1"
+          }
+        }
+      },
+      "rejected_invalid_arguments": {
+        "partial_output_alias": true,
+        "misaligned_output": true
+      },
+      "aligned_16b_views_equal": true,
+      "cublaslt_version": 130101,
+      "algorithm_candidates": 1,
+      "selected_algorithm_index": 0,
+      "tuning_us": [
+        {
+          "index": 0,
+          "microseconds": 15.159039497375488
+        }
+      ],
+      "native_with_a_scale_preparation": {
+        "median_us": 16.34160041809082,
+        "samples_us": [
+          16.3482403755188,
+          16.346479654312134,
+          16.34160041809082,
+          16.25424027442932,
+          16.208720207214355
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "native_gemm": {
+        "median_us": 14.612159729003906,
+        "samples_us": [
+          14.612159729003906,
+          14.614559412002563,
+          14.592640399932861,
+          14.59712028503418,
+          14.613200426101685
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "a_scale_preparation": {
+        "median_us": 1.6442400217056274,
+        "samples_us": [
+          1.6435199975967407,
+          1.6472800076007843,
+          1.648000031709671,
+          1.6442400217056274,
+          1.6433599591255188
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": false
+      },
+      "tilelang": {
+        "median_us": 65.59999942779541,
+        "samples_us": [
+          65.59999942779541,
+          65.5955982208252,
+          65.60783863067627,
+          65.64311981201172,
+          65.5845594406128
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "speedup_including_a_scale": 4.014294668175433,
+      "effective_tflops": 1080.5563340327333,
+      "b_scale_preparation": "once before measurement; FP8 B payload unchanged",
+      "m_padding": 7,
+      "workspace_bytes": 33554432,
+      "projection": "query_a"
+    },
+    {
+      "m": 32,
+      "n": 32768,
+      "k": 1024,
+      "passed": true,
+      "data": "real MP1 E4M3 B and UE8M0 B scales; synthetic E4M3 A and UE8M0 A scales",
+      "versus_tilelang": {
+        "relative_l2": 1.797957520466298e-05,
+        "max_absolute": 0.015625,
+        "cosine": 1.0,
+        "finite": true
+      },
+      "versus_fp32": {
+        "relative_l2": 0.0016596931964159012,
+        "max_absolute": 0.0624237060546875,
+        "cosine": 0.9999986290931702,
+        "finite": true
+      },
+      "tilelang_versus_fp32": {
+        "relative_l2": 0.0016596931964159012,
+        "max_absolute": 0.0624237060546875,
+        "cosine": 0.9999986886978149,
+        "finite": true
+      },
+      "graph_replay_equal": true,
+      "tilelang_graph_replay_equal": true,
+      "changed_a_scales_graph_passed": true,
+      "changed_a_scales_native": {
+        "relative_l2": 0.0016596931964159012,
+        "max_absolute": 0.124847412109375,
+        "cosine": 0.9999986290931702,
+        "finite": true
+      },
+      "changed_a_scales_tilelang": {
+        "relative_l2": 0.0016596931964159012,
+        "max_absolute": 0.124847412109375,
+        "cosine": 0.9999986886978149,
+        "finite": true
+      },
+      "selected_weights": {
+        "path": "/tmp/llaisys-deepseek-v4-flash-mp1/model0-mp1.safetensors",
+        "scope": "selected weight/scale payloads plus full header; not entire checkpoint payload",
+        "header_sha256": "80fb82525d75f1580d3bfca8d0f5340fc8cc4a8f243a1e6ae3bb36cf6a6df22c",
+        "file_size": 168430204680,
+        "tensors": {
+          "layers.2.attn.wq_b.weight": {
+            "dtype": "F8_E4M3",
+            "shape": [
+              32768,
+              1024
+            ],
+            "bytes": 33554432,
+            "sha256": "65d1cf8c02b74b164f4b17d4c61c8b3445997aca3e6946cc717c28f0bfd29d30"
+          },
+          "layers.2.attn.wq_b.scale": {
+            "dtype": "F8_E8M0",
+            "shape": [
+              256,
+              8
+            ],
+            "bytes": 2048,
+            "sha256": "7c84ae8b6a7d2f131900f413b9c1b8dbd24d7680f67d3183edc0c026a5bebe16"
+          }
+        }
+      },
+      "rejected_invalid_arguments": {
+        "partial_output_alias": true,
+        "misaligned_output": true
+      },
+      "aligned_16b_views_equal": true,
+      "cublaslt_version": 130101,
+      "algorithm_candidates": 2,
+      "selected_algorithm_index": 0,
+      "tuning_us": [
+        {
+          "index": 0,
+          "microseconds": 6.652160286903381
+        },
+        {
+          "index": 1,
+          "microseconds": 7.7811199426651
+        }
+      ],
+      "native_with_a_scale_preparation": {
+        "median_us": 7.9898399114608765,
+        "samples_us": [
+          7.989599704742432,
+          7.990639805793762,
+          7.992879748344421,
+          7.989519834518433,
+          7.9898399114608765
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "native_gemm": {
+        "median_us": 6.353359818458557,
+        "samples_us": [
+          6.351360082626343,
+          6.347600221633911,
+          6.353359818458557,
+          6.353759765625,
+          6.353600025177002
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "a_scale_preparation": {
+        "median_us": 1.4387999475002289,
+        "samples_us": [
+          1.4390400052070618,
+          1.4403200149536133,
+          1.438560038805008,
+          1.4377599954605103,
+          1.4387999475002289
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": false
+      },
+      "tilelang": {
+        "median_us": 10.645999908447266,
+        "samples_us": [
+          10.644479990005493,
+          10.646560192108154,
+          10.645999908447266,
+          10.650960206985474,
+          10.639200210571289
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "speedup_including_a_scale": 1.3324422049027929,
+      "effective_tflops": 268.7768055176653,
+      "b_scale_preparation": "once before measurement; FP8 B payload unchanged",
+      "m_padding": 0,
+      "workspace_bytes": 33554432,
+      "projection": "query_b"
+    },
+    {
+      "m": 256,
+      "n": 32768,
+      "k": 1024,
+      "passed": true,
+      "data": "real MP1 E4M3 B and UE8M0 B scales; synthetic E4M3 A and UE8M0 A scales",
+      "versus_tilelang": {
+        "relative_l2": 2.863994632207323e-05,
+        "max_absolute": 0.0625,
+        "cosine": 1.0,
+        "finite": true
+      },
+      "versus_fp32": {
+        "relative_l2": 0.0016588683938607574,
+        "max_absolute": 0.12122726440429688,
+        "cosine": 0.9999986886978149,
+        "finite": true
+      },
+      "tilelang_versus_fp32": {
+        "relative_l2": 0.0016588683938607574,
+        "max_absolute": 0.12122726440429688,
+        "cosine": 0.9999986886978149,
+        "finite": true
+      },
+      "graph_replay_equal": true,
+      "tilelang_graph_replay_equal": true,
+      "changed_a_scales_graph_passed": true,
+      "changed_a_scales_native": {
+        "relative_l2": 0.0016588683938607574,
+        "max_absolute": 0.24245452880859375,
+        "cosine": 0.9999986886978149,
+        "finite": true
+      },
+      "changed_a_scales_tilelang": {
+        "relative_l2": 0.0016588683938607574,
+        "max_absolute": 0.24245452880859375,
+        "cosine": 0.9999986886978149,
+        "finite": true
+      },
+      "selected_weights": {
+        "path": "/tmp/llaisys-deepseek-v4-flash-mp1/model0-mp1.safetensors",
+        "scope": "selected weight/scale payloads plus full header; not entire checkpoint payload",
+        "header_sha256": "80fb82525d75f1580d3bfca8d0f5340fc8cc4a8f243a1e6ae3bb36cf6a6df22c",
+        "file_size": 168430204680,
+        "tensors": {
+          "layers.2.attn.wq_b.weight": {
+            "dtype": "F8_E4M3",
+            "shape": [
+              32768,
+              1024
+            ],
+            "bytes": 33554432,
+            "sha256": "65d1cf8c02b74b164f4b17d4c61c8b3445997aca3e6946cc717c28f0bfd29d30"
+          },
+          "layers.2.attn.wq_b.scale": {
+            "dtype": "F8_E8M0",
+            "shape": [
+              256,
+              8
+            ],
+            "bytes": 2048,
+            "sha256": "7c84ae8b6a7d2f131900f413b9c1b8dbd24d7680f67d3183edc0c026a5bebe16"
+          }
+        }
+      },
+      "rejected_invalid_arguments": {
+        "partial_output_alias": true,
+        "misaligned_output": true
+      },
+      "aligned_16b_views_equal": true,
+      "cublaslt_version": 130101,
+      "algorithm_candidates": 2,
+      "selected_algorithm_index": 1,
+      "tuning_us": [
+        {
+          "index": 0,
+          "microseconds": 8.698880076408386
+        },
+        {
+          "index": 1,
+          "microseconds": 8.684800267219543
+        }
+      ],
+      "native_with_a_scale_preparation": {
+        "median_us": 10.00864028930664,
+        "samples_us": [
+          9.99400019645691,
+          10.02303957939148,
+          10.01431941986084,
+          9.998160004615784,
+          10.00864028930664
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "native_gemm": {
+        "median_us": 8.042399883270264,
+        "samples_us": [
+          8.058800101280212,
+          8.042399883270264,
+          8.030319809913635,
+          8.044160008430481,
+          8.035839796066284
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "a_scale_preparation": {
+        "median_us": 1.443919986486435,
+        "samples_us": [
+          1.4444799721240997,
+          1.444000005722046,
+          1.4425599575042725,
+          1.443440020084381,
+          1.443919986486435
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": false
+      },
+      "tilelang": {
+        "median_us": 64.06167984008789,
+        "samples_us": [
+          64.91911888122559,
+          65.09280204772949,
+          64.06167984008789,
+          63.962321281433105,
+          63.936638832092285
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "speedup_including_a_scale": 6.400637647906301,
+      "effective_tflops": 1716.503809449041,
+      "b_scale_preparation": "once before measurement; FP8 B payload unchanged",
+      "m_padding": 0,
+      "workspace_bytes": 33554432,
+      "projection": "query_b"
+    },
+    {
+      "m": 2105,
+      "n": 32768,
+      "k": 1024,
+      "passed": true,
+      "data": "real MP1 E4M3 B and UE8M0 B scales; synthetic E4M3 A and UE8M0 A scales",
+      "versus_tilelang": {
+        "relative_l2": 3.213086893083528e-05,
+        "max_absolute": 0.125,
+        "cosine": 1.0,
+        "finite": true
+      },
+      "versus_fp32": {
+        "relative_l2": 0.0016593296313658357,
+        "max_absolute": 0.1244354248046875,
+        "cosine": 0.9999986886978149,
+        "finite": true
+      },
+      "tilelang_versus_fp32": {
+        "relative_l2": 0.0016593296313658357,
+        "max_absolute": 0.1244354248046875,
+        "cosine": 0.9999987483024597,
+        "finite": true
+      },
+      "graph_replay_equal": true,
+      "tilelang_graph_replay_equal": true,
+      "changed_a_scales_graph_passed": true,
+      "changed_a_scales_native": {
+        "relative_l2": 0.0016593296313658357,
+        "max_absolute": 0.248870849609375,
+        "cosine": 0.9999986886978149,
+        "finite": true
+      },
+      "changed_a_scales_tilelang": {
+        "relative_l2": 0.0016593296313658357,
+        "max_absolute": 0.248870849609375,
+        "cosine": 0.9999987483024597,
+        "finite": true
+      },
+      "selected_weights": {
+        "path": "/tmp/llaisys-deepseek-v4-flash-mp1/model0-mp1.safetensors",
+        "scope": "selected weight/scale payloads plus full header; not entire checkpoint payload",
+        "header_sha256": "80fb82525d75f1580d3bfca8d0f5340fc8cc4a8f243a1e6ae3bb36cf6a6df22c",
+        "file_size": 168430204680,
+        "tensors": {
+          "layers.2.attn.wq_b.weight": {
+            "dtype": "F8_E4M3",
+            "shape": [
+              32768,
+              1024
+            ],
+            "bytes": 33554432,
+            "sha256": "65d1cf8c02b74b164f4b17d4c61c8b3445997aca3e6946cc717c28f0bfd29d30"
+          },
+          "layers.2.attn.wq_b.scale": {
+            "dtype": "F8_E8M0",
+            "shape": [
+              256,
+              8
+            ],
+            "bytes": 2048,
+            "sha256": "7c84ae8b6a7d2f131900f413b9c1b8dbd24d7680f67d3183edc0c026a5bebe16"
+          }
+        }
+      },
+      "rejected_invalid_arguments": {
+        "partial_output_alias": true,
+        "misaligned_output": true
+      },
+      "aligned_16b_views_equal": true,
+      "cublaslt_version": 130101,
+      "algorithm_candidates": 3,
+      "selected_algorithm_index": 1,
+      "tuning_us": [
+        {
+          "index": 0,
+          "microseconds": 106.36544227600098
+        },
+        {
+          "index": 1,
+          "microseconds": 99.66079711914062
+        },
+        {
+          "index": 2,
+          "microseconds": 111.71456336975098
+        }
+      ],
+      "native_with_a_scale_preparation": {
+        "median_us": 115.33807754516602,
+        "samples_us": [
+          110.40007591247559,
+          114.65496063232422,
+          115.38455963134766,
+          115.50968170166016,
+          115.33807754516602
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "native_gemm": {
+        "median_us": 114.47088241577148,
+        "samples_us": [
+          111.77215576171875,
+          113.77863883972168,
+          114.56055641174316,
+          114.47088241577148,
+          114.52511787414551
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "a_scale_preparation": {
+        "median_us": 1.7511199414730072,
+        "samples_us": [
+          1.751759946346283,
+          1.7511199414730072,
+          1.7494399845600128,
+          1.751600056886673,
+          1.7508800327777863
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": false
+      },
+      "tilelang": {
+        "median_us": 498.6627197265625,
+        "samples_us": [
+          501.62158966064453,
+          498.6627197265625,
+          498.66966247558594,
+          498.6606216430664,
+          498.6422348022461
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "speedup_including_a_scale": 4.323487354219926,
+      "effective_tflops": 1224.783364927176,
+      "b_scale_preparation": "once before measurement; FP8 B payload unchanged",
+      "m_padding": 7,
+      "workspace_bytes": 33554432,
+      "projection": "query_b"
+    },
+    {
+      "m": 32,
+      "n": 512,
+      "k": 4096,
+      "passed": true,
+      "data": "real MP1 E4M3 B and UE8M0 B scales; synthetic E4M3 A and UE8M0 A scales",
+      "versus_tilelang": {
+        "relative_l2": 7.753107638563961e-05,
+        "max_absolute": 0.03125,
+        "cosine": 1.0,
+        "finite": true
+      },
+      "versus_fp32": {
+        "relative_l2": 0.0016617941437289119,
+        "max_absolute": 0.057586669921875,
+        "cosine": 0.9999985694885254,
+        "finite": true
+      },
+      "tilelang_versus_fp32": {
+        "relative_l2": 0.0016617936780676246,
+        "max_absolute": 0.057586669921875,
+        "cosine": 0.9999985694885254,
+        "finite": true
+      },
+      "graph_replay_equal": true,
+      "tilelang_graph_replay_equal": true,
+      "changed_a_scales_graph_passed": true,
+      "changed_a_scales_native": {
+        "relative_l2": 0.0016617941437289119,
+        "max_absolute": 0.11517333984375,
+        "cosine": 0.9999985694885254,
+        "finite": true
+      },
+      "changed_a_scales_tilelang": {
+        "relative_l2": 0.0016617936780676246,
+        "max_absolute": 0.11517333984375,
+        "cosine": 0.9999985694885254,
+        "finite": true
+      },
+      "selected_weights": {
+        "path": "/tmp/llaisys-deepseek-v4-flash-mp1/model0-mp1.safetensors",
+        "scope": "selected weight/scale payloads plus full header; not entire checkpoint payload",
+        "header_sha256": "80fb82525d75f1580d3bfca8d0f5340fc8cc4a8f243a1e6ae3bb36cf6a6df22c",
+        "file_size": 168430204680,
+        "tensors": {
+          "layers.2.attn.wkv.weight": {
+            "dtype": "F8_E4M3",
+            "shape": [
+              512,
+              4096
+            ],
+            "bytes": 2097152,
+            "sha256": "108bf0e279a04312f7b6b5140eef4a4f38dbba60f84e7b70d96c14021bc0c535"
+          },
+          "layers.2.attn.wkv.scale": {
+            "dtype": "F8_E8M0",
+            "shape": [
+              4,
+              32
+            ],
+            "bytes": 128,
+            "sha256": "5b39d820a21b1d575b02fa9978ad7bccd7286a610ce402e9def6a2f3ba1cec94"
+          }
+        }
+      },
+      "rejected_invalid_arguments": {
+        "partial_output_alias": true,
+        "misaligned_output": true
+      },
+      "aligned_16b_views_equal": true,
+      "cublaslt_version": 130101,
+      "algorithm_candidates": 3,
+      "selected_algorithm_index": 0,
+      "tuning_us": [
+        {
+          "index": 0,
+          "microseconds": 7.449600100517273
+        },
+        {
+          "index": 1,
+          "microseconds": 10.35647988319397
+        },
+        {
+          "index": 2,
+          "microseconds": 10.320639610290527
+        }
+      ],
+      "native_with_a_scale_preparation": {
+        "median_us": 8.372640013694763,
+        "samples_us": [
+          8.373759984970093,
+          8.377119898796082,
+          8.370000123977661,
+          8.369519710540771,
+          8.372640013694763
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "native_gemm": {
+        "median_us": 6.804640293121338,
+        "samples_us": [
+          6.804400086402893,
+          6.804640293121338,
+          6.824480295181274,
+          6.79144024848938,
+          6.833919882774353
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "a_scale_preparation": {
+        "median_us": 1.443919986486435,
+        "samples_us": [
+          1.4441600441932678,
+          1.4433600008487701,
+          1.443919986486435,
+          1.4479200541973114,
+          1.4426399767398834
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": false
+      },
+      "tilelang": {
+        "median_us": 22.662720680236816,
+        "samples_us": [
+          22.67143964767456,
+          22.667360305786133,
+          22.653040885925293,
+          22.654800415039062,
+          22.662720680236816
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "speedup_including_a_scale": 2.7067592352195233,
+      "effective_tflops": 16.030514602379405,
+      "b_scale_preparation": "once before measurement; FP8 B payload unchanged",
+      "m_padding": 0,
+      "workspace_bytes": 33554432,
+      "projection": "latent"
+    },
+    {
+      "m": 256,
+      "n": 512,
+      "k": 4096,
+      "passed": true,
+      "data": "real MP1 E4M3 B and UE8M0 B scales; synthetic E4M3 A and UE8M0 A scales",
+      "versus_tilelang": {
+        "relative_l2": 2.890431642299518e-05,
+        "max_absolute": 0.03125,
+        "cosine": 1.0,
+        "finite": true
+      },
+      "versus_fp32": {
+        "relative_l2": 0.0016701765125617385,
+        "max_absolute": 0.06217765808105469,
+        "cosine": 0.9999985694885254,
+        "finite": true
+      },
+      "tilelang_versus_fp32": {
+        "relative_l2": 0.0016701765125617385,
+        "max_absolute": 0.06217765808105469,
+        "cosine": 0.9999985694885254,
+        "finite": true
+      },
+      "graph_replay_equal": true,
+      "tilelang_graph_replay_equal": true,
+      "changed_a_scales_graph_passed": true,
+      "changed_a_scales_native": {
+        "relative_l2": 0.0016701765125617385,
+        "max_absolute": 0.12435531616210938,
+        "cosine": 0.9999985694885254,
+        "finite": true
+      },
+      "changed_a_scales_tilelang": {
+        "relative_l2": 0.0016701765125617385,
+        "max_absolute": 0.12435531616210938,
+        "cosine": 0.9999985694885254,
+        "finite": true
+      },
+      "selected_weights": {
+        "path": "/tmp/llaisys-deepseek-v4-flash-mp1/model0-mp1.safetensors",
+        "scope": "selected weight/scale payloads plus full header; not entire checkpoint payload",
+        "header_sha256": "80fb82525d75f1580d3bfca8d0f5340fc8cc4a8f243a1e6ae3bb36cf6a6df22c",
+        "file_size": 168430204680,
+        "tensors": {
+          "layers.2.attn.wkv.weight": {
+            "dtype": "F8_E4M3",
+            "shape": [
+              512,
+              4096
+            ],
+            "bytes": 2097152,
+            "sha256": "108bf0e279a04312f7b6b5140eef4a4f38dbba60f84e7b70d96c14021bc0c535"
+          },
+          "layers.2.attn.wkv.scale": {
+            "dtype": "F8_E8M0",
+            "shape": [
+              4,
+              32
+            ],
+            "bytes": 128,
+            "sha256": "5b39d820a21b1d575b02fa9978ad7bccd7286a610ce402e9def6a2f3ba1cec94"
+          }
+        }
+      },
+      "rejected_invalid_arguments": {
+        "partial_output_alias": true,
+        "misaligned_output": true
+      },
+      "aligned_16b_views_equal": true,
+      "cublaslt_version": 130101,
+      "algorithm_candidates": 3,
+      "selected_algorithm_index": 0,
+      "tuning_us": [
+        {
+          "index": 0,
+          "microseconds": 7.208960056304932
+        },
+        {
+          "index": 1,
+          "microseconds": 10.717439651489258
+        },
+        {
+          "index": 2,
+          "microseconds": 10.739200115203857
+        }
+      ],
+      "native_with_a_scale_preparation": {
+        "median_us": 8.405359983444214,
+        "samples_us": [
+          8.410080075263977,
+          8.412479758262634,
+          8.405359983444214,
+          8.401920199394226,
+          8.403760194778442
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "native_gemm": {
+        "median_us": 6.76688015460968,
+        "samples_us": [
+          6.763520240783691,
+          6.768159866333008,
+          6.772400140762329,
+          6.76688015460968,
+          6.76584005355835
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "a_scale_preparation": {
+        "median_us": 1.5408000349998474,
+        "samples_us": [
+          1.5411199629306793,
+          1.5405599772930145,
+          1.5399999916553497,
+          1.5408000349998474,
+          1.5415200591087341
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": false
+      },
+      "tilelang": {
+        "median_us": 22.64535903930664,
+        "samples_us": [
+          22.64535903930664,
+          22.64319896697998,
+          22.64143943786621,
+          22.648239135742188,
+          22.654719352722168
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "speedup_including_a_scale": 2.6941569526957236,
+      "effective_tflops": 127.7448944619763,
+      "b_scale_preparation": "once before measurement; FP8 B payload unchanged",
+      "m_padding": 0,
+      "workspace_bytes": 33554432,
+      "projection": "latent"
+    },
+    {
+      "m": 2105,
+      "n": 512,
+      "k": 4096,
+      "passed": true,
+      "data": "real MP1 E4M3 B and UE8M0 B scales; synthetic E4M3 A and UE8M0 A scales",
+      "versus_tilelang": {
+        "relative_l2": 6.944324559299275e-05,
+        "max_absolute": 0.0625,
+        "cosine": 1.0,
+        "finite": true
+      },
+      "versus_fp32": {
+        "relative_l2": 0.0016599221853539348,
+        "max_absolute": 0.06246376037597656,
+        "cosine": 0.9999986290931702,
+        "finite": true
+      },
+      "tilelang_versus_fp32": {
+        "relative_l2": 0.0016599219525232911,
+        "max_absolute": 0.06246376037597656,
+        "cosine": 0.9999985694885254,
+        "finite": true
+      },
+      "graph_replay_equal": true,
+      "tilelang_graph_replay_equal": true,
+      "changed_a_scales_graph_passed": true,
+      "changed_a_scales_native": {
+        "relative_l2": 0.0016599221853539348,
+        "max_absolute": 0.12492752075195312,
+        "cosine": 0.9999986290931702,
+        "finite": true
+      },
+      "changed_a_scales_tilelang": {
+        "relative_l2": 0.0016599219525232911,
+        "max_absolute": 0.12492752075195312,
+        "cosine": 0.9999985694885254,
+        "finite": true
+      },
+      "selected_weights": {
+        "path": "/tmp/llaisys-deepseek-v4-flash-mp1/model0-mp1.safetensors",
+        "scope": "selected weight/scale payloads plus full header; not entire checkpoint payload",
+        "header_sha256": "80fb82525d75f1580d3bfca8d0f5340fc8cc4a8f243a1e6ae3bb36cf6a6df22c",
+        "file_size": 168430204680,
+        "tensors": {
+          "layers.2.attn.wkv.weight": {
+            "dtype": "F8_E4M3",
+            "shape": [
+              512,
+              4096
+            ],
+            "bytes": 2097152,
+            "sha256": "108bf0e279a04312f7b6b5140eef4a4f38dbba60f84e7b70d96c14021bc0c535"
+          },
+          "layers.2.attn.wkv.scale": {
+            "dtype": "F8_E8M0",
+            "shape": [
+              4,
+              32
+            ],
+            "bytes": 128,
+            "sha256": "5b39d820a21b1d575b02fa9978ad7bccd7286a610ce402e9def6a2f3ba1cec94"
+          }
+        }
+      },
+      "rejected_invalid_arguments": {
+        "partial_output_alias": true,
+        "misaligned_output": true
+      },
+      "aligned_16b_views_equal": true,
+      "cublaslt_version": 130101,
+      "algorithm_candidates": 1,
+      "selected_algorithm_index": 0,
+      "tuning_us": [
+        {
+          "index": 0,
+          "microseconds": 13.190399408340454
+        }
+      ],
+      "native_with_a_scale_preparation": {
+        "median_us": 14.254720211029053,
+        "samples_us": [
+          14.259200096130371,
+          14.247440099716187,
+          14.241759777069092,
+          14.254720211029053,
+          14.25879955291748
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "native_gemm": {
+        "median_us": 12.730480432510376,
+        "samples_us": [
+          12.74399995803833,
+          12.729840278625488,
+          12.730480432510376,
+          12.730159759521484,
+          12.730640172958374
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "a_scale_preparation": {
+        "median_us": 1.642879992723465,
+        "samples_us": [
+          1.6436000168323517,
+          1.6439999639987946,
+          1.6424000263214111,
+          1.642879992723465,
+          1.642799973487854
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": false
+      },
+      "tilelang": {
+        "median_us": 34.725520610809326,
+        "samples_us": [
+          34.73664045333862,
+          34.731600284576416,
+          34.725520610809326,
+          34.721839427948,
+          34.714319705963135
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "speedup_including_a_scale": 2.4360717079484844,
+      "effective_tflops": 619.3744801226534,
+      "b_scale_preparation": "once before measurement; FP8 B payload unchanged",
+      "m_padding": 7,
+      "workspace_bytes": 33554432,
+      "projection": "latent"
+    },
+    {
+      "m": 32,
+      "n": 4096,
+      "k": 8192,
+      "passed": true,
+      "data": "real MP1 E4M3 B and UE8M0 B scales; synthetic E4M3 A and UE8M0 A scales",
+      "versus_tilelang": {
+        "relative_l2": 4.022189386887476e-05,
+        "max_absolute": 0.0625,
+        "cosine": 1.0,
+        "finite": true
+      },
+      "versus_fp32": {
+        "relative_l2": 0.0016537384362891316,
+        "max_absolute": 0.06249809265136719,
+        "cosine": 0.9999986886978149,
+        "finite": true
+      },
+      "tilelang_versus_fp32": {
+        "relative_l2": 0.0016537384362891316,
+        "max_absolute": 0.06249809265136719,
+        "cosine": 0.9999986886978149,
+        "finite": true
+      },
+      "graph_replay_equal": true,
+      "tilelang_graph_replay_equal": true,
+      "changed_a_scales_graph_passed": true,
+      "changed_a_scales_native": {
+        "relative_l2": 0.0016537384362891316,
+        "max_absolute": 0.12499618530273438,
+        "cosine": 0.9999986886978149,
+        "finite": true
+      },
+      "changed_a_scales_tilelang": {
+        "relative_l2": 0.0016537384362891316,
+        "max_absolute": 0.12499618530273438,
+        "cosine": 0.9999986886978149,
+        "finite": true
+      },
+      "selected_weights": {
+        "path": "/tmp/llaisys-deepseek-v4-flash-mp1/model0-mp1.safetensors",
+        "scope": "selected weight/scale payloads plus full header; not entire checkpoint payload",
+        "header_sha256": "80fb82525d75f1580d3bfca8d0f5340fc8cc4a8f243a1e6ae3bb36cf6a6df22c",
+        "file_size": 168430204680,
+        "tensors": {
+          "layers.2.attn.wo_b.weight": {
+            "dtype": "F8_E4M3",
+            "shape": [
+              4096,
+              8192
+            ],
+            "bytes": 33554432,
+            "sha256": "afb8aa77090e6a961228ea17e1d0fa06fd92cc6febabc99638de5af31c340ff6"
+          },
+          "layers.2.attn.wo_b.scale": {
+            "dtype": "F8_E8M0",
+            "shape": [
+              32,
+              64
+            ],
+            "bytes": 2048,
+            "sha256": "340af4f12b951cc54c7e520d78dd62c0c48597c56ba984a8793cf0c98ed0dc1f"
+          }
+        }
+      },
+      "rejected_invalid_arguments": {
+        "partial_output_alias": true,
+        "misaligned_output": true
+      },
+      "aligned_16b_views_equal": true,
+      "cublaslt_version": 130101,
+      "algorithm_candidates": 3,
+      "selected_algorithm_index": 0,
+      "tuning_us": [
+        {
+          "index": 0,
+          "microseconds": 10.40768027305603
+        },
+        {
+          "index": 1,
+          "microseconds": 15.567359924316406
+        },
+        {
+          "index": 2,
+          "microseconds": 11.550719738006592
+        }
+      ],
+      "native_with_a_scale_preparation": {
+        "median_us": 11.671040058135986,
+        "samples_us": [
+          11.671040058135986,
+          11.671119928359985,
+          11.6703200340271,
+          11.688400506973267,
+          11.658639907836914
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "native_gemm": {
+        "median_us": 9.999679923057556,
+        "samples_us": [
+          9.97376024723053,
+          9.958879947662354,
+          9.999679923057556,
+          10.00872015953064,
+          10.003279447555542
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "a_scale_preparation": {
+        "median_us": 1.4593599736690521,
+        "samples_us": [
+          1.4593599736690521,
+          1.470080018043518,
+          1.4585599303245544,
+          1.4741599559783936,
+          1.4424799382686615
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": false
+      },
+      "tilelang": {
+        "median_us": 43.29319953918457,
+        "samples_us": [
+          43.299760818481445,
+          43.29319953918457,
+          43.29815864562988,
+          43.28551769256592,
+          43.2908821105957
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "speedup_including_a_scale": 3.709455140547178,
+      "effective_tflops": 184.0010519459206,
+      "b_scale_preparation": "once before measurement; FP8 B payload unchanged",
+      "m_padding": 0,
+      "workspace_bytes": 33554432,
+      "projection": "output"
+    },
+    {
+      "m": 256,
+      "n": 4096,
+      "k": 8192,
+      "passed": true,
+      "data": "real MP1 E4M3 B and UE8M0 B scales; synthetic E4M3 A and UE8M0 A scales",
+      "versus_tilelang": {
+        "relative_l2": 0.00011285422078799456,
+        "max_absolute": 0.125,
+        "cosine": 0.9999999403953552,
+        "finite": true
+      },
+      "versus_fp32": {
+        "relative_l2": 0.0016571300802752376,
+        "max_absolute": 0.11553573608398438,
+        "cosine": 0.9999986290931702,
+        "finite": true
+      },
+      "tilelang_versus_fp32": {
+        "relative_l2": 0.0016571283340454102,
+        "max_absolute": 0.11553573608398438,
+        "cosine": 0.9999986290931702,
+        "finite": true
+      },
+      "graph_replay_equal": true,
+      "tilelang_graph_replay_equal": true,
+      "changed_a_scales_graph_passed": true,
+      "changed_a_scales_native": {
+        "relative_l2": 0.0016571300802752376,
+        "max_absolute": 0.23107147216796875,
+        "cosine": 0.9999986290931702,
+        "finite": true
+      },
+      "changed_a_scales_tilelang": {
+        "relative_l2": 0.0016571283340454102,
+        "max_absolute": 0.23107147216796875,
+        "cosine": 0.9999986290931702,
+        "finite": true
+      },
+      "selected_weights": {
+        "path": "/tmp/llaisys-deepseek-v4-flash-mp1/model0-mp1.safetensors",
+        "scope": "selected weight/scale payloads plus full header; not entire checkpoint payload",
+        "header_sha256": "80fb82525d75f1580d3bfca8d0f5340fc8cc4a8f243a1e6ae3bb36cf6a6df22c",
+        "file_size": 168430204680,
+        "tensors": {
+          "layers.2.attn.wo_b.weight": {
+            "dtype": "F8_E4M3",
+            "shape": [
+              4096,
+              8192
+            ],
+            "bytes": 33554432,
+            "sha256": "afb8aa77090e6a961228ea17e1d0fa06fd92cc6febabc99638de5af31c340ff6"
+          },
+          "layers.2.attn.wo_b.scale": {
+            "dtype": "F8_E8M0",
+            "shape": [
+              32,
+              64
+            ],
+            "bytes": 2048,
+            "sha256": "340af4f12b951cc54c7e520d78dd62c0c48597c56ba984a8793cf0c98ed0dc1f"
+          }
+        }
+      },
+      "rejected_invalid_arguments": {
+        "partial_output_alias": true,
+        "misaligned_output": true
+      },
+      "aligned_16b_views_equal": true,
+      "cublaslt_version": 130101,
+      "algorithm_candidates": 3,
+      "selected_algorithm_index": 0,
+      "tuning_us": [
+        {
+          "index": 0,
+          "microseconds": 11.229439973831177
+        },
+        {
+          "index": 1,
+          "microseconds": 20.55936098098755
+        },
+        {
+          "index": 2,
+          "microseconds": 20.556800365447998
+        }
+      ],
+      "native_with_a_scale_preparation": {
+        "median_us": 12.898080348968506,
+        "samples_us": [
+          12.89728045463562,
+          12.899119853973389,
+          12.893919944763184,
+          12.898080348968506,
+          12.909200191497803
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "native_gemm": {
+        "median_us": 10.800720453262329,
+        "samples_us": [
+          10.807759761810303,
+          10.77944040298462,
+          10.800720453262329,
+          10.804400444030762,
+          10.774240493774414
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "a_scale_preparation": {
+        "median_us": 1.5452000498771667,
+        "samples_us": [
+          1.5411999821662903,
+          1.542080044746399,
+          1.5452000498771667,
+          1.5455199778079987,
+          1.5456800162792206
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": false
+      },
+      "tilelang": {
+        "median_us": 67.88352012634277,
+        "samples_us": [
+          67.88352012634277,
+          67.89455890655518,
+          67.87320137023926,
+          67.88335800170898,
+          67.90567874908447
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "speedup_including_a_scale": 5.263071580397745,
+      "effective_tflops": 1331.9710157778572,
+      "b_scale_preparation": "once before measurement; FP8 B payload unchanged",
+      "m_padding": 0,
+      "workspace_bytes": 33554432,
+      "projection": "output"
+    },
+    {
+      "m": 2105,
+      "n": 4096,
+      "k": 8192,
+      "passed": true,
+      "data": "real MP1 E4M3 B and UE8M0 B scales; synthetic E4M3 A and UE8M0 A scales",
+      "versus_tilelang": {
+        "relative_l2": 0.00010806909267557785,
+        "max_absolute": 0.125,
+        "cosine": 0.9999999403953552,
+        "finite": true
+      },
+      "versus_fp32": {
+        "relative_l2": 0.0016568254213780165,
+        "max_absolute": 0.10504531860351562,
+        "cosine": 0.9999986886978149,
+        "finite": true
+      },
+      "tilelang_versus_fp32": {
+        "relative_l2": 0.001656823675148189,
+        "max_absolute": 0.10504531860351562,
+        "cosine": 0.9999984502792358,
+        "finite": true
+      },
+      "graph_replay_equal": true,
+      "tilelang_graph_replay_equal": true,
+      "changed_a_scales_graph_passed": true,
+      "changed_a_scales_native": {
+        "relative_l2": 0.0016568254213780165,
+        "max_absolute": 0.21009063720703125,
+        "cosine": 0.9999986886978149,
+        "finite": true
+      },
+      "changed_a_scales_tilelang": {
+        "relative_l2": 0.001656823675148189,
+        "max_absolute": 0.21009063720703125,
+        "cosine": 0.9999984502792358,
+        "finite": true
+      },
+      "selected_weights": {
+        "path": "/tmp/llaisys-deepseek-v4-flash-mp1/model0-mp1.safetensors",
+        "scope": "selected weight/scale payloads plus full header; not entire checkpoint payload",
+        "header_sha256": "80fb82525d75f1580d3bfca8d0f5340fc8cc4a8f243a1e6ae3bb36cf6a6df22c",
+        "file_size": 168430204680,
+        "tensors": {
+          "layers.2.attn.wo_b.weight": {
+            "dtype": "F8_E4M3",
+            "shape": [
+              4096,
+              8192
+            ],
+            "bytes": 33554432,
+            "sha256": "afb8aa77090e6a961228ea17e1d0fa06fd92cc6febabc99638de5af31c340ff6"
+          },
+          "layers.2.attn.wo_b.scale": {
+            "dtype": "F8_E8M0",
+            "shape": [
+              32,
+              64
+            ],
+            "bytes": 2048,
+            "sha256": "340af4f12b951cc54c7e520d78dd62c0c48597c56ba984a8793cf0c98ed0dc1f"
+          }
+        }
+      },
+      "rejected_invalid_arguments": {
+        "partial_output_alias": true,
+        "misaligned_output": true
+      },
+      "aligned_16b_views_equal": true,
+      "cublaslt_version": 130101,
+      "algorithm_candidates": 3,
+      "selected_algorithm_index": 0,
+      "tuning_us": [
+        {
+          "index": 0,
+          "microseconds": 57.244157791137695
+        },
+        {
+          "index": 1,
+          "microseconds": 58.577919006347656
+        },
+        {
+          "index": 2,
+          "microseconds": 61.61407947540283
+        }
+      ],
+      "native_with_a_scale_preparation": {
+        "median_us": 73.99951934814453,
+        "samples_us": [
+          62.45376110076904,
+          71.96256160736084,
+          75.21632194519043,
+          76.19095802307129,
+          73.99951934814453
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "native_gemm": {
+        "median_us": 73.33903789520264,
+        "samples_us": [
+          70.14143943786621,
+          73.17975997924805,
+          73.33903789520264,
+          73.4991979598999,
+          73.41375827789307
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "a_scale_preparation": {
+        "median_us": 2.719840109348297,
+        "samples_us": [
+          2.7136000990867615,
+          2.7700001001358032,
+          2.6977598667144775,
+          2.723119854927063,
+          2.719840109348297
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": false
+      },
+      "tilelang": {
+        "median_us": 492.94246673583984,
+        "samples_us": [
+          496.5195083618164,
+          492.94334411621094,
+          492.939453125,
+          492.92625427246094,
+          492.94246673583984
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "speedup_including_a_scale": 6.66142795356143,
+      "effective_tflops": 1908.9875172755708,
+      "b_scale_preparation": "once before measurement; FP8 B payload unchanged",
+      "m_padding": 7,
+      "workspace_bytes": 33554432,
+      "projection": "output"
+    },
+    {
+      "m": 32,
+      "n": 8192,
+      "k": 1024,
+      "passed": true,
+      "data": "real MP1 E4M3 B and UE8M0 B scales; synthetic E4M3 A and UE8M0 A scales",
+      "versus_tilelang": {
+        "relative_l2": 2.1121939425938763e-05,
+        "max_absolute": 0.0625,
+        "cosine": 1.0,
+        "finite": true
+      },
+      "versus_fp32": {
+        "relative_l2": 0.0016576852649450302,
+        "max_absolute": 0.2598724365234375,
+        "cosine": 0.9999986886978149,
+        "finite": true
+      },
+      "tilelang_versus_fp32": {
+        "relative_l2": 0.0016576852649450302,
+        "max_absolute": 0.2598724365234375,
+        "cosine": 0.9999985694885254,
+        "finite": true
+      },
+      "graph_replay_equal": true,
+      "tilelang_graph_replay_equal": true,
+      "changed_a_scales_graph_passed": true,
+      "changed_a_scales_native": {
+        "relative_l2": 0.0016576852649450302,
+        "max_absolute": 0.519744873046875,
+        "cosine": 0.9999986886978149,
+        "finite": true
+      },
+      "changed_a_scales_tilelang": {
+        "relative_l2": 0.0016576852649450302,
+        "max_absolute": 0.519744873046875,
+        "cosine": 0.9999985694885254,
+        "finite": true
+      },
+      "selected_weights": {
+        "path": "/tmp/llaisys-deepseek-v4-flash-mp1/model0-mp1.safetensors",
+        "scope": "selected weight/scale payloads plus full header; not entire checkpoint payload",
+        "header_sha256": "80fb82525d75f1580d3bfca8d0f5340fc8cc4a8f243a1e6ae3bb36cf6a6df22c",
+        "file_size": 168430204680,
+        "tensors": {
+          "layers.2.attn.indexer.wq_b.weight": {
+            "dtype": "F8_E4M3",
+            "shape": [
+              8192,
+              1024
+            ],
+            "bytes": 8388608,
+            "sha256": "26f3610fdf31d95138e7965b888ae18524ddbabc55381dcea8d403a3660ef7da"
+          },
+          "layers.2.attn.indexer.wq_b.scale": {
+            "dtype": "F8_E8M0",
+            "shape": [
+              64,
+              8
+            ],
+            "bytes": 512,
+            "sha256": "be3772745236c3ebc5896ebf686e73b127914e334e60f0de1200328b89a46d84"
+          }
+        }
+      },
+      "rejected_invalid_arguments": {
+        "partial_output_alias": true,
+        "misaligned_output": true
+      },
+      "aligned_16b_views_equal": true,
+      "cublaslt_version": 130101,
+      "algorithm_candidates": 1,
+      "selected_algorithm_index": 0,
+      "tuning_us": [
+        {
+          "index": 0,
+          "microseconds": 4.14463996887207
+        }
+      ],
+      "native_with_a_scale_preparation": {
+        "median_us": 5.340160131454468,
+        "samples_us": [
+          5.340160131454468,
+          5.344319939613342,
+          5.334240198135376,
+          5.343919992446899,
+          5.3330397605896
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "native_gemm": {
+        "median_us": 3.5848799347877502,
+        "samples_us": [
+          3.5839998722076416,
+          3.585759997367859,
+          3.572080135345459,
+          3.5848799347877502,
+          3.585759997367859
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "a_scale_preparation": {
+        "median_us": 1.443520039319992,
+        "samples_us": [
+          1.443839967250824,
+          1.443520039319992,
+          1.4423200488090515,
+          1.443520039319992,
+          1.4433600008487701
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": false
+      },
+      "tilelang": {
+        "median_us": 7.9232001304626465,
+        "samples_us": [
+          7.9232001304626465,
+          7.9256802797317505,
+          7.925199866294861,
+          7.914479970932007,
+          7.914639711380005
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "speedup_including_a_scale": 1.4837008508028862,
+      "effective_tflops": 100.53460922224735,
+      "b_scale_preparation": "once before measurement; FP8 B payload unchanged",
+      "m_padding": 0,
+      "workspace_bytes": 33554432,
+      "projection": "indexer"
+    },
+    {
+      "m": 256,
+      "n": 8192,
+      "k": 1024,
+      "passed": true,
+      "data": "real MP1 E4M3 B and UE8M0 B scales; synthetic E4M3 A and UE8M0 A scales",
+      "versus_tilelang": {
+        "relative_l2": 2.6434850951773115e-05,
+        "max_absolute": 0.125,
+        "cosine": 1.0000001192092896,
+        "finite": true
+      },
+      "versus_fp32": {
+        "relative_l2": 0.0016599945956841111,
+        "max_absolute": 0.4545135498046875,
+        "cosine": 0.9999987483024597,
+        "finite": true
+      },
+      "tilelang_versus_fp32": {
+        "relative_l2": 0.0016599945956841111,
+        "max_absolute": 0.4545135498046875,
+        "cosine": 0.9999986886978149,
+        "finite": true
+      },
+      "graph_replay_equal": true,
+      "tilelang_graph_replay_equal": true,
+      "changed_a_scales_graph_passed": true,
+      "changed_a_scales_native": {
+        "relative_l2": 0.0016599945956841111,
+        "max_absolute": 0.909027099609375,
+        "cosine": 0.9999987483024597,
+        "finite": true
+      },
+      "changed_a_scales_tilelang": {
+        "relative_l2": 0.0016599945956841111,
+        "max_absolute": 0.909027099609375,
+        "cosine": 0.9999986886978149,
+        "finite": true
+      },
+      "selected_weights": {
+        "path": "/tmp/llaisys-deepseek-v4-flash-mp1/model0-mp1.safetensors",
+        "scope": "selected weight/scale payloads plus full header; not entire checkpoint payload",
+        "header_sha256": "80fb82525d75f1580d3bfca8d0f5340fc8cc4a8f243a1e6ae3bb36cf6a6df22c",
+        "file_size": 168430204680,
+        "tensors": {
+          "layers.2.attn.indexer.wq_b.weight": {
+            "dtype": "F8_E4M3",
+            "shape": [
+              8192,
+              1024
+            ],
+            "bytes": 8388608,
+            "sha256": "26f3610fdf31d95138e7965b888ae18524ddbabc55381dcea8d403a3660ef7da"
+          },
+          "layers.2.attn.indexer.wq_b.scale": {
+            "dtype": "F8_E8M0",
+            "shape": [
+              64,
+              8
+            ],
+            "bytes": 512,
+            "sha256": "be3772745236c3ebc5896ebf686e73b127914e334e60f0de1200328b89a46d84"
+          }
+        }
+      },
+      "rejected_invalid_arguments": {
+        "partial_output_alias": true,
+        "misaligned_output": true
+      },
+      "aligned_16b_views_equal": true,
+      "cublaslt_version": 130101,
+      "algorithm_candidates": 1,
+      "selected_algorithm_index": 0,
+      "tuning_us": [
+        {
+          "index": 0,
+          "microseconds": 3.8284799456596375
+        }
+      ],
+      "native_with_a_scale_preparation": {
+        "median_us": 5.227760076522827,
+        "samples_us": [
+          5.224959850311279,
+          5.227760076522827,
+          5.228719711303711,
+          5.228880047798157,
+          5.226799845695496
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "native_gemm": {
+        "median_us": 3.384239971637726,
+        "samples_us": [
+          3.384239971637726,
+          3.383679986000061,
+          3.3831200003623962,
+          3.388719856739044,
+          3.3871999382972717
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "a_scale_preparation": {
+        "median_us": 1.443919986486435,
+        "samples_us": [
+          1.443919986486435,
+          1.440960019826889,
+          1.4444799721240997,
+          1.4460000395774841,
+          1.443919986486435
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": false
+      },
+      "tilelang": {
+        "median_us": 19.681600332260132,
+        "samples_us": [
+          19.68127965927124,
+          19.681600332260132,
+          19.685120582580566,
+          19.693679809570312,
+          19.680479764938354
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "speedup_including_a_scale": 3.7648247134843795,
+      "effective_tflops": 821.5693209197042,
+      "b_scale_preparation": "once before measurement; FP8 B payload unchanged",
+      "m_padding": 0,
+      "workspace_bytes": 33554432,
+      "projection": "indexer"
+    },
+    {
+      "m": 2105,
+      "n": 8192,
+      "k": 1024,
+      "passed": true,
+      "data": "real MP1 E4M3 B and UE8M0 B scales; synthetic E4M3 A and UE8M0 A scales",
+      "versus_tilelang": {
+        "relative_l2": 3.190028292010538e-05,
+        "max_absolute": 0.25,
+        "cosine": 1.0,
+        "finite": true
+      },
+      "versus_fp32": {
+        "relative_l2": 0.0016607365105301142,
+        "max_absolute": 0.495269775390625,
+        "cosine": 0.9999987483024597,
+        "finite": true
+      },
+      "tilelang_versus_fp32": {
+        "relative_l2": 0.0016607365105301142,
+        "max_absolute": 0.495269775390625,
+        "cosine": 0.9999987483024597,
+        "finite": true
+      },
+      "graph_replay_equal": true,
+      "tilelang_graph_replay_equal": true,
+      "changed_a_scales_graph_passed": true,
+      "changed_a_scales_native": {
+        "relative_l2": 0.0016607365105301142,
+        "max_absolute": 0.99053955078125,
+        "cosine": 0.9999987483024597,
+        "finite": true
+      },
+      "changed_a_scales_tilelang": {
+        "relative_l2": 0.0016607365105301142,
+        "max_absolute": 0.99053955078125,
+        "cosine": 0.9999987483024597,
+        "finite": true
+      },
+      "selected_weights": {
+        "path": "/tmp/llaisys-deepseek-v4-flash-mp1/model0-mp1.safetensors",
+        "scope": "selected weight/scale payloads plus full header; not entire checkpoint payload",
+        "header_sha256": "80fb82525d75f1580d3bfca8d0f5340fc8cc4a8f243a1e6ae3bb36cf6a6df22c",
+        "file_size": 168430204680,
+        "tensors": {
+          "layers.2.attn.indexer.wq_b.weight": {
+            "dtype": "F8_E4M3",
+            "shape": [
+              8192,
+              1024
+            ],
+            "bytes": 8388608,
+            "sha256": "26f3610fdf31d95138e7965b888ae18524ddbabc55381dcea8d403a3660ef7da"
+          },
+          "layers.2.attn.indexer.wq_b.scale": {
+            "dtype": "F8_E8M0",
+            "shape": [
+              64,
+              8
+            ],
+            "bytes": 512,
+            "sha256": "be3772745236c3ebc5896ebf686e73b127914e334e60f0de1200328b89a46d84"
+          }
+        }
+      },
+      "rejected_invalid_arguments": {
+        "partial_output_alias": true,
+        "misaligned_output": true
+      },
+      "aligned_16b_views_equal": true,
+      "cublaslt_version": 130101,
+      "algorithm_candidates": 3,
+      "selected_algorithm_index": 0,
+      "tuning_us": [
+        {
+          "index": 0,
+          "microseconds": 27.197439670562744
+        },
+        {
+          "index": 1,
+          "microseconds": 29.482240676879883
+        },
+        {
+          "index": 2,
+          "microseconds": 28.61311912536621
+        }
+      ],
+      "native_with_a_scale_preparation": {
+        "median_us": 28.553199768066406,
+        "samples_us": [
+          28.5644793510437,
+          28.553199768066406,
+          28.569519519805908,
+          28.479759693145752,
+          28.53208065032959
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "native_gemm": {
+        "median_us": 28.623440265655518,
+        "samples_us": [
+          28.623440265655518,
+          28.60879898071289,
+          28.481600284576416,
+          28.762879371643066,
+          29.341518878936768
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "a_scale_preparation": {
+        "median_us": 1.6441600024700165,
+        "samples_us": [
+          1.6439999639987946,
+          1.64560005068779,
+          1.6441600024700165,
+          1.6443200409412384,
+          1.6420799493789673
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": false
+      },
+      "tilelang": {
+        "median_us": 127.81760215759277,
+        "samples_us": [
+          132.73584365844727,
+          127.9208755493164,
+          127.79128074645996,
+          127.81248092651367,
+          127.81760215759277
+        ],
+        "graph_nodes": 20,
+        "replays_per_sample": 20,
+        "samples": 5,
+        "poisoned_output_replay_checked": true
+      },
+      "speedup_including_a_scale": 4.476472101054769,
+      "effective_tflops": 1236.8505094653904,
+      "b_scale_preparation": "once before measurement; FP8 B payload unchanged",
+      "m_padding": 7,
+      "workspace_bytes": 33554432,
+      "projection": "indexer"
+    }
+  ],
+  "precision": "native MXFP8 Tensor Core FP32 accumulation, BF16 output; UE8M0 replication only",
+  "threshold_relative_l2": 0.01,
+  "cublaslt_fallback": false,
+  "whole_model_validated": false,
+  "measurement": "CUDA event time over captured repeated calls; 5 samples",
+  "dependencies": "native DSO: CUDA13 and cuBLASLt; harness: Torch, TileLang0.1.8, TVM-FFI0.1.8.post2",
+  "checkpoint_unchanged": true,
+  "source_unchanged": true
+}

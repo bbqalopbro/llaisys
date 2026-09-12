@@ -1,0 +1,962 @@
+{
+  "scope": "full native MP1 43-layer free greedy generation; continuous/ring cache; not pybind/serving/performance",
+  "all_passed": true,
+  "result": {
+    "all_passed": true,
+    "layers": 43,
+    "loaded_weights": 67569,
+    "loaded_bytes": 157458450652,
+    "auxiliary_weights": 4702,
+    "steps": 32,
+    "byte_comparisons": 34,
+    "negative_checks": 36,
+    "python_loaded": false,
+    "aten_cpp": true,
+    "fallback": false,
+    "free_generation": true,
+    "allow_tf32_cublas": false,
+    "cases": [
+      {
+        "case": "case_0",
+        "repeat": 0,
+        "input_tokens": 2105,
+        "output_tokens": 16,
+        "generated_ids": [
+          11111,
+          16,
+          455,
+          6102,
+          294,
+          8760,
+          344,
+          11111,
+          16,
+          455,
+          6102,
+          294,
+          8760,
+          344,
+          11111,
+          16
+        ]
+      },
+      {
+        "case": "case_0",
+        "repeat": 1,
+        "input_tokens": 2105,
+        "output_tokens": 16,
+        "generated_ids": [
+          11111,
+          16,
+          455,
+          6102,
+          294,
+          8760,
+          344,
+          11111,
+          16,
+          455,
+          6102,
+          294,
+          8760,
+          344,
+          11111,
+          16
+        ]
+      }
+    ],
+    "backends": [
+      {
+        "backend": "tilelang",
+        "operation": "act_quant",
+        "calls": 20698,
+        "fallback": false
+      },
+      {
+        "backend": "tilelang",
+        "operation": "fp8_gemm",
+        "calls": 1376,
+        "fallback": false
+      },
+      {
+        "backend": "tilelang",
+        "operation": "act_quant",
+        "calls": 2048,
+        "fallback": false
+      },
+      {
+        "backend": "tilelang",
+        "operation": "act_quant",
+        "calls": 1376,
+        "fallback": false
+      },
+      {
+        "backend": "tilelang",
+        "operation": "act_quant",
+        "calls": 44148,
+        "fallback": false
+      },
+      {
+        "backend": "tilelang",
+        "operation": "fp8_gemm",
+        "calls": 1376,
+        "fallback": false
+      },
+      {
+        "backend": "tilelang",
+        "operation": "fp8_gemm",
+        "calls": 1376,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "rotary_inplace",
+        "calls": 3640,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "tensor_scale",
+        "calls": 640,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "indexer_scores",
+        "calls": 640,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "indexer_mask",
+        "calls": 640,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "indexer_topk",
+        "calls": 640,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "indexer_remap",
+        "calls": 640,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "row_inv_rms",
+        "calls": 3872,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "tensor_row_multiply",
+        "calls": 3872,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "attention_prepare",
+        "calls": 1280,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "grouped_linear",
+        "calls": 1280,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "row_gather",
+        "calls": 0,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "router",
+        "calls": 1280,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "moe_dispatch",
+        "calls": 1280,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "moe_combine",
+        "calls": 1280,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "moe_finalize",
+        "calls": 1280,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "expert_activation",
+        "calls": 19810,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "hc_pre_reduce",
+        "calls": 2592,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "hc_post_mix",
+        "calls": 2560,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "token_embedding",
+        "calls": 32,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "greedy_argmax",
+        "calls": 32,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "rotary_frequencies",
+        "calls": 2,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "rotary_inplace",
+        "calls": 1280,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "hc_head_weights",
+        "calls": 32,
+        "fallback": false
+      },
+      {
+        "backend": "cuda-hadamard",
+        "operation": "hadamard",
+        "calls": 840,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "tensor_cast",
+        "calls": 653,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "tensor_fill",
+        "calls": 16,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "dense_linear",
+        "calls": 448,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "compressor_prepare",
+        "calls": 64,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "compressor_pool",
+        "calls": 20,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "rms_norm",
+        "calls": 404,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "rotary_inplace",
+        "calls": 244,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "tensor_scale",
+        "calls": 32,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "indexer_scores",
+        "calls": 32,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "indexer_mask",
+        "calls": 32,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "indexer_topk",
+        "calls": 32,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "indexer_remap",
+        "calls": 32,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "row_inv_rms",
+        "calls": 288,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "tensor_row_multiply",
+        "calls": 288,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "attention_prepare",
+        "calls": 96,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "grouped_linear",
+        "calls": 96,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "row_gather",
+        "calls": 96,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "router",
+        "calls": 96,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "moe_dispatch",
+        "calls": 96,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "moe_combine",
+        "calls": 96,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "moe_finalize",
+        "calls": 96,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "expert_activation",
+        "calls": 888,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "hc_pre_reduce",
+        "calls": 192,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "hc_post_mix",
+        "calls": 192,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "token_embedding",
+        "calls": 0,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "greedy_argmax",
+        "calls": 0,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "rotary_frequencies",
+        "calls": 0,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "rotary_inplace",
+        "calls": 96,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "hc_head_weights",
+        "calls": 0,
+        "fallback": false
+      },
+      {
+        "backend": "cuda-hadamard",
+        "operation": "hadamard",
+        "calls": 42,
+        "fallback": false
+      },
+      {
+        "backend": "tilelang",
+        "operation": "fp8_gemm",
+        "calls": 2752,
+        "fallback": false
+      },
+      {
+        "backend": "tilelang",
+        "operation": "fp8_gemm",
+        "calls": 1376,
+        "fallback": false
+      },
+      {
+        "backend": "tilelang",
+        "operation": "fp8_gemm",
+        "calls": 1376,
+        "fallback": false
+      },
+      {
+        "backend": "tilelang",
+        "operation": "fp8_gemm",
+        "calls": 672,
+        "fallback": false
+      },
+      {
+        "backend": "tilelang",
+        "operation": "act_quant",
+        "calls": 1626,
+        "fallback": false
+      },
+      {
+        "backend": "tilelang",
+        "operation": "fp4_act_quant",
+        "calls": 882,
+        "fallback": false
+      },
+      {
+        "backend": "tilelang",
+        "operation": "hc_split_sinkhorn",
+        "calls": 2752,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "tensor_fill",
+        "calls": 360,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "tensor_cast",
+        "calls": 10626,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "dense_linear",
+        "calls": 8384,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "compressor_prepare",
+        "calls": 1920,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "compressor_pool",
+        "calls": 440,
+        "fallback": false
+      },
+      {
+        "backend": "aten-reference",
+        "operation": "rms_norm",
+        "calls": 5592,
+        "fallback": false
+      },
+      {
+        "backend": "tilelang",
+        "operation": "sparse_attn",
+        "calls": 1376,
+        "fallback": false
+      },
+      {
+        "backend": "tilelang",
+        "operation": "fp4_gemm",
+        "calls": 38644,
+        "fallback": false
+      },
+      {
+        "backend": "tilelang",
+        "operation": "fp4_gemm",
+        "calls": 19322,
+        "fallback": false
+      }
+    ]
+  },
+  "schema": {
+    "all_passed": true,
+    "layers": 43,
+    "required_weights": 67569,
+    "auxiliary_weights": 4702,
+    "loaded_weights": 0,
+    "gpu_allocated": false
+  },
+  "config_rejections": [
+    {
+      "case": "hidden_size=True",
+      "rejected": true,
+      "error": "integer (not float/bool) required"
+    },
+    {
+      "case": "hidden_size=4096.5",
+      "rejected": true,
+      "error": "integer (not float/bool) required"
+    },
+    {
+      "case": "hidden_size=-1",
+      "rejected": true,
+      "error": "HF/inference config mismatch: hidden_size"
+    },
+    {
+      "case": "architectures=['WrongModel']",
+      "rejected": true,
+      "error": "unsupported V4 architectures"
+    },
+    {
+      "case": "n_shared_experts=2",
+      "rejected": true,
+      "error": "unsupported V4 attention/shared expert configuration"
+    },
+    {
+      "case": "expert_dtype=fp8",
+      "rejected": true,
+      "error": "unsupported V4 dtype/activation/routing/RoPE contract"
+    },
+    {
+      "case": "attention_bias=True",
+      "rejected": true,
+      "error": "unsupported boolean model option: attention_bias"
+    },
+    {
+      "case": "qk_rope_head_dim=65",
+      "rejected": true,
+      "error": "HF/inference config mismatch: qk_rope_head_dim"
+    },
+    {
+      "case": "compress_ratios=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+      "rejected": true,
+      "error": "compression ratios disagree"
+    },
+    {
+      "case": "dspark_target_layer_ids=[40, 40, 42]",
+      "rejected": true,
+      "error": "invalid main/MTP compression coverage"
+    },
+    {
+      "case": "missing_hidden",
+      "rejected": true,
+      "error": "missing model field: hidden_size"
+    },
+    {
+      "case": "wrong_scale",
+      "rejected": true,
+      "error": "unsupported V4 dense quantization contract"
+    },
+    {
+      "case": "valid_config_wrong_weight_shape",
+      "rejected": true,
+      "error": "MP1 tensor shape mismatch: embed.weight"
+    },
+    {
+      "case": "valid_config_wrong_weight_count",
+      "rejected": true,
+      "error": "MP1 tensor count differs from actual main/auxiliary schema"
+    }
+  ],
+  "source_unchanged": true,
+  "checkpoint_unchanged": true,
+  "checkpoint_identity": {
+    "path": "/tmp/llaisys-deepseek-v4-flash-mp1/model0-mp1.safetensors",
+    "size_bytes": 168430204680,
+    "sha256": "024836b412ccd5c539bb130842842247d9c427f99c3a1e21ed35ea08ddcc0aa2",
+    "scope": "entire_file_including_header_and_tensor_payload",
+    "signature": {
+      "st_dev": 64772,
+      "st_ino": 1870444,
+      "st_size": 168430204680,
+      "st_mtime_ns": 1788196907364762897,
+      "st_ctime_ns": 1788196907366762884
+    }
+  },
+  "reference_precision_policy_matches": true,
+  "full_vs_chunk_numerical_gate": "not claimed; original gate unchanged",
+  "measurement": {
+    "kind": "correctness_only",
+    "batch": 1,
+    "concurrency": 1,
+    "warmup": 0,
+    "repeats": 2,
+    "cuda_graph": false,
+    "prefix_cache": false,
+    "paged_cache": false,
+    "fallback": false
+  },
+  "configuration": {
+    "capacity": 4096,
+    "layers": 43,
+    "experts": 256,
+    "topk": 6,
+    "precision": "W8A8 dense/shared; W4A8 routed; BF16 hidden/cache; FP32 norms/HC/compressor/router; no MTP execution"
+  },
+  "cases": [
+    {
+      "prompt": "The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is",
+      "expected_contains": "Paris",
+      "expected_exact": null,
+      "chat": null,
+      "case_id": "0",
+      "max_new_tokens": 16,
+      "golden_file": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/deepseek_v4_tilelang_top512_golden/case_0.safetensors",
+      "golden_sha256": "86ae149a3e019e8737266dcdda44f701eb20d0f4f03cfafc692cc37fc4fa9915",
+      "checkpoint_payload_verified": true,
+      "reference_profile": "published",
+      "baseline_report": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/deepseek_v4_b300_tilelang_top512_accuracy.json",
+      "baseline_report_sha256": "5053ff25a9a39b95f61e022a395cbfd1bf949040e85f21fe35da8c7aa768078a"
+    }
+  ],
+  "slurm_job_id": "23085",
+  "gpu": "NVIDIA B300 SXM6 AC",
+  "compute_capability": [
+    10,
+    3
+  ],
+  "cuda": "13.0",
+  "torch": "2.13.0+cu130",
+  "tilelang": "0.1.8",
+  "tvm_ffi": "0.1.8.post2",
+  "native_exit_code": 0,
+  "stdout": "loading 43 layers and 67569 main parameters directly from MP1\nloaded 67569 weights, 157458450652 bytes\nPASS case_0 repeat=0 step=0 token=11111\nPASS case_0 repeat=0 step=1 token=16\nPASS case_0 repeat=0 step=2 token=455\nPASS case_0 repeat=0 step=3 token=6102\nPASS case_0 repeat=0 step=4 token=294\nPASS case_0 repeat=0 step=5 token=8760\nPASS case_0 repeat=0 step=6 token=344\nPASS case_0 repeat=0 step=7 token=11111\nPASS case_0 repeat=0 step=8 token=16\nPASS case_0 repeat=0 step=9 token=455\nPASS case_0 repeat=0 step=10 token=6102\nPASS case_0 repeat=0 step=11 token=294\nPASS case_0 repeat=0 step=12 token=8760\nPASS case_0 repeat=0 step=13 token=344\nPASS case_0 repeat=0 step=14 token=11111\nPASS case_0 repeat=0 step=15 token=16\nPASS case_0 repeat=1 step=0 token=11111\nPASS case_0 repeat=1 step=1 token=16\nPASS case_0 repeat=1 step=2 token=455\nPASS case_0 repeat=1 step=3 token=6102\nPASS case_0 repeat=1 step=4 token=294\nPASS case_0 repeat=1 step=5 token=8760\nPASS case_0 repeat=1 step=6 token=344\nPASS case_0 repeat=1 step=7 token=11111\nPASS case_0 repeat=1 step=8 token=16\nPASS case_0 repeat=1 step=9 token=455\nPASS case_0 repeat=1 step=10 token=6102\nPASS case_0 repeat=1 step=11 token=294\nPASS case_0 repeat=1 step=12 token=8760\nPASS case_0 repeat=1 step=13 token=344\nPASS case_0 repeat=1 step=14 token=11111\nPASS case_0 repeat=1 step=15 token=16\n{\"all_passed\":true,\"layers\":43,\"loaded_weights\":67569,\"loaded_bytes\":157458450652,\"auxiliary_weights\":4702,\"steps\":32,\"byte_comparisons\":34,\"negative_checks\":36,\"python_loaded\":false,\"aten_cpp\":true,\"fallback\":false,\"free_generation\":true,\"allow_tf32_cublas\":false,\"cases\":[{\"case\":\"case_0\",\"repeat\":0,\"input_tokens\":2105,\"output_tokens\":16,\"generated_ids\":[11111,16,455,6102,294,8760,344,11111,16,455,6102,294,8760,344,11111,16]},{\"case\":\"case_0\",\"repeat\":1,\"input_tokens\":2105,\"output_tokens\":16,\"generated_ids\":[11111,16,455,6102,294,8760,344,11111,16,455,6102,294,8760,344,11111,16]}],\"backends\":[{\"backend\":\"tilelang\",\"operation\":\"act_quant\",\"calls\":20698,\"fallback\":false},{\"backend\":\"tilelang\",\"operation\":\"fp8_gemm\",\"calls\":1376,\"fallback\":false},{\"backend\":\"tilelang\",\"operation\":\"act_quant\",\"calls\":2048,\"fallback\":false},{\"backend\":\"tilelang\",\"operation\":\"act_quant\",\"calls\":1376,\"fallback\":false},{\"backend\":\"tilelang\",\"operation\":\"act_quant\",\"calls\":44148,\"fallback\":false},{\"backend\":\"tilelang\",\"operation\":\"fp8_gemm\",\"calls\":1376,\"fallback\":false},{\"backend\":\"tilelang\",\"operation\":\"fp8_gemm\",\"calls\":1376,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"rotary_inplace\",\"calls\":3640,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"tensor_scale\",\"calls\":640,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"indexer_scores\",\"calls\":640,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"indexer_mask\",\"calls\":640,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"indexer_topk\",\"calls\":640,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"indexer_remap\",\"calls\":640,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"row_inv_rms\",\"calls\":3872,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"tensor_row_multiply\",\"calls\":3872,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"attention_prepare\",\"calls\":1280,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"grouped_linear\",\"calls\":1280,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"row_gather\",\"calls\":0,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"router\",\"calls\":1280,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"moe_dispatch\",\"calls\":1280,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"moe_combine\",\"calls\":1280,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"moe_finalize\",\"calls\":1280,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"expert_activation\",\"calls\":19810,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"hc_pre_reduce\",\"calls\":2592,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"hc_post_mix\",\"calls\":2560,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"token_embedding\",\"calls\":32,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"greedy_argmax\",\"calls\":32,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"rotary_frequencies\",\"calls\":2,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"rotary_inplace\",\"calls\":1280,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"hc_head_weights\",\"calls\":32,\"fallback\":false},{\"backend\":\"cuda-hadamard\",\"operation\":\"hadamard\",\"calls\":840,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"tensor_cast\",\"calls\":653,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"tensor_fill\",\"calls\":16,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"dense_linear\",\"calls\":448,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"compressor_prepare\",\"calls\":64,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"compressor_pool\",\"calls\":20,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"rms_norm\",\"calls\":404,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"rotary_inplace\",\"calls\":244,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"tensor_scale\",\"calls\":32,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"indexer_scores\",\"calls\":32,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"indexer_mask\",\"calls\":32,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"indexer_topk\",\"calls\":32,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"indexer_remap\",\"calls\":32,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"row_inv_rms\",\"calls\":288,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"tensor_row_multiply\",\"calls\":288,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"attention_prepare\",\"calls\":96,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"grouped_linear\",\"calls\":96,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"row_gather\",\"calls\":96,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"router\",\"calls\":96,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"moe_dispatch\",\"calls\":96,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"moe_combine\",\"calls\":96,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"moe_finalize\",\"calls\":96,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"expert_activation\",\"calls\":888,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"hc_pre_reduce\",\"calls\":192,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"hc_post_mix\",\"calls\":192,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"token_embedding\",\"calls\":0,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"greedy_argmax\",\"calls\":0,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"rotary_frequencies\",\"calls\":0,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"rotary_inplace\",\"calls\":96,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"hc_head_weights\",\"calls\":0,\"fallback\":false},{\"backend\":\"cuda-hadamard\",\"operation\":\"hadamard\",\"calls\":42,\"fallback\":false},{\"backend\":\"tilelang\",\"operation\":\"fp8_gemm\",\"calls\":2752,\"fallback\":false},{\"backend\":\"tilelang\",\"operation\":\"fp8_gemm\",\"calls\":1376,\"fallback\":false},{\"backend\":\"tilelang\",\"operation\":\"fp8_gemm\",\"calls\":1376,\"fallback\":false},{\"backend\":\"tilelang\",\"operation\":\"fp8_gemm\",\"calls\":672,\"fallback\":false},{\"backend\":\"tilelang\",\"operation\":\"act_quant\",\"calls\":1626,\"fallback\":false},{\"backend\":\"tilelang\",\"operation\":\"fp4_act_quant\",\"calls\":882,\"fallback\":false},{\"backend\":\"tilelang\",\"operation\":\"hc_split_sinkhorn\",\"calls\":2752,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"tensor_fill\",\"calls\":360,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"tensor_cast\",\"calls\":10626,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"dense_linear\",\"calls\":8384,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"compressor_prepare\",\"calls\":1920,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"compressor_pool\",\"calls\":440,\"fallback\":false},{\"backend\":\"aten-reference\",\"operation\":\"rms_norm\",\"calls\":5592,\"fallback\":false},{\"backend\":\"tilelang\",\"operation\":\"sparse_attn\",\"calls\":1376,\"fallback\":false},{\"backend\":\"tilelang\",\"operation\":\"fp4_gemm\",\"calls\":38644,\"fallback\":false},{\"backend\":\"tilelang\",\"operation\":\"fp4_gemm\",\"calls\":19322,\"fallback\":false}]}\n",
+  "export_origins": {
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/quant_hidden.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/fd0cec6d531f099a1275eb0b9d3343caba2f2e3265ad7b834adf11b7da666de9/executable.so"
+    },
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/quant_query_rank.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/a726c99db3588e90f83a278b1a1813d5c4205c28f5d820813e8e2234335baa06/executable.so"
+    },
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/quant_output.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/e19268578618438c5f974e7b0aee547ae71d944991547822bcc41f4e13c9545b/executable.so"
+    },
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/quant_intermediate.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/1fafd1df3f169c40d09a9a593330c88da1ae999ef4094a3db312383ae1451d9a/executable.so"
+    },
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/gemm_query_a.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/c868324117e883a0cb2d38b13441b5002a8c425c8acdbf61ca4202222118deb5/executable.so"
+    },
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/gemm_query_b.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/dbcaeae3bd0a32dc00244712982bb99407c59aa250d34f0a1e4c1fab24138d2d/executable.so"
+    },
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/gemm_latent.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/79ccc9114363f524e913d12c408b8204eefd9992dcd441a5669321575660d9f2/executable.so"
+    },
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/gemm_output.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/0f7103d8c4e55f39fed79fabe1e27b00456fac01e823a8dffefb1cc222b55c91/executable.so"
+    },
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/indexer_gemm.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/ebf8dfbc4a2fad86f7f89aa38aba2ec87fe0970d2fd61c2bde0a14ca15f7b611/executable.so"
+    },
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/latent_qdq.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/ff9328d33476b730496a3014c014115e9228618739500d86d6c4fafb4475548e/executable.so"
+    },
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/indexer_qdq.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/e72f625c28bc9732c0d9d285ecb248d3abff4702aed5287091685c9b7c1848ff/executable.so"
+    },
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/sparse_attn.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/13008f65b0b6edf5bb7e2ed991523a5f3c35269e22dcb3b68f35bfc57e6c3a2c/executable.so"
+    },
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/fp4_gate.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/52136d985765f4fac6a3234da8e319b46867e7e6b48dfdb0e3055126b4a4d995/executable.so"
+    },
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/fp4_down.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/08eea94d36ef434ad09eb12e428cba350b35331058ff884db20028c23229fedd/executable.so"
+    },
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/fp8_gate.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/1f6f81c67974f5b4d1ba57156ccd929fd203e2a2cc9864e5156f67baf8a73177/executable.so"
+    },
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/fp8_down.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/389ce43f5dbcdce8e4a1d0ec0d4bbefe115ab76d3a9b5e640953845396a0ee6d/executable.so"
+    },
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/hc_split_sinkhorn.so": {
+      "mode": "cached_library_copy",
+      "source": "/home/lcpu/57682329/.tilelang/cache/0aea8a2faf5a2802b38f86759e644ffcba9ca972a8444f696dfdd83a4dca40e7/executable.so"
+    }
+  },
+  "dependencies": "\tlinux-vdso.so.1 (0x00007ffd735f3000)\n\tlibllaisys.so => /home/lcpu/57682329/workspace/llaisys/python/llaisys/libllaisys/libllaisys.so (0x00007975c2c00000)\n\tlibtilelang.so => /home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/lib/libtilelang.so (0x00007975c2200000)\n\tlibtvm.so => /home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/lib/libtvm.so (0x00007975be600000)\n\tlibtvm_ffi.so => /home/lcpu/57682329/.local/deepseek-v4-tilelang-compat/tvm_ffi/lib/libtvm_ffi.so (0x00007975c2af1000)\n\tlibtorch_cuda.so => /home/lcpu/57682329/.local/deepseek-v4-reference/torch/lib/libtorch_cuda.so (0x00007975a5c00000)\n\tlibtorch_cpu.so => /home/lcpu/57682329/.local/deepseek-v4-reference/torch/lib/libtorch_cpu.so (0x0000797590c00000)\n\tlibc10_cuda.so => /home/lcpu/57682329/.local/deepseek-v4-reference/torch/lib/libc10_cuda.so (0x00007975c3c97000)\n\tlibc10.so => /home/lcpu/57682329/.local/deepseek-v4-reference/torch/lib/libc10.so (0x00007975a5aba000)\n\tlibcudart.so.13 => /home/lcpu/57682329/.local/deepseek-v4-reference/nvidia/cu13/lib/libcudart.so.13 (0x0000797590800000)\n\tlibstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x0000797590400000)\n\tlibm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x0000797590b17000)\n\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007975c35d2000)\n\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x0000797590000000)\n\t/lib64/ld-linux-x86-64.so.2 (0x00007975c3d3b000)\n\tlibcublas.so.13 => /home/lcpu/57682329/.local/deepseek-v4-reference/nvidia/cu13/lib/libcublas.so.13 (0x000079758ca00000)\n\tlibcuda_stub.so => /home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/lib/libcuda_stub.so (0x00007975c3c81000)\n\tlibpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007975c3c7c000)\n\tlibz3.so => /home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/lib/../../z3/lib/libz3.so (0x000079758b600000)\n\tlibdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x00007975c3c77000)\n\tlibcudart_stub.so => /home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/lib/libcudart_stub.so (0x00007975c3c6d000)\n\tlibnvrtc_stub.so => /home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/lib/libnvrtc_stub.so (0x00007975c3c68000)\n\tlibtorch_nvshmem.so => /home/lcpu/57682329/.local/deepseek-v4-reference/torch/lib/libtorch_nvshmem.so (0x000079758b200000)\n\tlibcusparse.so.12 => /home/lcpu/57682329/.local/deepseek-v4-reference/torch/lib/../../nvidia/cu13/lib/libcusparse.so.12 (0x0000797581400000)\n\tlibcufft.so.12 => /home/lcpu/57682329/.local/deepseek-v4-reference/torch/lib/../../nvidia/cu13/lib/libcufft.so.12 (0x000079756fa00000)\n\tlibcufile.so.0 => /home/lcpu/57682329/.local/deepseek-v4-reference/torch/lib/../../nvidia/cu13/lib/libcufile.so.0 (0x000079756f600000)\n\tlibcusparseLt.so.0 => /home/lcpu/57682329/.local/deepseek-v4-reference/torch/lib/../../nvidia/cusparselt/lib/libcusparseLt.so.0 (0x0000797561400000)\n\tlibnccl.so.2 => /home/lcpu/57682329/.local/deepseek-v4-reference/torch/lib/../../nvidia/nccl/lib/libnccl.so.2 (0x0000797555600000)\n\tlibcurand.so.10 => /home/lcpu/57682329/.local/deepseek-v4-reference/torch/lib/../../nvidia/cu13/lib/libcurand.so.10 (0x000079754ce00000)\n\tlibcublasLt.so.13 => /home/lcpu/57682329/.local/deepseek-v4-reference/torch/lib/../../nvidia/cu13/lib/libcublasLt.so.13 (0x0000797526e00000)\n\tlibcudnn.so.9 => /home/lcpu/57682329/.local/deepseek-v4-reference/torch/lib/../../nvidia/cudnn/lib/libcudnn.so.9 (0x0000797526a00000)\n\tlibnvrtc.so.13 => /home/lcpu/57682329/.local/deepseek-v4-reference/torch/lib/../../nvidia/cu13/lib/libnvrtc.so.13 (0x000079751fe00000)\n\tlibrt.so.1 => /lib/x86_64-linux-gnu/librt.so.1 (0x00007975c2aec000)\n\tlibgomp.so.1 => /home/lcpu/57682329/.local/deepseek-v4-reference/torch/lib/libgomp.so.1 (0x000079751fa00000)\n\tlibcupti.so.13 => /home/lcpu/57682329/.local/deepseek-v4-reference/torch/lib/../../nvidia/cu13/lib/libcupti.so.13 (0x000079751f400000)\n\tlibnvshmem_host.so.3 => /home/lcpu/57682329/.local/deepseek-v4-reference/torch/lib/../../nvidia/nvshmem/lib/libnvshmem_host.so.3 (0x000079751ca00000)\n\tlibnvJitLink.so.13 => /home/lcpu/57682329/.local/deepseek-v4-reference/nvidia/cu13/lib/libnvJitLink.so.13 (0x0000797516a00000)\n\tlibutil.so.1 => /lib/x86_64-linux-gnu/libutil.so.1 (0x00007975c2ae7000)\n",
+  "artifact_sha256": {
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/model-native-standalone": "178dac16c9cf75ab8623b1716409199dfd4601369cef36447bd48823cbf8fe8b",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/manifest.txt": "661b469ed7a7714b5c09c0017d920540f155f90ae74f67d2034e821d23f94488",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/quant_hidden.so": "785aaa135dc8bee95433adbdfe9d09b11ce542a2f3ce80681374818a4adc0ad9",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/quant_query_rank.so": "4b2e23080d30bd4d4f170862138067ba4fb131aab2c18f2fecbf814379b50a30",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/quant_output.so": "281ca0d548debcad63b3ab1e707fef3fed37386a11dafa1647ac186c4cbb8e74",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/quant_intermediate.so": "dc7a13961136dea35b4e12efb71c676ddb85445d7d3d5ea56ca940010d40d577",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/gemm_query_a.so": "149cded612c8fe9c60cdd5811969d961494a4958d68be8f93977b948135568e7",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/gemm_query_b.so": "8ea4b9229eda18134104b4320c3bf17f7359f362be970cb87771b6a2e932aa99",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/gemm_latent.so": "492077c8ac82193aab2e01e222da6324f6aa1ae347bfbd9a462dd1622b3e888d",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/gemm_output.so": "e364b729d114254c4fc4556735bf114221a191d64b2e87d6e9b64978b8f00320",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/indexer_gemm.so": "a11f5241738944df5fe2ba6eac45de0a33a6d8dc9fd097598aee5c5152b73e84",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/latent_qdq.so": "8f1115dc26ab923b9f396fcb9ae40ba078ac68b8dfe702fb4100bc593a058e07",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/indexer_qdq.so": "f5fb6342d71b18b1318c3874018bde46d82326abe4f1eaf667d82a18d9424c91",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/sparse_attn.so": "8dde7b38f7af6adac84f58bd87a6712ee1caa9552124fed4ff8e2f19babcbed5",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/fp4_gate.so": "7ff6f2b8d0d806596f7ec6c87351863331c2291918f67523eef6c293ab0ba050",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/fp4_down.so": "3d070d57e6287b37ad0dab28e1f1814e8393e6ea0563c98be7a40943ce1fc651",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/fp8_gate.so": "a42e66db30827be22b91025c42a68b4aa901176e33d70538eaa24b8544a5654e",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/fp8_down.so": "97cbad850bb97cec8a0274cf8a5ae6eabb9651174abd2fc411c45fe135faffe1",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/hc_split_sinkhorn.so": "cade241b287938b6318fd5d725c29ce893a1886524bfc968d08c8312bb92f554",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/case_0_logits_0.bin": "7ce309a7ae63873dddecb9659a82b003ddcc38903ea17d8138169b2fb5916971",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/case_0_logits_5.bin": "3b7a01f93be28f3967937510f8866b53469e8c928888abba9bd8d91131d5253e",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/case_0_logits_12.bin": "ba3824e90bc56d6b4e57adf6168d0ce5f0e2e60e0ca4f098e2c3847e95b57bbb",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/case_0_logits_10.bin": "b6534fe311913667a7c89dae283d9d0ab26d0fa642c58419dcf00bb9d759dfee",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/case_0_logits_15.bin": "f0c6a5db70a0cdc7d86cecd1b99665860cdeb4546a416f3cacff8fe2c02c8662",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/case_0_logits_9.bin": "c7e5c991c60c715ab6bd1a28ececc74805e8d77511ef6f775b44d2835eb2940a",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/case_0_logits_14.bin": "e2bcea2bdff73a6adfd637eca6cd59b3831724a1bf039a07c0612513c2818260",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/case_0_logits_3.bin": "c5a202422b146878624389190f7455f5c0852fb53092837693a59ff4826374b7",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/case_0_logits_1.bin": "82b53bf40798c412d838c682b085e95a218f9a18d3277dc2310bfa7c698a1bab",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/case_0_logits_4.bin": "61f0802fb0d2bde329916ee2c07c651bc2e40677f3ef9afcf2f20aa1efee1dc3",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/case_0_logits_11.bin": "3b2876a4bb65dfaaa8580db248fc88a326e6c09674a8e8f17f382c7cec49ac08",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/case_0_logits_2.bin": "5f01145994a93353421cc2cb39f52ef649779f79d3755151ba0583a1b44e76b2",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/case_0_ids.bin": "7e0e9d4a6b1ed7c4d71489fd96f10655a135dccdd8ed2c3d3840f5b14df4838d",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/case_0_logits_6.bin": "e00ed9e9af2ab5616365bde9a38d6fe7d1724d2b9dcef125d4cf85b3b8e2a915",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/case_0_logits_13.bin": "d1badf0892227a2d3f267a5e323da9618dcd8fb724b1808a75c6b97108446cab",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/frequencies_True.bin": "57323bfcbc64788c7743c02a5456eb88fdfd39aab529807903df35188c13e6b9",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/case_0_logits_7.bin": "9acad864fc321599be271c2ba361fe9cee17c111ae2776db6980464491a9cf4c",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/case_0_logits_8.bin": "3596671cdae2a80ee1b0f19015bb6648daf4af14af791e3dcb43bb6838b0d3ed",
+    "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/frequencies_False.bin": "48c591cd4f54422fe722889dc5e1036b6e49d0da9311f9397b63d2a428f90ea6"
+  },
+  "provenance": {
+    "command": [
+      "tools/deepseek_v4_reference/verify_native_model.py",
+      "--source-model",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731",
+      "--checkpoint",
+      "/tmp/llaisys-deepseek-v4-flash-mp1/model0-mp1.safetensors",
+      "--baseline",
+      "benchmark_results/deepseek_v4_b300_tilelang_top512_accuracy.json",
+      "benchmark_results/deepseek_v4_tilelang_top512_golden",
+      "--max-seq-len",
+      "4096",
+      "--repeat",
+      "2",
+      "--hadamard-source",
+      "/home/lcpu/57682329/.local/src/fast-hadamard-transform",
+      "--hadamard-object",
+      "/home/lcpu/57682329/.local/deepseek-v4-hadamard/fast_hadamard_transform_cuda.cuda.o",
+      "--output",
+      "benchmark_results/deepseek_v4_b300_native_model_top512.json"
+    ],
+    "build_command": [
+      "/usr/bin/g++",
+      "-std=c++20",
+      "-O2",
+      "-pthread",
+      "-D_GLIBCXX_USE_CXX11_ABI=1",
+      "-I/home/lcpu/57682329/workspace/llaisys",
+      "-I/home/lcpu/57682329/workspace/llaisys/include",
+      "-I/home/lcpu/57682329/.local/deepseek-v4-tilelang-compat/tvm_ffi/include",
+      "-I/home/lcpu/57682329/.local/deepseek-v4-reference/torch/include",
+      "-I/home/lcpu/57682329/.local/deepseek-v4-reference/torch/include/torch/csrc/api/include",
+      "-I/usr/local/cuda/include",
+      "/home/lcpu/57682329/workspace/llaisys/test/model_native_standalone.cpp",
+      "-Wl,--start-group",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-deepseek-v4-native.a",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-tilelang-native.a",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-aten-native.a",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-native-tensor.a",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-core.a",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-device.a",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-device-cpu.a",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-utils.a",
+      "-Wl,--end-group",
+      "-L/home/lcpu/57682329/.local/deepseek-v4-reference/torch/lib",
+      "-L/home/lcpu/57682329/.local/deepseek-v4-tilelang-compat/tvm_ffi/lib",
+      "-L/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/lib",
+      "-L/home/lcpu/57682329/workspace/llaisys/python/llaisys/libllaisys",
+      "-L/usr/local/cuda/lib64",
+      "-Wl,--no-as-needed",
+      "-lllaisys",
+      "-ltilelang",
+      "-ltvm",
+      "-ltvm_ffi",
+      "-ltorch_cuda",
+      "-ltorch_cpu",
+      "-lc10_cuda",
+      "-lc10",
+      "-lcudart",
+      "-ldl",
+      "-Wl,-rpath,/home/lcpu/57682329/.local/deepseek-v4-reference/torch/lib",
+      "-Wl,-rpath,/home/lcpu/57682329/.local/deepseek-v4-tilelang-compat/tvm_ffi/lib",
+      "-Wl,-rpath,/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/lib",
+      "-Wl,-rpath,/home/lcpu/57682329/workspace/llaisys/python/llaisys/libllaisys",
+      "-Wl,-rpath,/usr/local/cuda/lib64",
+      "-o",
+      "/home/lcpu/57682329/workspace/llaisys/benchmark_results/native_model_khbmfuqa/model-native-standalone"
+    ],
+    "file_sha256": {
+      "/home/lcpu/57682329/workspace/llaisys/tools/deepseek_v4_reference/verify_native_model.py": "2a16fde3a7cdf301c57256a2022cbc0fddf9585de9e68fa47e0b2ff09e78483f",
+      "/home/lcpu/57682329/workspace/llaisys/test/model_native_standalone.cpp": "c94c3241506b1b31510c88c1413d8ec9da4ee4d02be94cfe5461f65b6e892356",
+      "/home/lcpu/57682329/workspace/llaisys/test/native_fixture_utils.hpp": "0d2246cb4e49bd02c86bec345674ec13d25a5c3c516446e93acf645677b4257b",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/inference/model.py": "c0c19e6c9fa439bac7fbb1c5bc1868232dfd5aa2f439a548d0e33dcc2a9edd3f",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/inference/kernel.py": "59b325083d7103975cba025bd0d60ea343bb82d8fff53088afb7c04bd380c0c2",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/inference/config.json": "c90861f3d10a9e4ef5954f8f1a34c529d480da1c5799f84660028f4e38e14e71",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/config.json": "6c8f3d2d3b48707541b88f32f22ef3f0f8a6b57d8523281e2b8d3cdb0ae9a023",
+      "/home/lcpu/57682329/workspace/llaisys/xmake.lua": "9825adcf7b65c1d8f94e5baefb356271a74c9f0d28fa84f119fc7d7377458b23",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-deepseek-v4-native.a": "f878254e095bc2079e0f3e2873472e10c2701cf98212b4edeaadb8229803ffc3",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-tilelang-native.a": "8fe0f66931bea0da0626adb8b58022819c3bdfd54888cfa47bf62e4db44da2e4",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-aten-native.a": "e17c5176ab985c12f1b095d8b6b59fde8a8b8cbc3df51a6849d094ac07961b14",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-native-tensor.a": "6dafc36b2d0244f536668ecb58f26fb4aab86bbf08c844bf7482ca2f3a0943b1",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-core.a": "f63f95e5b1a5fae20d613d489df0d833dab444b4637eb386d08a2d0e4fa0d4c4",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-device.a": "a557bb9c31d19fd7a868cfdb7a025a2f3141d38c60a759998ed82f14b8d1e529",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-device-cpu.a": "7bde43509365929e0f99d167e5858adc36e2dc3a7fd70d62c05477f41d9fcecd",
+      "/home/lcpu/57682329/workspace/llaisys/build/linux/x86_64/release/libllaisys-utils.a": "f5080f3550727cba814457c93c4bf9b8088e4adb6c5a6738dee6b303e5ab5a02",
+      "/home/lcpu/57682329/workspace/llaisys/python/llaisys/libllaisys/libllaisys.so": "43302daa19357dfb8eff84c15c1557d4e1dd33d112a8810903015dc1de6f44a2",
+      "/home/lcpu/57682329/.local/src/fast-hadamard-transform/csrc/fast_hadamard_transform_cuda.cu": "aed649e84fe379d1adfdb061fc6f622f55612ddcd103f51f08ee984ff4dff34f",
+      "/home/lcpu/57682329/.local/deepseek-v4-hadamard/fast_hadamard_transform_cuda.cuda.o": "580051b78b9187fb40324b67ae39521f98035c8dfeebfd24a2746dd31c44fc60",
+      "/home/lcpu/57682329/workspace/llaisys/tools/deepseek_v4_reference/run_independent.py": "7d5700d474f7010d712675a3eec0c168e563b38e9fffe5de798628a45edf3ff1",
+      "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_evidence.py": "d94d0afe68747a3876231f922868a752c26eb396f100456bf90f0ce6646de6a8",
+      "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_model/config.py": "c16d141ca56040b8a0c4c4915add4d56a94b4358ea3e2de31dc789a4785ea3b9",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/allocators.h": "afca4781a6e2b2fd6261248538e55bb7466e88f9d00f6f64bb68152bf0079d82",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/cursorstreamwrapper.h": "2e64fd6f5bfe6c176575e055ce085a0bd50791296d1c9187f89f803217956164",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/document.h": "166076b35368846b82c89ded1565b53d5c26387dae88be72d071742e58bd6455",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/encodedstream.h": "91fab96a0fb8b45b0a95022488446ea75b9e8d1bd30b14e8279b2dca0ea825b6",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/encodings.h": "05cdbdf29cb20665ee66db400a2b2cf9c4263238a219efca1f9f880a2e50818f",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/error/en.h": "7b689af887eca2200862654b8ca201c9c19262eaed9f430a99768024612705bc",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/error/error.h": "04e95c457d06684d4119155838e19d9f126925f1167d9fb0b28bfc967af15fab",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/filereadstream.h": "b0d3238f260eed198d1a1cc8da3fb667b798b3860d65a087583bc08f396ff7d5",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/filewritestream.h": "3d06026343043cf863c299f3149b09e5b7a3a04d7cf90cb456a2a29e7820fe55",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/fwd.h": "4f6085ff62b3e74a9529e3fd9ff929b37042e4808f507b3a6af4ccb8382e6943",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/internal/biginteger.h": "8e33749ec7c3c4b2d9c54a7a0debcdc08e7f3868a932d1dd4a6d6dfa8eb1a596",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/internal/clzll.h": "bacae6cf2cd4b930fb71833a37119d74633c558ef8cbdbb203ae35329318b68d",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/internal/diyfp.h": "d6935857eccb4631236e28f3646de18839a0d3a9da82b87ff1a292e35376cee3",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/internal/dtoa.h": "846eea60a315c65d9385c76b5f3ee60ad521c332ecf0e5c43a350664c7e63ddf",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/internal/ieee754.h": "ee0f793af77496549ed63200d47259386a8e705061c2a22f8dfff2f0c6cdd05d",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/internal/itoa.h": "676d4983b3683f69a5a1128f385d4e92045fe41e02dc24741ed700668deca13a",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/internal/meta.h": "11abdfc72e0b16f21a35cedfb2b60c97e6807c2c8a5b300ba5a834ca07710e04",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/internal/pow10.h": "2de768bed1db790e98f52e7486c9cfafde8fd9f980a25cebc4edaf1e0e09c98e",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/internal/regex.h": "5887f3bde1230a71ddef72ebfd3c5f743cb44b131e20c59ed592dd5e58d1ac94",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/internal/stack.h": "494e81aa4a4468cc6426deabe617cecfd40cd618fe7c731deef07d40ae70f6ac",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/internal/strfunc.h": "5818b36ee9d9f64b50c75c494d5d78969b85beb578155e066951df11026010fe",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/internal/strtod.h": "c3ac788b1439ed633c92091198b51fc1500726029152ac530df7cf53eddf9b6e",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/internal/swap.h": "2e15453e86c314a50ae7ecc976abfc05b5f374055a684d87057081ea8c5595ff",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/istreamwrapper.h": "78a73e96af1f8d73a5766800501ada440af577dff8d476d286b76de82f3b0759",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/memorybuffer.h": "5e3c7891798318251bdccab0f264afc3331ba7016c195a6b55a5f0352a110683",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/memorystream.h": "85bc44021b91449458e4a6cf50e41dba39c43f4890e2261dff6ba474f616c21b",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/msinttypes/inttypes.h": "87df6f591d283db1072c6b4e7b8860cad12d1b719e4be981b00dc22d2aa5aac7",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/msinttypes/stdint.h": "a606f91ae249397dcea4e8ea5312d6be149d925558279c1cf6f43c3a4e20c39b",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/ostreamwrapper.h": "28fe880b013e21128bd24cf7e2d7e070ffa7476e26e96d9bc5596e15eb4bc725",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/pointer.h": "5b2c8888baa6a0764aeeb4be0600dd74762af3c362f715118b6aa9877b076209",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/prettywriter.h": "2a66a3df47e66fa1dc7d6c3ccb639058011fe0e891e4c856a304506e4ac833a7",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/rapidjson.h": "520e98fc2f1e8bf483fdd11e91c6b4ff608ea27ee16e9164e77863c200769744",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/reader.h": "fd4645d266c57ca05e5792b61336365e30a5ebc400a5c4cb9f68bf4b24dc971f",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/schema.h": "3b423ea3954ec14110274155ea616c451b24671124deb806e634ec7e63587b14",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/stream.h": "fabedeb85deb674d0f935d96b2b008e2d5aa939729ea2e2ce59f7b8818348d8e",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/stringbuffer.h": "004c07b95a9aa52eb9c462ed6db0aa8d9c5a58729faaa767b4f6718640bb873b",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/uri.h": "b0680e444b5fa6170affa4fd137c66d51a6f922f672019b04614e735406c5e12",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/3rdparty/composable_kernel/include/rapidjson/writer.h": "1318a3db0b585813398cb733a31505eea6682f67ee8993895c0f062ed4fc4ca9",
+      "/home/lcpu/57682329/workspace/llaisys/src/backends/native/kernel.hpp": "a5419ec3a7a3bea08772cb3dc3cb801353394c756bc750092c3c30d7497d8dad",
+      "/home/lcpu/57682329/workspace/llaisys/src/backends/native/tensor.cpp": "40a65c76f58f0f43bcddccbd962b95acc04eae7c8d0fba6003457d25f23ed8f7",
+      "/home/lcpu/57682329/workspace/llaisys/src/backends/native/tensor.hpp": "73248a59c5a3999bcda7c97bd4c2d03db6d25eb23104b46ab3325d4c9f2ca33f",
+      "/home/lcpu/57682329/workspace/llaisys/src/backends/tilelang/native_kernel.cpp": "285edf1b13682ccdfb5a2f8dfd819540a001a0b1614f8bea6932f856e6a791b0",
+      "/home/lcpu/57682329/workspace/llaisys/src/backends/tilelang/native_kernel.hpp": "3ea17a2047399558f1759bf036ba206af42432f8fb576205635e0590b4b9cb03",
+      "/home/lcpu/57682329/workspace/llaisys/src/backends/aten/structural_kernel.cpp": "1ed42c257128d50ad2691b13d4af08ceeaeca72bb4aaf038bef3e8b89d07dc05",
+      "/home/lcpu/57682329/workspace/llaisys/src/backends/aten/structural_kernel.hpp": "dac14f3a2e9496bbcfdc08ca8fee4a49b8729b2aa927ef1cfb3b269404e0336e",
+      "/home/lcpu/57682329/workspace/llaisys/src/backends/hadamard/native_kernel.cpp": "b49bf451d0bdecdf63bd3d6ebac16a5cc0a3fdf6fce43a33681bc0ebe9821f61",
+      "/home/lcpu/57682329/workspace/llaisys/src/backends/hadamard/native_kernel.hpp": "65508fa1bed834068d45048bcf5114ae57307991e9681e6d94bfd6b2a0c5b4e5",
+      "/home/lcpu/57682329/workspace/llaisys/src/models/deepseek_v4/attention.cpp": "6bb2e0974fb68de32c690c69141f89c1352093a0268203aae4fa21400c6c7c43",
+      "/home/lcpu/57682329/workspace/llaisys/src/models/deepseek_v4/attention.hpp": "ea84c1caa1def1fc8cd8b374f92978a7f7dd1515af8aa761619b615746437868",
+      "/home/lcpu/57682329/workspace/llaisys/src/models/deepseek_v4/block.cpp": "53bc2c026aa19160b6ff4e19f1ea9482f86a12b89bbbf2d1d1af77bb18dac795",
+      "/home/lcpu/57682329/workspace/llaisys/src/models/deepseek_v4/block.hpp": "2826fb8e3f02df21acb1e741106dbb14aa3d0002e27b30f3c45af6c1c2b9e853",
+      "/home/lcpu/57682329/workspace/llaisys/src/models/deepseek_v4/cache_layout.hpp": "6fb5dd5584e201c7b29fcdd94e37a86ef6904c36d6ca7ac7cf1d0462d58c8d55",
+      "/home/lcpu/57682329/workspace/llaisys/src/models/deepseek_v4/checkpoint.cpp": "521d7a11fdd38998e4bbb19b747e5d3ef9c88cc2d3bee5ea082d57727ce5f7b0",
+      "/home/lcpu/57682329/workspace/llaisys/src/models/deepseek_v4/checkpoint.hpp": "bd7e266fed7852aed2ed5c03e241d65433e931b882324d08d221905782dc8f8a",
+      "/home/lcpu/57682329/workspace/llaisys/src/models/deepseek_v4/compressor.cpp": "7683f11db13ed681c8e7989647dd1cc8095fad86f4993394791badbda88ea92f",
+      "/home/lcpu/57682329/workspace/llaisys/src/models/deepseek_v4/compressor.hpp": "b9a7ea977d4dd47250b7a54889971b1479a7ff39fa393233814fd71c6c6c2cca",
+      "/home/lcpu/57682329/workspace/llaisys/src/models/deepseek_v4/config.cpp": "fa9d0f83eb2605f02dd2b3ef877636b4be6a8d1be6f07ef98ea754bd2f00831a",
+      "/home/lcpu/57682329/workspace/llaisys/src/models/deepseek_v4/config.hpp": "1145dc6f34d864394494779317148dbfd58865244b98194e83f7d10f7bf49da6",
+      "/home/lcpu/57682329/workspace/llaisys/src/models/deepseek_v4/hyperconnection.cpp": "f513b6ab8204c7198746d34332431b0cb5d4bde0470091104cff35dccedbafb1",
+      "/home/lcpu/57682329/workspace/llaisys/src/models/deepseek_v4/hyperconnection.hpp": "5b63804f06279cf51c2ae8c75ca1500b2cd50c23b7685c654742fd874b0fbf3d",
+      "/home/lcpu/57682329/workspace/llaisys/src/models/deepseek_v4/indexer.cpp": "d63b69e332c7deb7c940463dcc63f43ef79c4079aa80cf7e97fed9768873acd5",
+      "/home/lcpu/57682329/workspace/llaisys/src/models/deepseek_v4/indexer.hpp": "ea68917e58aa73fc126764d7058044944a40dcc83b339ad6b1315ebbb6ef96cd",
+      "/home/lcpu/57682329/workspace/llaisys/src/models/deepseek_v4/json_detail.hpp": "d380950ef2d5c5dad67a371ebaa9995eb3eec7e21bffab62d86eec86fb7e7d1e",
+      "/home/lcpu/57682329/workspace/llaisys/src/models/deepseek_v4/linear.cpp": "6296e464e648a383af29cddaba40c93883099c7b3096562382e6a00b0fde80d7",
+      "/home/lcpu/57682329/workspace/llaisys/src/models/deepseek_v4/linear.hpp": "12e3dda26b2bad717b8af1f88f3c6d0707d5b0801beeee155a70f55f49beb0b4",
+      "/home/lcpu/57682329/workspace/llaisys/src/models/deepseek_v4/model.cpp": "6031dd8205e30297f40bbd7a34e3d5656cf228f721bc0fa4c9c522b34bd05f61",
+      "/home/lcpu/57682329/workspace/llaisys/src/models/deepseek_v4/model.hpp": "b84d3bf64b043aaad282c098117daba6a5e096e3cf626327b86d500318a45941",
+      "/home/lcpu/57682329/workspace/llaisys/src/models/deepseek_v4/moe.cpp": "e2b5ab9416b018a4500c6844beff88fc9f6b0df0ff46f953825fee49cc04b77d",
+      "/home/lcpu/57682329/workspace/llaisys/src/models/deepseek_v4/moe.hpp": "328552a9daf9463c00959bc511757056453b75cf70b238578dabb5492833cdd5",
+      "/home/lcpu/57682329/workspace/llaisys/xmake/native_model.lua": "841d7edd5254e0030c29b6ad71a8517adc59ca0ab7992ffc5869a1df80741236",
+      "/home/lcpu/57682329/workspace/llaisys/xmake/native_tensor.lua": "a3ad7cdb1d7d0b65004de69bca01e6af4a6749676a26e88956388a8329337640",
+      "/home/lcpu/57682329/workspace/llaisys/xmake/tilelang.lua": "8e3af04f8a658ff4f75c9b9cd573c9e6489d13ae4ef3b80be5512784815ed772",
+      "/home/lcpu/57682329/workspace/llaisys/xmake/aten.lua": "985ab8a0b8c1c820bb8c30b7c09f2f9efd2106df3093b67af91b3d46b0d82ae5",
+      "/home/lcpu/57682329/.local/deepseek-v4-tilelang-compat/tvm_ffi/lib/libtvm_ffi.so": "e18844e96ff3f1054e769a1d685eb3178cf878d1ac411378f6a72c2d8c153884",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/lib/libtilelang.so": "949b98558468329afeb03cd91218331ca28ec59143bbdeb57901a915f688ef6a",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/tilelang/lib/libtvm.so": "0321038d48fed213e5432186f87d1c145f66911278b98752c92c99496bc54e7d",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/torch/lib/libtorch_cpu.so": "9b8ecee6ebc8419142714302c8a7b61b2e1e52a2882bce6ab1e1587ed39c07e9",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/torch/lib/libtorch_cuda.so": "181dfc4fe86bf8eb4726604ea13b18581b15cf4d5f6e52f538daa41016edc19a",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/torch/lib/libc10.so": "b83ea50e9171c7e3455c19f9ff2c7d21d457a7b8231e9c4ea1b6e032ae1156d5",
+      "/home/lcpu/57682329/.local/deepseek-v4-reference/torch/lib/libc10_cuda.so": "54da13d79545600a1822a72b179a58295c1915f8ea0194a89066437c3ac48c1a"
+    },
+    "commit": "05784b4da6483f77821a061e521ea1b98fa271e1",
+    "dirty": true
+  }
+}

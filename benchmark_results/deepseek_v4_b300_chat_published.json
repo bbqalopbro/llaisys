@@ -1,0 +1,3490 @@
+{
+  "gpu": "NVIDIA B300 SXM6 AC",
+  "compute_capability": [
+    10,
+    3
+  ],
+  "torch": "2.13.0+cu130",
+  "cuda": "13.0",
+  "backend": "published-tilelang",
+  "reference_mode": "full-only",
+  "reference_profile": "published",
+  "profile_adapter": null,
+  "profile_operation_counts": {},
+  "checkpoint_identity": {
+    "path": "/tmp/llaisys-deepseek-v4-flash-mp1/model0-mp1.safetensors",
+    "size_bytes": 168430204680,
+    "sha256": "024836b412ccd5c539bb130842842247d9c427f99c3a1e21ed35ea08ddcc0aa2",
+    "scope": "entire_file_including_header_and_tensor_payload",
+    "signature": {
+      "st_dev": 64772,
+      "st_ino": 1870444,
+      "st_size": 168430204680,
+      "st_mtime_ns": 1788196907364762897,
+      "st_ctime_ns": 1788196907366762884
+    }
+  },
+  "weight_key_validation": {
+    "missing": [],
+    "unexpected": []
+  },
+  "golden_file_sha256": {
+    "case_0.safetensors": "153f0f72ea2c81bb090afedf12515679cd210dc72eee3edb71545e5b9562552d",
+    "case_1.safetensors": "b15602c010c31a0609bd0ee66873b5808cf1a8c76085d2aec7cdecd47ebcc2df",
+    "case_2.safetensors": "8e748891eb557363efdfbb1ec9932ed093ce29657bd0d2b831dc38278f7e8057",
+    "case_3.safetensors": "8aaea7e43a8dd62f0d1ecc61f4da5adf934b5eeb17be25f9e44be7ebbb0d5731",
+    "case_4.safetensors": "1e9e51dd51b2def7c91ea81fc672e0d8dd07ce08dd900120e941d7457bdf75a9",
+    "case_5.safetensors": "31d9171bcfae389b11788c56e003d381fa14e06e37f23aa5adaa99634f3c98b3",
+    "case_6.safetensors": "b86bc681e13d9fe87f960fafaeb3c534b33096227d0551dbdd0e5955312e1dd3",
+    "case_7.safetensors": "ae9ea265fef25ac631b11afdfc13647cd10396dd0accca1e0e1bc53f00805de3"
+  },
+  "operator_backends": {
+    "act_quant": {
+      "backend": "tilelang",
+      "version": "0.1.8",
+      "contract": {
+        "revision": 1,
+        "inputs": "BF16 [...,K]; block=128; FP32/UE8M0 scales",
+        "outputs": "FP8 [...,K], scale [...,K/128] or BF16 QDQ",
+        "mutation": "x only when inplace=True"
+      },
+      "calls": 566495,
+      "failures": 0,
+      "fallback": false
+    },
+    "fp4_act_quant": {
+      "backend": "tilelang",
+      "version": "0.1.8",
+      "contract": {
+        "revision": 1,
+        "inputs": "BF16 [...,K]; block=32; UE8M0 scales",
+        "outputs": "packed E2M1 [...,K/2], scale [...,K/32] or BF16 QDQ",
+        "mutation": "x only when inplace=True"
+      },
+      "calls": 9681,
+      "failures": 0,
+      "fallback": false
+    },
+    "fp8_gemm": {
+      "backend": "tilelang",
+      "version": "0.1.8",
+      "contract": {
+        "revision": 1,
+        "inputs": "FP8 A[...,K], B[N,K]; scales A[...,K/128], B[ceil(N/128),K/128]",
+        "outputs": "BF16 [...,N]; FP32 accumulation; no activation requantization",
+        "mutation": "none"
+      },
+      "calls": 115920,
+      "failures": 0,
+      "fallback": false
+    },
+    "fp4_gemm": {
+      "backend": "tilelang",
+      "version": "0.1.8",
+      "contract": {
+        "revision": 1,
+        "inputs": "FP8 A[...,K], packed E2M1 B[N,K/2]; scales A[...,K/128], B[N,K/32]",
+        "outputs": "BF16 [...,N]; FP32 accumulation; W4A8, not W4A4",
+        "mutation": "none"
+      },
+      "calls": 432894,
+      "failures": 0,
+      "fallback": false
+    },
+    "sparse_attn": {
+      "backend": "tilelang",
+      "version": "0.1.8",
+      "contract": {
+        "revision": 1,
+        "inputs": "BF16 Q[B,S,H,D], latent[B,L,D]; FP32 sink[H]; int32 indices[B,S,T], -1=invalid",
+        "outputs": "BF16 [B,S,H,D]; indexed attention with sink in softmax denominator",
+        "mutation": "none"
+      },
+      "calls": 15480,
+      "failures": 0,
+      "fallback": false
+    },
+    "hc_split_sinkhorn": {
+      "backend": "tilelang",
+      "version": "0.1.8",
+      "contract": {
+        "revision": 1,
+        "inputs": "FP32 mixes[B,S,(2+HC)*HC], scale[3], base[(2+HC)*HC]",
+        "outputs": "FP32 pre[B,S,HC], post[B,S,HC], combine[B,S,HC,HC]",
+        "mutation": "none"
+      },
+      "calls": 30960,
+      "failures": 0,
+      "fallback": false
+    }
+  },
+  "hadamard": {
+    "backend": "cuda",
+    "calls": 9681,
+    "fallback": false,
+    "extension": "/home/lcpu/57682329/.local/deepseek-v4-hadamard/fast_hadamard_transform_cuda.so"
+  },
+  "tilelang": "0.1.8",
+  "tvm_ffi": "0.1.8.post2",
+  "indexer_tie_policy": "published torch.topk",
+  "provenance": {
+    "commit": "05784b4da6483f77821a061e521ea1b98fa271e1",
+    "branch": "feat/vllm-paged-attention",
+    "worktree_dirty": true,
+    "file_sha256": {
+      "/home/lcpu/57682329/workspace/llaisys/tools/deepseek_v4_reference/run_single_gpu.py": "be3a1a6dd511ebdd83257ee699994cf1a9f8d01b058100a4abc946436fc9ae29",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/inference/model.py": "c0c19e6c9fa439bac7fbb1c5bc1868232dfd5aa2f439a548d0e33dcc2a9edd3f",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/inference/kernel.py": "59b325083d7103975cba025bd0d60ea343bb82d8fff53088afb7c04bd380c0c2",
+      "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_evidence.py": "d94d0afe68747a3876231f922868a752c26eb396f100456bf90f0ce6646de6a8",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/inference/config.json": "c90861f3d10a9e4ef5954f8f1a34c529d480da1c5799f84660028f4e38e14e71",
+      "/home/lcpu/57682329/workspace/llaisys/tools/deepseek_v4_reference/fast_hadamard_transform.py": "89e8c4002ed50b34283506f544e1a53d94aa5611eaa32b3231639ef46c1bf1da",
+      "test/data/deepseek_v4_chat_cases.json": "27fccd558aafb91d9cf8e89521f5e9345f92b3c3d8615110d02c795b0032b830",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/encoding/encoding_dsv4.py": "abc0d26120250dda0ae077dc64aa28836026e61e970854aaeb792445e6a0dde6",
+      "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_model/chat.py": "cc792fb7b140420fdfa2402cbfae03230ef0f6fd65244a9cc03a657d77d6040b",
+      "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_backends.py": "e83c52c7977f0bf0c221a0ebcc621a9178791e852513f82c53378c7b21be40c9",
+      "/home/lcpu/57682329/.local/deepseek-v4-hadamard/fast_hadamard_transform_cuda.so": "854f75c763ce3a9698b4e31dde765490ecc57d31a7bf87c074bf99378937ad88"
+    },
+    "command": [
+      "tools/deepseek_v4_reference/run_single_gpu.py",
+      "--source-model",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731",
+      "--converted-model",
+      "/tmp/llaisys-deepseek-v4-flash-mp1",
+      "--cases-file",
+      "test/data/deepseek_v4_chat_cases.json",
+      "--max-new-tokens",
+      "256",
+      "--max-seq-len",
+      "4096",
+      "--gemm-backend",
+      "tilelang",
+      "--hadamard-backend",
+      "cuda",
+      "--reference-mode",
+      "full-only",
+      "--hash-checkpoint",
+      "--dump-logits-dir",
+      "benchmark_results/deepseek_v4_chat_golden",
+      "--output",
+      "benchmark_results/deepseek_v4_b300_chat_published.json"
+    ]
+  },
+  "measurement": {
+    "kind": "correctness_runner_step_latency_not_serving_ttft_tpot",
+    "batch_size": 1,
+    "concurrency": 1,
+    "cuda_graph": false,
+    "prefix_cache": false,
+    "warmup": "one full prefill per case; no token replay",
+    "timed_repeats": 1,
+    "fallback": false,
+    "weights": "FP8 E4M3 dense, FP4 E2M1 experts, E8M0 scales",
+    "activation_dtype": "BF16 with explicit QAT boundaries"
+  },
+  "source_model": "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731",
+  "converted_model": "/tmp/llaisys-deepseek-v4-flash-mp1",
+  "weight_load_seconds": 32.03838019212708,
+  "cases": [
+    {
+      "prompt": "<｜begin▁of▁sentence｜><｜User｜>计算 17 × 23。只输出十进制整数，不要解释。<｜Assistant｜></think>",
+      "prompt_tokens": 19,
+      "token_replay_tested": false,
+      "accuracy": null,
+      "layer_diagnostics": null,
+      "generated_ids": [
+        23005,
+        1
+      ],
+      "max_new_tokens": 256,
+      "stop_on_eos": true,
+      "finish_reason": "stop",
+      "generated_text": "391<｜end▁of▁sentence｜>",
+      "teacher_forced_ids": null,
+      "golden_comparison": null,
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 19,
+          "next_token": 23005,
+          "max_logit": 35.81877517700195,
+          "latency_ms": 961.0058520920575
+        },
+        {
+          "start_pos": 19,
+          "input_tokens": 1,
+          "next_token": 1,
+          "max_logit": 39.08672332763672,
+          "latency_ms": 360.2471649646759
+        }
+      ],
+      "case_id": "arithmetic_zh",
+      "input_format": "chat",
+      "chat": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "计算 17 × 23。只输出十进制整数，不要解释。"
+          }
+        ],
+        "thinking_mode": "chat",
+        "drop_thinking": true,
+        "reasoning_effort": "low",
+        "codec": {
+          "format": "deepseek-v4-checkpoint-encoding",
+          "encoding_path": "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/encoding/encoding_dsv4.py",
+          "encoding_sha256": "abc0d26120250dda0ae077dc64aa28836026e61e970854aaeb792445e6a0dde6",
+          "tokenizer_backend_sha256": "0e546c51529290ed4b18dc8b3e481a9ea39a2df2175b65ecb281af6bac79af73",
+          "bos_id": 0,
+          "eos_id": 1,
+          "add_special_tokens": false,
+          "tool_execution": false,
+          "fallback": false
+        }
+      },
+      "expected_contains": null,
+      "expected_match": true,
+      "completion": {
+        "raw_text": "391<｜end▁of▁sentence｜>",
+        "finish_reason": "stop",
+        "message": {
+          "role": "assistant",
+          "content": "391",
+          "reasoning_content": "",
+          "tool_calls": []
+        },
+        "parse_error": null,
+        "complete": true
+      },
+      "expected_exact": "391"
+    },
+    {
+      "prompt": "<｜begin▁of▁sentence｜><｜User｜>记住变量 x = 12。<｜Assistant｜></think>好的，x = 12。<｜end▁of▁sentence｜><｜User｜>现在把 x 增加 7，再乘以 3。只输出最后的整数值。<｜Assistant｜></think>",
+      "prompt_tokens": 41,
+      "token_replay_tested": false,
+      "accuracy": null,
+      "layer_diagnostics": null,
+      "generated_ids": [
+        3648,
+        303,
+        1300,
+        64569,
+        637,
+        5189,
+        19,
+        16,
+        223,
+        21957,
+        1527,
+        438,
+        223,
+        736,
+        2143,
+        20,
+        16,
+        223,
+        5133,
+        223,
+        25,
+        768,
+        736,
+        940,
+        223,
+        25,
+        438,
+        223,
+        511,
+        2143,
+        21,
+        16,
+        223,
+        63760,
+        223,
+        21,
+        768,
+        511,
+        2863,
+        223,
+        21,
+        438,
+        223,
+        3351,
+        6776,
+        37259,
+        1913,
+        24292,
+        389,
+        5189,
+        666,
+        3351,
+        666,
+        1
+      ],
+      "max_new_tokens": 256,
+      "stop_on_eos": true,
+      "finish_reason": "stop",
+      "generated_text": "好的，我们一步步来：\n\n1. 初始 x = 12  \n2. 增加 7：12 + 7 = 19  \n3. 乘以 3：19 × 3 = 57  \n\n最后的整数值是：\n\n**57**<｜end▁of▁sentence｜>",
+      "teacher_forced_ids": null,
+      "golden_comparison": null,
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 41,
+          "next_token": 3648,
+          "max_logit": 30.002281188964844,
+          "latency_ms": 1428.2934567891061
+        },
+        {
+          "start_pos": 41,
+          "input_tokens": 1,
+          "next_token": 303,
+          "max_logit": 32.940059661865234,
+          "latency_ms": 189.4765319302678
+        },
+        {
+          "start_pos": 42,
+          "input_tokens": 1,
+          "next_token": 1300,
+          "max_logit": 29.215293884277344,
+          "latency_ms": 186.90997315570712
+        },
+        {
+          "start_pos": 43,
+          "input_tokens": 1,
+          "next_token": 64569,
+          "max_logit": 31.972625732421875,
+          "latency_ms": 196.04762783274055
+        },
+        {
+          "start_pos": 44,
+          "input_tokens": 1,
+          "next_token": 637,
+          "max_logit": 32.71391296386719,
+          "latency_ms": 187.32576817274094
+        },
+        {
+          "start_pos": 45,
+          "input_tokens": 1,
+          "next_token": 5189,
+          "max_logit": 31.571117401123047,
+          "latency_ms": 186.9666427373886
+        },
+        {
+          "start_pos": 46,
+          "input_tokens": 1,
+          "next_token": 19,
+          "max_logit": 31.998682022094727,
+          "latency_ms": 186.39610707759857
+        },
+        {
+          "start_pos": 47,
+          "input_tokens": 1,
+          "next_token": 16,
+          "max_logit": 35.8495979309082,
+          "latency_ms": 195.33905386924744
+        },
+        {
+          "start_pos": 48,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 33.29365539550781,
+          "latency_ms": 186.61072570830584
+        },
+        {
+          "start_pos": 49,
+          "input_tokens": 1,
+          "next_token": 21957,
+          "max_logit": 30.850276947021484,
+          "latency_ms": 186.96274189278483
+        },
+        {
+          "start_pos": 50,
+          "input_tokens": 1,
+          "next_token": 1527,
+          "max_logit": 30.524394989013672,
+          "latency_ms": 188.05901193991303
+        },
+        {
+          "start_pos": 51,
+          "input_tokens": 1,
+          "next_token": 438,
+          "max_logit": 38.967437744140625,
+          "latency_ms": 195.65165089443326
+        },
+        {
+          "start_pos": 52,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 34.926998138427734,
+          "latency_ms": 185.82408176735044
+        },
+        {
+          "start_pos": 53,
+          "input_tokens": 1,
+          "next_token": 736,
+          "max_logit": 36.494632720947266,
+          "latency_ms": 186.44770793616772
+        },
+        {
+          "start_pos": 54,
+          "input_tokens": 1,
+          "next_token": 2143,
+          "max_logit": 35.03042221069336,
+          "latency_ms": 186.41085689887404
+        },
+        {
+          "start_pos": 55,
+          "input_tokens": 1,
+          "next_token": 20,
+          "max_logit": 38.00030517578125,
+          "latency_ms": 196.31675584241748
+        },
+        {
+          "start_pos": 56,
+          "input_tokens": 1,
+          "next_token": 16,
+          "max_logit": 39.65621566772461,
+          "latency_ms": 186.1559790559113
+        },
+        {
+          "start_pos": 57,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 36.14750289916992,
+          "latency_ms": 186.82510405778885
+        },
+        {
+          "start_pos": 58,
+          "input_tokens": 1,
+          "next_token": 5133,
+          "max_logit": 36.1296501159668,
+          "latency_ms": 185.9702910296619
+        },
+        {
+          "start_pos": 59,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 37.58928680419922,
+          "latency_ms": 195.68284088745713
+        },
+        {
+          "start_pos": 60,
+          "input_tokens": 1,
+          "next_token": 25,
+          "max_logit": 38.93113708496094,
+          "latency_ms": 187.3950599692762
+        },
+        {
+          "start_pos": 61,
+          "input_tokens": 1,
+          "next_token": 768,
+          "max_logit": 35.35887908935547,
+          "latency_ms": 186.99332419782877
+        },
+        {
+          "start_pos": 62,
+          "input_tokens": 1,
+          "next_token": 736,
+          "max_logit": 33.57684326171875,
+          "latency_ms": 187.4204589985311
+        },
+        {
+          "start_pos": 63,
+          "input_tokens": 1,
+          "next_token": 940,
+          "max_logit": 39.15911102294922,
+          "latency_ms": 198.00138287246227
+        },
+        {
+          "start_pos": 64,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 31.390968322753906,
+          "latency_ms": 186.24551873654127
+        },
+        {
+          "start_pos": 65,
+          "input_tokens": 1,
+          "next_token": 25,
+          "max_logit": 34.33671569824219,
+          "latency_ms": 187.52371799200773
+        },
+        {
+          "start_pos": 66,
+          "input_tokens": 1,
+          "next_token": 438,
+          "max_logit": 37.53242492675781,
+          "latency_ms": 187.48379778116941
+        },
+        {
+          "start_pos": 67,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 33.54190444946289,
+          "latency_ms": 196.1853289976716
+        },
+        {
+          "start_pos": 68,
+          "input_tokens": 1,
+          "next_token": 511,
+          "max_logit": 33.508819580078125,
+          "latency_ms": 186.748914886266
+        },
+        {
+          "start_pos": 69,
+          "input_tokens": 1,
+          "next_token": 2143,
+          "max_logit": 35.583526611328125,
+          "latency_ms": 187.12660111486912
+        },
+        {
+          "start_pos": 70,
+          "input_tokens": 1,
+          "next_token": 21,
+          "max_logit": 35.69916915893555,
+          "latency_ms": 187.35782895237207
+        },
+        {
+          "start_pos": 71,
+          "input_tokens": 1,
+          "next_token": 16,
+          "max_logit": 37.253639221191406,
+          "latency_ms": 197.32995936647058
+        },
+        {
+          "start_pos": 72,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 37.84001922607422,
+          "latency_ms": 186.81061593815684
+        },
+        {
+          "start_pos": 73,
+          "input_tokens": 1,
+          "next_token": 63760,
+          "max_logit": 36.85663986206055,
+          "latency_ms": 186.85206398367882
+        },
+        {
+          "start_pos": 74,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 34.92428970336914,
+          "latency_ms": 187.79467698186636
+        },
+        {
+          "start_pos": 75,
+          "input_tokens": 1,
+          "next_token": 21,
+          "max_logit": 36.29643249511719,
+          "latency_ms": 196.5338960289955
+        },
+        {
+          "start_pos": 76,
+          "input_tokens": 1,
+          "next_token": 768,
+          "max_logit": 37.32817077636719,
+          "latency_ms": 186.9200230576098
+        },
+        {
+          "start_pos": 77,
+          "input_tokens": 1,
+          "next_token": 511,
+          "max_logit": 36.176753997802734,
+          "latency_ms": 187.63784924522042
+        },
+        {
+          "start_pos": 78,
+          "input_tokens": 1,
+          "next_token": 2863,
+          "max_logit": 39.80056381225586,
+          "latency_ms": 187.16596299782395
+        },
+        {
+          "start_pos": 79,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 32.89928436279297,
+          "latency_ms": 195.59441367164254
+        },
+        {
+          "start_pos": 80,
+          "input_tokens": 1,
+          "next_token": 21,
+          "max_logit": 35.024478912353516,
+          "latency_ms": 186.65239680558443
+        },
+        {
+          "start_pos": 81,
+          "input_tokens": 1,
+          "next_token": 438,
+          "max_logit": 36.40254592895508,
+          "latency_ms": 188.15205479040742
+        },
+        {
+          "start_pos": 82,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 34.100135803222656,
+          "latency_ms": 188.60790133476257
+        },
+        {
+          "start_pos": 83,
+          "input_tokens": 1,
+          "next_token": 3351,
+          "max_logit": 38.159549713134766,
+          "latency_ms": 197.22328009083867
+        },
+        {
+          "start_pos": 84,
+          "input_tokens": 1,
+          "next_token": 6776,
+          "max_logit": 38.64734649658203,
+          "latency_ms": 187.18034215271473
+        },
+        {
+          "start_pos": 85,
+          "input_tokens": 1,
+          "next_token": 37259,
+          "max_logit": 33.56342697143555,
+          "latency_ms": 187.04419303685427
+        },
+        {
+          "start_pos": 86,
+          "input_tokens": 1,
+          "next_token": 1913,
+          "max_logit": 35.69964599609375,
+          "latency_ms": 187.60332884266973
+        },
+        {
+          "start_pos": 87,
+          "input_tokens": 1,
+          "next_token": 24292,
+          "max_logit": 42.700279235839844,
+          "latency_ms": 195.95043128356338
+        },
+        {
+          "start_pos": 88,
+          "input_tokens": 1,
+          "next_token": 389,
+          "max_logit": 38.015480041503906,
+          "latency_ms": 187.27536126971245
+        },
+        {
+          "start_pos": 89,
+          "input_tokens": 1,
+          "next_token": 5189,
+          "max_logit": 34.34612274169922,
+          "latency_ms": 187.65173899009824
+        },
+        {
+          "start_pos": 90,
+          "input_tokens": 1,
+          "next_token": 666,
+          "max_logit": 38.60047912597656,
+          "latency_ms": 187.39991961047053
+        },
+        {
+          "start_pos": 91,
+          "input_tokens": 1,
+          "next_token": 3351,
+          "max_logit": 42.66114807128906,
+          "latency_ms": 196.55266590416431
+        },
+        {
+          "start_pos": 92,
+          "input_tokens": 1,
+          "next_token": 666,
+          "max_logit": 37.941898345947266,
+          "latency_ms": 188.62117175012827
+        },
+        {
+          "start_pos": 93,
+          "input_tokens": 1,
+          "next_token": 1,
+          "max_logit": 38.03348159790039,
+          "latency_ms": 187.07059416919947
+        }
+      ],
+      "case_id": "multiturn_update",
+      "input_format": "chat",
+      "chat": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "记住变量 x = 12。"
+          },
+          {
+            "role": "assistant",
+            "content": "好的，x = 12。"
+          },
+          {
+            "role": "user",
+            "content": "现在把 x 增加 7，再乘以 3。只输出最后的整数值。"
+          }
+        ],
+        "thinking_mode": "chat",
+        "drop_thinking": true,
+        "reasoning_effort": "low",
+        "codec": {
+          "format": "deepseek-v4-checkpoint-encoding",
+          "encoding_path": "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/encoding/encoding_dsv4.py",
+          "encoding_sha256": "abc0d26120250dda0ae077dc64aa28836026e61e970854aaeb792445e6a0dde6",
+          "tokenizer_backend_sha256": "0e546c51529290ed4b18dc8b3e481a9ea39a2df2175b65ecb281af6bac79af73",
+          "bos_id": 0,
+          "eos_id": 1,
+          "add_special_tokens": false,
+          "tool_execution": false,
+          "fallback": false
+        }
+      },
+      "expected_contains": null,
+      "expected_match": false,
+      "completion": {
+        "raw_text": "好的，我们一步步来：\n\n1. 初始 x = 12  \n2. 增加 7：12 + 7 = 19  \n3. 乘以 3：19 × 3 = 57  \n\n最后的整数值是：\n\n**57**<｜end▁of▁sentence｜>",
+        "finish_reason": "stop",
+        "message": {
+          "role": "assistant",
+          "content": "好的，我们一步步来：\n\n1. 初始 x = 12  \n2. 增加 7：12 + 7 = 19  \n3. 乘以 3：19 × 3 = 57  \n\n最后的整数值是：\n\n**57**",
+          "reasoning_content": "",
+          "tool_calls": []
+        },
+        "parse_error": null,
+        "complete": true
+      },
+      "expected_exact": "57"
+    },
+    {
+      "prompt": "<｜begin▁of▁sentence｜>Extract exactly the requested value. Do not add any explanation.<｜User｜>Record: order=K82; color=teal; quantity=14; status=shipped. What is the color? Output the color only.<｜Assistant｜></think>",
+      "prompt_tokens": 48,
+      "token_replay_tested": false,
+      "accuracy": null,
+      "layer_diagnostics": null,
+      "generated_ids": [
+        592,
+        282,
+        1
+      ],
+      "max_new_tokens": 256,
+      "stop_on_eos": true,
+      "finish_reason": "stop",
+      "generated_text": "teal<｜end▁of▁sentence｜>",
+      "teacher_forced_ids": null,
+      "golden_comparison": null,
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 48,
+          "next_token": 592,
+          "max_logit": 42.569339752197266,
+          "latency_ms": 1646.468031220138
+        },
+        {
+          "start_pos": 48,
+          "input_tokens": 1,
+          "next_token": 282,
+          "max_logit": 46.39027404785156,
+          "latency_ms": 190.2754777111113
+        },
+        {
+          "start_pos": 49,
+          "input_tokens": 1,
+          "next_token": 1,
+          "max_logit": 41.186676025390625,
+          "latency_ms": 188.3028349839151
+        }
+      ],
+      "case_id": "extract_en",
+      "input_format": "chat",
+      "chat": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "Extract exactly the requested value. Do not add any explanation."
+          },
+          {
+            "role": "user",
+            "content": "Record: order=K82; color=teal; quantity=14; status=shipped. What is the color? Output the color only."
+          }
+        ],
+        "thinking_mode": "chat",
+        "drop_thinking": true,
+        "reasoning_effort": "low",
+        "codec": {
+          "format": "deepseek-v4-checkpoint-encoding",
+          "encoding_path": "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/encoding/encoding_dsv4.py",
+          "encoding_sha256": "abc0d26120250dda0ae077dc64aa28836026e61e970854aaeb792445e6a0dde6",
+          "tokenizer_backend_sha256": "0e546c51529290ed4b18dc8b3e481a9ea39a2df2175b65ecb281af6bac79af73",
+          "bos_id": 0,
+          "eos_id": 1,
+          "add_special_tokens": false,
+          "tool_execution": false,
+          "fallback": false
+        }
+      },
+      "expected_contains": null,
+      "expected_match": true,
+      "completion": {
+        "raw_text": "teal<｜end▁of▁sentence｜>",
+        "finish_reason": "stop",
+        "message": {
+          "role": "assistant",
+          "content": "teal",
+          "reasoning_content": "",
+          "tool_calls": []
+        },
+        "parse_error": null,
+        "complete": true
+      },
+      "expected_exact": "teal"
+    },
+    {
+      "prompt": "<｜begin▁of▁sentence｜><｜User｜>将 9, -3, 12, 0 按从小到大排序。只输出一个 JSON 数组。<｜Assistant｜></think>",
+      "prompt_tokens": 28,
+      "token_replay_tested": false,
+      "accuracy": null,
+      "layer_diagnostics": null,
+      "generated_ids": [
+        10931,
+        15,
+        21,
+        1760,
+        582,
+        18,
+        1760,
+        582,
+        27,
+        1760,
+        582,
+        736,
+        13747,
+        1
+      ],
+      "max_new_tokens": 256,
+      "stop_on_eos": true,
+      "finish_reason": "stop",
+      "generated_text": "[\"-3\", \"0\", \"9\", \"12\"]<｜end▁of▁sentence｜>",
+      "teacher_forced_ids": null,
+      "golden_comparison": null,
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 28,
+          "next_token": 10931,
+          "max_logit": 38.0935173034668,
+          "latency_ms": 1164.2672279849648
+        },
+        {
+          "start_pos": 28,
+          "input_tokens": 1,
+          "next_token": 15,
+          "max_logit": 33.33574676513672,
+          "latency_ms": 189.93364088237286
+        },
+        {
+          "start_pos": 29,
+          "input_tokens": 1,
+          "next_token": 21,
+          "max_logit": 35.014488220214844,
+          "latency_ms": 187.4234532006085
+        },
+        {
+          "start_pos": 30,
+          "input_tokens": 1,
+          "next_token": 1760,
+          "max_logit": 41.50149154663086,
+          "latency_ms": 187.74870038032532
+        },
+        {
+          "start_pos": 31,
+          "input_tokens": 1,
+          "next_token": 582,
+          "max_logit": 45.25556182861328,
+          "latency_ms": 196.78072584792972
+        },
+        {
+          "start_pos": 32,
+          "input_tokens": 1,
+          "next_token": 18,
+          "max_logit": 35.409767150878906,
+          "latency_ms": 186.7084689438343
+        },
+        {
+          "start_pos": 33,
+          "input_tokens": 1,
+          "next_token": 1760,
+          "max_logit": 37.38454055786133,
+          "latency_ms": 189.88614296540618
+        },
+        {
+          "start_pos": 34,
+          "input_tokens": 1,
+          "next_token": 582,
+          "max_logit": 41.40753173828125,
+          "latency_ms": 189.50120639055967
+        },
+        {
+          "start_pos": 35,
+          "input_tokens": 1,
+          "next_token": 27,
+          "max_logit": 35.419334411621094,
+          "latency_ms": 198.0104362592101
+        },
+        {
+          "start_pos": 36,
+          "input_tokens": 1,
+          "next_token": 1760,
+          "max_logit": 34.63667297363281,
+          "latency_ms": 189.47509583085775
+        },
+        {
+          "start_pos": 37,
+          "input_tokens": 1,
+          "next_token": 582,
+          "max_logit": 35.72092056274414,
+          "latency_ms": 189.3811570480466
+        },
+        {
+          "start_pos": 38,
+          "input_tokens": 1,
+          "next_token": 736,
+          "max_logit": 38.108890533447266,
+          "latency_ms": 188.3596247062087
+        },
+        {
+          "start_pos": 39,
+          "input_tokens": 1,
+          "next_token": 13747,
+          "max_logit": 41.1607551574707,
+          "latency_ms": 196.95770600810647
+        },
+        {
+          "start_pos": 40,
+          "input_tokens": 1,
+          "next_token": 1,
+          "max_logit": 38.59849548339844,
+          "latency_ms": 187.36701179295778
+        }
+      ],
+      "case_id": "sort_zh",
+      "input_format": "chat",
+      "chat": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "将 9, -3, 12, 0 按从小到大排序。只输出一个 JSON 数组。"
+          }
+        ],
+        "thinking_mode": "chat",
+        "drop_thinking": true,
+        "reasoning_effort": "low",
+        "codec": {
+          "format": "deepseek-v4-checkpoint-encoding",
+          "encoding_path": "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/encoding/encoding_dsv4.py",
+          "encoding_sha256": "abc0d26120250dda0ae077dc64aa28836026e61e970854aaeb792445e6a0dde6",
+          "tokenizer_backend_sha256": "0e546c51529290ed4b18dc8b3e481a9ea39a2df2175b65ecb281af6bac79af73",
+          "bos_id": 0,
+          "eos_id": 1,
+          "add_special_tokens": false,
+          "tool_execution": false,
+          "fallback": false
+        }
+      },
+      "expected_contains": null,
+      "expected_match": false,
+      "completion": {
+        "raw_text": "[\"-3\", \"0\", \"9\", \"12\"]<｜end▁of▁sentence｜>",
+        "finish_reason": "stop",
+        "message": {
+          "role": "assistant",
+          "content": "[\"-3\", \"0\", \"9\", \"12\"]",
+          "reasoning_content": "",
+          "tool_calls": []
+        },
+        "parse_error": null,
+        "complete": true
+      },
+      "expected_exact": "[-3, 0, 9, 12]"
+    },
+    {
+      "prompt": "<｜begin▁of▁sentence｜><｜User｜>Write a Python function named is_even(n) that returns whether an integer n is even. Include a short explanation of the modulo operation.<｜Assistant｜></think>",
+      "prompt_tokens": 32,
+      "token_replay_tested": false,
+      "accuracy": null,
+      "layer_diagnostics": null,
+      "generated_ids": [
+        9544,
+        734,
+        270,
+        4630,
+        418,
+        411,
+        11394,
+        979,
+        9854,
+        36490,
+        201,
+        3465,
+        344,
+        17856,
+        1615,
+        3913,
+        3395,
+        361,
+        16786,
+        361,
+        27669,
+        11485,
+        855,
+        313,
+        344,
+        1749,
+        14,
+        14584,
+        9694,
+        603,
+        5191,
+        361,
+        49112,
+        270,
+        81802,
+        13057,
+        39944,
+        778,
+        10340,
+        270,
+        17347,
+        201,
+        361,
+        294,
+        11057,
+        16,
+        2052,
+        313,
+        3104,
+        223,
+        20,
+        2606,
+        223,
+        18,
+        14,
+        1539,
+        313,
+        344,
+        17822,
+        24490,
+        201,
+        361,
+        513,
+        223,
+        20,
+        418,
+        1119,
+        17347,
+        14,
+        5281,
+        436,
+        734,
+        1749,
+        603,
+        361,
+        16786,
+        361,
+        1354,
+        313,
+        3104,
+        223,
+        20,
+        2606,
+        223,
+        18,
+        201,
+        20759,
+        666,
+        28395,
+        294,
+        270,
+        81802,
+        7408,
+        57840,
+        671,
+        81802,
+        13057,
+        42936,
+        7,
+        54975,
+        295,
+        15255,
+        10340,
+        270,
+        2619,
+        107443,
+        1514,
+        666,
+        294,
+        260,
+        11057,
+        7408,
+        16,
+        1884,
+        2511,
+        1137,
+        15,
+        3608,
+        25,
+        3104,
+        223,
+        21,
+        66,
+        438,
+        223,
+        19,
+        343,
+        30551,
+        223,
+        25,
+        7203,
+        513,
+        223,
+        21,
+        344,
+        223,
+        20,
+        418,
+        17347,
+        223,
+        19,
+        682,
+        15,
+        3608,
+        553,
+        3104,
+        223,
+        23,
+        66,
+        438,
+        223,
+        18,
+        343,
+        30551,
+        223,
+        553,
+        7203,
+        513,
+        223,
+        23,
+        344,
+        9045,
+        223,
+        20,
+        418,
+        1119,
+        17347,
+        868,
+        4823,
+        21587,
+        855,
+        260,
+        1167,
+        344,
+        1749,
+        14,
+        579,
+        1347,
+        3608,
+        80,
+        3104,
+        223,
+        20,
+        66,
+        1137,
+        15,
+        2052,
+        3608,
+        80,
+        66,
+        344,
+        1749,
+        14,
+        436,
+        734,
+        24490,
+        513,
+        223,
+        20,
+        418,
+        1119,
+        17347,
+        14,
+        832,
+        3608,
+        80,
+        3104,
+        223,
+        20,
+        66,
+        9615,
+        3608,
+        18,
+        16153,
+        15,
+        2052,
+        3608,
+        80,
+        66,
+        344,
+        12601,
+        14,
+        26843,
+        513,
+        223,
+        20,
+        9120,
+        260,
+        17347,
+        294,
+        3608,
+        19,
+        16781,
+        832,
+        3608,
+        80,
+        3104,
+        223,
+        20,
+        66,
+        9615,
+        3608,
+        19,
+        31903,
+        666,
+        16221,
+        14629,
+        28,
+        5866,
+        9854,
+        36490,
+        201,
+        3098,
+        40391,
+        17856,
+        1615
+      ],
+      "max_new_tokens": 256,
+      "stop_on_eos": true,
+      "finish_reason": "length",
+      "generated_text": "Here's the solution with an explanation:\n\n```python\ndef is_even(n):\n    \"\"\"\n    Returns True if n is even, False otherwise.\n    \n    Uses the modulo operator (%) which returns the remainder\n    of division. If n % 2 == 0, then n is perfectly divisible\n    by 2 with no remainder, meaning it's even.\n    \"\"\"\n    return n % 2 == 0\n```\n\n**Explanation of the modulo operation:**\n\nThe modulo operator (`%`) in Python returns the **remainder** of a division operation. For example:\n- `7 % 3` = 1 (because 7 divided by 3 is 2 with remainder 1)\n- `10 % 5` = 0 (because 10 divided by 5 is exactly 2 with no remainder)\n\nWhen checking if a number is even, we use `n % 2`:\n- If `n` is even, it's divisible by 2 with no remainder, so `n % 2` equals `0`\n- If `n` is odd, dividing by 2 leaves a remainder of `1`, so `n % 2` equals `1`\n\n**Example usage:**\n```python\nprint(is_even",
+      "teacher_forced_ids": null,
+      "golden_comparison": null,
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 32,
+          "next_token": 9544,
+          "max_logit": 41.928565979003906,
+          "latency_ms": 1336.2373341806233
+        },
+        {
+          "start_pos": 32,
+          "input_tokens": 1,
+          "next_token": 734,
+          "max_logit": 45.516597747802734,
+          "latency_ms": 189.03294065967202
+        },
+        {
+          "start_pos": 33,
+          "input_tokens": 1,
+          "next_token": 270,
+          "max_logit": 41.86399841308594,
+          "latency_ms": 188.6984221637249
+        },
+        {
+          "start_pos": 34,
+          "input_tokens": 1,
+          "next_token": 4630,
+          "max_logit": 41.00646209716797,
+          "latency_ms": 187.9480187781155
+        },
+        {
+          "start_pos": 35,
+          "input_tokens": 1,
+          "next_token": 418,
+          "max_logit": 43.17719268798828,
+          "latency_ms": 196.2804808281362
+        },
+        {
+          "start_pos": 36,
+          "input_tokens": 1,
+          "next_token": 411,
+          "max_logit": 41.939266204833984,
+          "latency_ms": 187.02298728749156
+        },
+        {
+          "start_pos": 37,
+          "input_tokens": 1,
+          "next_token": 11394,
+          "max_logit": 46.69418716430664,
+          "latency_ms": 186.79558904841542
+        },
+        {
+          "start_pos": 38,
+          "input_tokens": 1,
+          "next_token": 979,
+          "max_logit": 41.42795181274414,
+          "latency_ms": 188.10496665537357
+        },
+        {
+          "start_pos": 39,
+          "input_tokens": 1,
+          "next_token": 9854,
+          "max_logit": 48.20646667480469,
+          "latency_ms": 197.11581384763122
+        },
+        {
+          "start_pos": 40,
+          "input_tokens": 1,
+          "next_token": 36490,
+          "max_logit": 50.3914794921875,
+          "latency_ms": 186.85547821223736
+        },
+        {
+          "start_pos": 41,
+          "input_tokens": 1,
+          "next_token": 201,
+          "max_logit": 38.15077590942383,
+          "latency_ms": 187.6286631450057
+        },
+        {
+          "start_pos": 42,
+          "input_tokens": 1,
+          "next_token": 3465,
+          "max_logit": 46.18867492675781,
+          "latency_ms": 187.64606211334467
+        },
+        {
+          "start_pos": 43,
+          "input_tokens": 1,
+          "next_token": 344,
+          "max_logit": 40.328609466552734,
+          "latency_ms": 196.18278089910746
+        },
+        {
+          "start_pos": 44,
+          "input_tokens": 1,
+          "next_token": 17856,
+          "max_logit": 46.153160095214844,
+          "latency_ms": 187.36192397773266
+        },
+        {
+          "start_pos": 45,
+          "input_tokens": 1,
+          "next_token": 1615,
+          "max_logit": 59.29742431640625,
+          "latency_ms": 186.9932790286839
+        },
+        {
+          "start_pos": 46,
+          "input_tokens": 1,
+          "next_token": 3913,
+          "max_logit": 43.03316879272461,
+          "latency_ms": 187.48396215960383
+        },
+        {
+          "start_pos": 47,
+          "input_tokens": 1,
+          "next_token": 3395,
+          "max_logit": 39.45526885986328,
+          "latency_ms": 195.4442299902439
+        },
+        {
+          "start_pos": 48,
+          "input_tokens": 1,
+          "next_token": 361,
+          "max_logit": 46.6004638671875,
+          "latency_ms": 186.27482280135155
+        },
+        {
+          "start_pos": 49,
+          "input_tokens": 1,
+          "next_token": 16786,
+          "max_logit": 44.07676696777344,
+          "latency_ms": 185.82042772322893
+        },
+        {
+          "start_pos": 50,
+          "input_tokens": 1,
+          "next_token": 361,
+          "max_logit": 51.91334533691406,
+          "latency_ms": 186.09294388443232
+        },
+        {
+          "start_pos": 51,
+          "input_tokens": 1,
+          "next_token": 27669,
+          "max_logit": 45.93473815917969,
+          "latency_ms": 195.80660527572036
+        },
+        {
+          "start_pos": 52,
+          "input_tokens": 1,
+          "next_token": 11485,
+          "max_logit": 50.89335632324219,
+          "latency_ms": 186.5593115799129
+        },
+        {
+          "start_pos": 53,
+          "input_tokens": 1,
+          "next_token": 855,
+          "max_logit": 48.889530181884766,
+          "latency_ms": 186.19507504627109
+        },
+        {
+          "start_pos": 54,
+          "input_tokens": 1,
+          "next_token": 313,
+          "max_logit": 45.53402328491211,
+          "latency_ms": 187.26940592750907
+        },
+        {
+          "start_pos": 55,
+          "input_tokens": 1,
+          "next_token": 344,
+          "max_logit": 48.279762268066406,
+          "latency_ms": 196.4364410378039
+        },
+        {
+          "start_pos": 56,
+          "input_tokens": 1,
+          "next_token": 1749,
+          "max_logit": 48.691524505615234,
+          "latency_ms": 186.73626007512212
+        },
+        {
+          "start_pos": 57,
+          "input_tokens": 1,
+          "next_token": 14,
+          "max_logit": 45.566925048828125,
+          "latency_ms": 186.71658914536238
+        },
+        {
+          "start_pos": 58,
+          "input_tokens": 1,
+          "next_token": 14584,
+          "max_logit": 47.352294921875,
+          "latency_ms": 187.84993141889572
+        },
+        {
+          "start_pos": 59,
+          "input_tokens": 1,
+          "next_token": 9694,
+          "max_logit": 45.76328659057617,
+          "latency_ms": 196.33759232237935
+        },
+        {
+          "start_pos": 60,
+          "input_tokens": 1,
+          "next_token": 603,
+          "max_logit": 40.311607360839844,
+          "latency_ms": 186.99872912839055
+        },
+        {
+          "start_pos": 61,
+          "input_tokens": 1,
+          "next_token": 5191,
+          "max_logit": 42.32206726074219,
+          "latency_ms": 187.14354606345296
+        },
+        {
+          "start_pos": 62,
+          "input_tokens": 1,
+          "next_token": 361,
+          "max_logit": 49.14287185668945,
+          "latency_ms": 187.7308231778443
+        },
+        {
+          "start_pos": 63,
+          "input_tokens": 1,
+          "next_token": 49112,
+          "max_logit": 37.15058135986328,
+          "latency_ms": 197.24235404282808
+        },
+        {
+          "start_pos": 64,
+          "input_tokens": 1,
+          "next_token": 270,
+          "max_logit": 39.86428451538086,
+          "latency_ms": 187.86230962723494
+        },
+        {
+          "start_pos": 65,
+          "input_tokens": 1,
+          "next_token": 81802,
+          "max_logit": 42.6379280090332,
+          "latency_ms": 189.12998121231794
+        },
+        {
+          "start_pos": 66,
+          "input_tokens": 1,
+          "next_token": 13057,
+          "max_logit": 42.427032470703125,
+          "latency_ms": 187.5940333120525
+        },
+        {
+          "start_pos": 67,
+          "input_tokens": 1,
+          "next_token": 39944,
+          "max_logit": 36.265682220458984,
+          "latency_ms": 196.60293124616146
+        },
+        {
+          "start_pos": 68,
+          "input_tokens": 1,
+          "next_token": 778,
+          "max_logit": 39.667640686035156,
+          "latency_ms": 187.13203724473715
+        },
+        {
+          "start_pos": 69,
+          "input_tokens": 1,
+          "next_token": 10340,
+          "max_logit": 43.144954681396484,
+          "latency_ms": 187.18803580850363
+        },
+        {
+          "start_pos": 70,
+          "input_tokens": 1,
+          "next_token": 270,
+          "max_logit": 43.10051727294922,
+          "latency_ms": 187.8028721548617
+        },
+        {
+          "start_pos": 71,
+          "input_tokens": 1,
+          "next_token": 17347,
+          "max_logit": 46.234615325927734,
+          "latency_ms": 201.28241321071982
+        },
+        {
+          "start_pos": 72,
+          "input_tokens": 1,
+          "next_token": 201,
+          "max_logit": 40.41948699951172,
+          "latency_ms": 190.183961763978
+        },
+        {
+          "start_pos": 73,
+          "input_tokens": 1,
+          "next_token": 361,
+          "max_logit": 50.40829849243164,
+          "latency_ms": 187.98856995999813
+        },
+        {
+          "start_pos": 74,
+          "input_tokens": 1,
+          "next_token": 294,
+          "max_logit": 43.24712371826172,
+          "latency_ms": 187.57907394319773
+        },
+        {
+          "start_pos": 75,
+          "input_tokens": 1,
+          "next_token": 11057,
+          "max_logit": 40.94108963012695,
+          "latency_ms": 197.55125232040882
+        },
+        {
+          "start_pos": 76,
+          "input_tokens": 1,
+          "next_token": 16,
+          "max_logit": 40.01517868041992,
+          "latency_ms": 187.80099181458354
+        },
+        {
+          "start_pos": 77,
+          "input_tokens": 1,
+          "next_token": 2052,
+          "max_logit": 40.08112335205078,
+          "latency_ms": 186.82028027251363
+        },
+        {
+          "start_pos": 78,
+          "input_tokens": 1,
+          "next_token": 313,
+          "max_logit": 39.64799118041992,
+          "latency_ms": 187.30559712275863
+        },
+        {
+          "start_pos": 79,
+          "input_tokens": 1,
+          "next_token": 3104,
+          "max_logit": 37.32848358154297,
+          "latency_ms": 197.2495256923139
+        },
+        {
+          "start_pos": 80,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 38.205196380615234,
+          "latency_ms": 187.8574718721211
+        },
+        {
+          "start_pos": 81,
+          "input_tokens": 1,
+          "next_token": 20,
+          "max_logit": 40.47760009765625,
+          "latency_ms": 186.65549205616117
+        },
+        {
+          "start_pos": 82,
+          "input_tokens": 1,
+          "next_token": 2606,
+          "max_logit": 43.60086441040039,
+          "latency_ms": 187.39171512424946
+        },
+        {
+          "start_pos": 83,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 38.897796630859375,
+          "latency_ms": 196.50966115295887
+        },
+        {
+          "start_pos": 84,
+          "input_tokens": 1,
+          "next_token": 18,
+          "max_logit": 35.14122009277344,
+          "latency_ms": 187.02950794249773
+        },
+        {
+          "start_pos": 85,
+          "input_tokens": 1,
+          "next_token": 14,
+          "max_logit": 40.867496490478516,
+          "latency_ms": 186.22642615810037
+        },
+        {
+          "start_pos": 86,
+          "input_tokens": 1,
+          "next_token": 1539,
+          "max_logit": 37.89636993408203,
+          "latency_ms": 187.63714283704758
+        },
+        {
+          "start_pos": 87,
+          "input_tokens": 1,
+          "next_token": 313,
+          "max_logit": 40.847293853759766,
+          "latency_ms": 195.01275382936
+        },
+        {
+          "start_pos": 88,
+          "input_tokens": 1,
+          "next_token": 344,
+          "max_logit": 39.010196685791016,
+          "latency_ms": 185.801369138062
+        },
+        {
+          "start_pos": 89,
+          "input_tokens": 1,
+          "next_token": 17822,
+          "max_logit": 40.33110046386719,
+          "latency_ms": 186.00764777511358
+        },
+        {
+          "start_pos": 90,
+          "input_tokens": 1,
+          "next_token": 24490,
+          "max_logit": 42.19596481323242,
+          "latency_ms": 186.92093016579747
+        },
+        {
+          "start_pos": 91,
+          "input_tokens": 1,
+          "next_token": 201,
+          "max_logit": 37.32841491699219,
+          "latency_ms": 196.60272169858217
+        },
+        {
+          "start_pos": 92,
+          "input_tokens": 1,
+          "next_token": 361,
+          "max_logit": 41.93857192993164,
+          "latency_ms": 187.59091524407268
+        },
+        {
+          "start_pos": 93,
+          "input_tokens": 1,
+          "next_token": 513,
+          "max_logit": 42.68218231201172,
+          "latency_ms": 187.6717540435493
+        },
+        {
+          "start_pos": 94,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 40.791099548339844,
+          "latency_ms": 187.43676599115133
+        },
+        {
+          "start_pos": 95,
+          "input_tokens": 1,
+          "next_token": 20,
+          "max_logit": 40.84262466430664,
+          "latency_ms": 196.94395782426
+        },
+        {
+          "start_pos": 96,
+          "input_tokens": 1,
+          "next_token": 418,
+          "max_logit": 37.01651382446289,
+          "latency_ms": 187.56164517253637
+        },
+        {
+          "start_pos": 97,
+          "input_tokens": 1,
+          "next_token": 1119,
+          "max_logit": 45.01008224487305,
+          "latency_ms": 188.9500836841762
+        },
+        {
+          "start_pos": 98,
+          "input_tokens": 1,
+          "next_token": 17347,
+          "max_logit": 46.51711654663086,
+          "latency_ms": 187.8055240958929
+        },
+        {
+          "start_pos": 99,
+          "input_tokens": 1,
+          "next_token": 14,
+          "max_logit": 40.02170181274414,
+          "latency_ms": 196.2419650517404
+        },
+        {
+          "start_pos": 100,
+          "input_tokens": 1,
+          "next_token": 5281,
+          "max_logit": 42.282310485839844,
+          "latency_ms": 187.3281868174672
+        },
+        {
+          "start_pos": 101,
+          "input_tokens": 1,
+          "next_token": 436,
+          "max_logit": 40.90220642089844,
+          "latency_ms": 187.34524678438902
+        },
+        {
+          "start_pos": 102,
+          "input_tokens": 1,
+          "next_token": 734,
+          "max_logit": 43.81049346923828,
+          "latency_ms": 186.51416432112455
+        },
+        {
+          "start_pos": 103,
+          "input_tokens": 1,
+          "next_token": 1749,
+          "max_logit": 43.74128723144531,
+          "latency_ms": 195.8652981556952
+        },
+        {
+          "start_pos": 104,
+          "input_tokens": 1,
+          "next_token": 603,
+          "max_logit": 41.096885681152344,
+          "latency_ms": 187.23979918286204
+        },
+        {
+          "start_pos": 105,
+          "input_tokens": 1,
+          "next_token": 361,
+          "max_logit": 43.33906555175781,
+          "latency_ms": 187.2325879521668
+        },
+        {
+          "start_pos": 106,
+          "input_tokens": 1,
+          "next_token": 16786,
+          "max_logit": 41.15274429321289,
+          "latency_ms": 186.742071993649
+        },
+        {
+          "start_pos": 107,
+          "input_tokens": 1,
+          "next_token": 361,
+          "max_logit": 40.91450500488281,
+          "latency_ms": 198.1700798496604
+        },
+        {
+          "start_pos": 108,
+          "input_tokens": 1,
+          "next_token": 1354,
+          "max_logit": 43.12723922729492,
+          "latency_ms": 188.2126904092729
+        },
+        {
+          "start_pos": 109,
+          "input_tokens": 1,
+          "next_token": 313,
+          "max_logit": 46.24064636230469,
+          "latency_ms": 187.5392058864236
+        },
+        {
+          "start_pos": 110,
+          "input_tokens": 1,
+          "next_token": 3104,
+          "max_logit": 42.64561462402344,
+          "latency_ms": 187.3323479667306
+        },
+        {
+          "start_pos": 111,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 29.986194610595703,
+          "latency_ms": 197.01337767764926
+        },
+        {
+          "start_pos": 112,
+          "input_tokens": 1,
+          "next_token": 20,
+          "max_logit": 33.961483001708984,
+          "latency_ms": 187.72258423268795
+        },
+        {
+          "start_pos": 113,
+          "input_tokens": 1,
+          "next_token": 2606,
+          "max_logit": 40.04496765136719,
+          "latency_ms": 187.45324714109302
+        },
+        {
+          "start_pos": 114,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 36.19467544555664,
+          "latency_ms": 186.46729411557317
+        },
+        {
+          "start_pos": 115,
+          "input_tokens": 1,
+          "next_token": 18,
+          "max_logit": 33.47703170776367,
+          "latency_ms": 196.46064331755042
+        },
+        {
+          "start_pos": 116,
+          "input_tokens": 1,
+          "next_token": 201,
+          "max_logit": 36.59321975708008,
+          "latency_ms": 187.05578008666635
+        },
+        {
+          "start_pos": 117,
+          "input_tokens": 1,
+          "next_token": 20759,
+          "max_logit": 44.65470886230469,
+          "latency_ms": 187.4554269015789
+        },
+        {
+          "start_pos": 118,
+          "input_tokens": 1,
+          "next_token": 666,
+          "max_logit": 44.58634948730469,
+          "latency_ms": 186.99975963681936
+        },
+        {
+          "start_pos": 119,
+          "input_tokens": 1,
+          "next_token": 28395,
+          "max_logit": 42.40465545654297,
+          "latency_ms": 196.39482395723462
+        },
+        {
+          "start_pos": 120,
+          "input_tokens": 1,
+          "next_token": 294,
+          "max_logit": 44.437278747558594,
+          "latency_ms": 188.01296083256602
+        },
+        {
+          "start_pos": 121,
+          "input_tokens": 1,
+          "next_token": 270,
+          "max_logit": 39.85991668701172,
+          "latency_ms": 187.1254090219736
+        },
+        {
+          "start_pos": 122,
+          "input_tokens": 1,
+          "next_token": 81802,
+          "max_logit": 42.8234977722168,
+          "latency_ms": 186.89537094905972
+        },
+        {
+          "start_pos": 123,
+          "input_tokens": 1,
+          "next_token": 7408,
+          "max_logit": 47.651206970214844,
+          "latency_ms": 196.58030243590474
+        },
+        {
+          "start_pos": 124,
+          "input_tokens": 1,
+          "next_token": 57840,
+          "max_logit": 36.74715805053711,
+          "latency_ms": 187.92949290946126
+        },
+        {
+          "start_pos": 125,
+          "input_tokens": 1,
+          "next_token": 671,
+          "max_logit": 44.828582763671875,
+          "latency_ms": 186.73927197232842
+        },
+        {
+          "start_pos": 126,
+          "input_tokens": 1,
+          "next_token": 81802,
+          "max_logit": 40.511878967285156,
+          "latency_ms": 187.17337911948562
+        },
+        {
+          "start_pos": 127,
+          "input_tokens": 1,
+          "next_token": 13057,
+          "max_logit": 45.84141540527344,
+          "latency_ms": 200.44776983559132
+        },
+        {
+          "start_pos": 128,
+          "input_tokens": 1,
+          "next_token": 42936,
+          "max_logit": 41.052974700927734,
+          "latency_ms": 188.63053806126118
+        },
+        {
+          "start_pos": 129,
+          "input_tokens": 1,
+          "next_token": 7,
+          "max_logit": 49.15621566772461,
+          "latency_ms": 187.12796922773123
+        },
+        {
+          "start_pos": 130,
+          "input_tokens": 1,
+          "next_token": 54975,
+          "max_logit": 41.56597137451172,
+          "latency_ms": 187.76738597080112
+        },
+        {
+          "start_pos": 131,
+          "input_tokens": 1,
+          "next_token": 295,
+          "max_logit": 39.71272277832031,
+          "latency_ms": 196.64369290694594
+        },
+        {
+          "start_pos": 132,
+          "input_tokens": 1,
+          "next_token": 15255,
+          "max_logit": 48.17858123779297,
+          "latency_ms": 187.69427621737123
+        },
+        {
+          "start_pos": 133,
+          "input_tokens": 1,
+          "next_token": 10340,
+          "max_logit": 40.15519714355469,
+          "latency_ms": 187.75130482390523
+        },
+        {
+          "start_pos": 134,
+          "input_tokens": 1,
+          "next_token": 270,
+          "max_logit": 42.817161560058594,
+          "latency_ms": 188.2058009505272
+        },
+        {
+          "start_pos": 135,
+          "input_tokens": 1,
+          "next_token": 2619,
+          "max_logit": 40.66416931152344,
+          "latency_ms": 197.3587367683649
+        },
+        {
+          "start_pos": 136,
+          "input_tokens": 1,
+          "next_token": 107443,
+          "max_logit": 55.51603698730469,
+          "latency_ms": 187.7906140871346
+        },
+        {
+          "start_pos": 137,
+          "input_tokens": 1,
+          "next_token": 1514,
+          "max_logit": 57.9559211730957,
+          "latency_ms": 187.65784613788128
+        },
+        {
+          "start_pos": 138,
+          "input_tokens": 1,
+          "next_token": 666,
+          "max_logit": 42.66182327270508,
+          "latency_ms": 187.6248363405466
+        },
+        {
+          "start_pos": 139,
+          "input_tokens": 1,
+          "next_token": 294,
+          "max_logit": 39.69216537475586,
+          "latency_ms": 197.1399886533618
+        },
+        {
+          "start_pos": 140,
+          "input_tokens": 1,
+          "next_token": 260,
+          "max_logit": 41.10218048095703,
+          "latency_ms": 186.37400679290295
+        },
+        {
+          "start_pos": 141,
+          "input_tokens": 1,
+          "next_token": 11057,
+          "max_logit": 51.226104736328125,
+          "latency_ms": 186.2736982293427
+        },
+        {
+          "start_pos": 142,
+          "input_tokens": 1,
+          "next_token": 7408,
+          "max_logit": 45.153175354003906,
+          "latency_ms": 186.6170261055231
+        },
+        {
+          "start_pos": 143,
+          "input_tokens": 1,
+          "next_token": 16,
+          "max_logit": 38.16287612915039,
+          "latency_ms": 195.85607899352908
+        },
+        {
+          "start_pos": 144,
+          "input_tokens": 1,
+          "next_token": 1884,
+          "max_logit": 38.80280303955078,
+          "latency_ms": 187.11072066798806
+        },
+        {
+          "start_pos": 145,
+          "input_tokens": 1,
+          "next_token": 2511,
+          "max_logit": 42.47544479370117,
+          "latency_ms": 187.14826134964824
+        },
+        {
+          "start_pos": 146,
+          "input_tokens": 1,
+          "next_token": 1137,
+          "max_logit": 39.9227180480957,
+          "latency_ms": 186.76946312189102
+        },
+        {
+          "start_pos": 147,
+          "input_tokens": 1,
+          "next_token": 15,
+          "max_logit": 42.25954818725586,
+          "latency_ms": 197.29277677834034
+        },
+        {
+          "start_pos": 148,
+          "input_tokens": 1,
+          "next_token": 3608,
+          "max_logit": 41.24299240112305,
+          "latency_ms": 186.6115052253008
+        },
+        {
+          "start_pos": 149,
+          "input_tokens": 1,
+          "next_token": 25,
+          "max_logit": 41.16214370727539,
+          "latency_ms": 188.1085829809308
+        },
+        {
+          "start_pos": 150,
+          "input_tokens": 1,
+          "next_token": 3104,
+          "max_logit": 45.77354431152344,
+          "latency_ms": 187.54526693373919
+        },
+        {
+          "start_pos": 151,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 36.612159729003906,
+          "latency_ms": 196.46898517385125
+        },
+        {
+          "start_pos": 152,
+          "input_tokens": 1,
+          "next_token": 21,
+          "max_logit": 39.40769958496094,
+          "latency_ms": 187.33667023479939
+        },
+        {
+          "start_pos": 153,
+          "input_tokens": 1,
+          "next_token": 66,
+          "max_logit": 41.23440933227539,
+          "latency_ms": 189.8730481043458
+        },
+        {
+          "start_pos": 154,
+          "input_tokens": 1,
+          "next_token": 438,
+          "max_logit": 38.55931854248047,
+          "latency_ms": 188.00137285143137
+        },
+        {
+          "start_pos": 155,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 40.01982498168945,
+          "latency_ms": 197.4496659822762
+        },
+        {
+          "start_pos": 156,
+          "input_tokens": 1,
+          "next_token": 19,
+          "max_logit": 40.037445068359375,
+          "latency_ms": 187.27286905050278
+        },
+        {
+          "start_pos": 157,
+          "input_tokens": 1,
+          "next_token": 343,
+          "max_logit": 40.19630813598633,
+          "latency_ms": 187.02013231813908
+        },
+        {
+          "start_pos": 158,
+          "input_tokens": 1,
+          "next_token": 30551,
+          "max_logit": 42.568641662597656,
+          "latency_ms": 187.1855901554227
+        },
+        {
+          "start_pos": 159,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 42.709693908691406,
+          "latency_ms": 196.90958177670836
+        },
+        {
+          "start_pos": 160,
+          "input_tokens": 1,
+          "next_token": 25,
+          "max_logit": 42.67071533203125,
+          "latency_ms": 187.90056509897113
+        },
+        {
+          "start_pos": 161,
+          "input_tokens": 1,
+          "next_token": 7203,
+          "max_logit": 39.03892135620117,
+          "latency_ms": 186.60307535901666
+        },
+        {
+          "start_pos": 162,
+          "input_tokens": 1,
+          "next_token": 513,
+          "max_logit": 40.349605560302734,
+          "latency_ms": 186.1570687033236
+        },
+        {
+          "start_pos": 163,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 37.56938171386719,
+          "latency_ms": 195.04363602027297
+        },
+        {
+          "start_pos": 164,
+          "input_tokens": 1,
+          "next_token": 21,
+          "max_logit": 42.0088005065918,
+          "latency_ms": 186.3869670778513
+        },
+        {
+          "start_pos": 165,
+          "input_tokens": 1,
+          "next_token": 344,
+          "max_logit": 40.49574661254883,
+          "latency_ms": 186.20394868776202
+        },
+        {
+          "start_pos": 166,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 40.912109375,
+          "latency_ms": 185.64623408019543
+        },
+        {
+          "start_pos": 167,
+          "input_tokens": 1,
+          "next_token": 20,
+          "max_logit": 44.41895294189453,
+          "latency_ms": 195.42622519657016
+        },
+        {
+          "start_pos": 168,
+          "input_tokens": 1,
+          "next_token": 418,
+          "max_logit": 43.161415100097656,
+          "latency_ms": 185.99638994783163
+        },
+        {
+          "start_pos": 169,
+          "input_tokens": 1,
+          "next_token": 17347,
+          "max_logit": 39.62889862060547,
+          "latency_ms": 186.03481026366353
+        },
+        {
+          "start_pos": 170,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 40.19057846069336,
+          "latency_ms": 188.02558397874236
+        },
+        {
+          "start_pos": 171,
+          "input_tokens": 1,
+          "next_token": 19,
+          "max_logit": 37.8157958984375,
+          "latency_ms": 196.49113528430462
+        },
+        {
+          "start_pos": 172,
+          "input_tokens": 1,
+          "next_token": 682,
+          "max_logit": 38.7449951171875,
+          "latency_ms": 187.09275173023343
+        },
+        {
+          "start_pos": 173,
+          "input_tokens": 1,
+          "next_token": 15,
+          "max_logit": 37.28839874267578,
+          "latency_ms": 187.4073101207614
+        },
+        {
+          "start_pos": 174,
+          "input_tokens": 1,
+          "next_token": 3608,
+          "max_logit": 36.60765075683594,
+          "latency_ms": 190.18351612612605
+        },
+        {
+          "start_pos": 175,
+          "input_tokens": 1,
+          "next_token": 553,
+          "max_logit": 39.048851013183594,
+          "latency_ms": 197.10206100717187
+        },
+        {
+          "start_pos": 176,
+          "input_tokens": 1,
+          "next_token": 3104,
+          "max_logit": 41.33333969116211,
+          "latency_ms": 187.30850983411074
+        },
+        {
+          "start_pos": 177,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 33.171356201171875,
+          "latency_ms": 186.79171381518245
+        },
+        {
+          "start_pos": 178,
+          "input_tokens": 1,
+          "next_token": 23,
+          "max_logit": 41.89775085449219,
+          "latency_ms": 187.0567724108696
+        },
+        {
+          "start_pos": 179,
+          "input_tokens": 1,
+          "next_token": 66,
+          "max_logit": 37.51213455200195,
+          "latency_ms": 195.77315216884017
+        },
+        {
+          "start_pos": 180,
+          "input_tokens": 1,
+          "next_token": 438,
+          "max_logit": 35.534393310546875,
+          "latency_ms": 186.92898377776146
+        },
+        {
+          "start_pos": 181,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 34.982730865478516,
+          "latency_ms": 187.93124705553055
+        },
+        {
+          "start_pos": 182,
+          "input_tokens": 1,
+          "next_token": 18,
+          "max_logit": 34.94739532470703,
+          "latency_ms": 187.10803193971515
+        },
+        {
+          "start_pos": 183,
+          "input_tokens": 1,
+          "next_token": 343,
+          "max_logit": 40.746421813964844,
+          "latency_ms": 195.64654305577278
+        },
+        {
+          "start_pos": 184,
+          "input_tokens": 1,
+          "next_token": 30551,
+          "max_logit": 42.44253921508789,
+          "latency_ms": 187.02271301299334
+        },
+        {
+          "start_pos": 185,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 41.15938949584961,
+          "latency_ms": 187.24657082930207
+        },
+        {
+          "start_pos": 186,
+          "input_tokens": 1,
+          "next_token": 553,
+          "max_logit": 49.06999206542969,
+          "latency_ms": 187.65373714268208
+        },
+        {
+          "start_pos": 187,
+          "input_tokens": 1,
+          "next_token": 7203,
+          "max_logit": 38.47480010986328,
+          "latency_ms": 196.38640666380525
+        },
+        {
+          "start_pos": 188,
+          "input_tokens": 1,
+          "next_token": 513,
+          "max_logit": 40.136417388916016,
+          "latency_ms": 189.261004794389
+        },
+        {
+          "start_pos": 189,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 33.28676223754883,
+          "latency_ms": 188.02746525034308
+        },
+        {
+          "start_pos": 190,
+          "input_tokens": 1,
+          "next_token": 23,
+          "max_logit": 42.187252044677734,
+          "latency_ms": 186.8369639851153
+        },
+        {
+          "start_pos": 191,
+          "input_tokens": 1,
+          "next_token": 344,
+          "max_logit": 38.758949279785156,
+          "latency_ms": 196.9709531404078
+        },
+        {
+          "start_pos": 192,
+          "input_tokens": 1,
+          "next_token": 9045,
+          "max_logit": 37.439544677734375,
+          "latency_ms": 186.23520014807582
+        },
+        {
+          "start_pos": 193,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 39.4412956237793,
+          "latency_ms": 185.58523477986455
+        },
+        {
+          "start_pos": 194,
+          "input_tokens": 1,
+          "next_token": 20,
+          "max_logit": 39.03614807128906,
+          "latency_ms": 186.00135203450918
+        },
+        {
+          "start_pos": 195,
+          "input_tokens": 1,
+          "next_token": 418,
+          "max_logit": 38.33418273925781,
+          "latency_ms": 194.88245993852615
+        },
+        {
+          "start_pos": 196,
+          "input_tokens": 1,
+          "next_token": 1119,
+          "max_logit": 38.622581481933594,
+          "latency_ms": 186.61506567150354
+        },
+        {
+          "start_pos": 197,
+          "input_tokens": 1,
+          "next_token": 17347,
+          "max_logit": 47.629638671875,
+          "latency_ms": 186.89446430653334
+        },
+        {
+          "start_pos": 198,
+          "input_tokens": 1,
+          "next_token": 868,
+          "max_logit": 34.99821853637695,
+          "latency_ms": 189.11982607096434
+        },
+        {
+          "start_pos": 199,
+          "input_tokens": 1,
+          "next_token": 4823,
+          "max_logit": 39.73244094848633,
+          "latency_ms": 196.29350770264864
+        },
+        {
+          "start_pos": 200,
+          "input_tokens": 1,
+          "next_token": 21587,
+          "max_logit": 39.757110595703125,
+          "latency_ms": 187.14273301884532
+        },
+        {
+          "start_pos": 201,
+          "input_tokens": 1,
+          "next_token": 855,
+          "max_logit": 38.617942810058594,
+          "latency_ms": 187.65407893806696
+        },
+        {
+          "start_pos": 202,
+          "input_tokens": 1,
+          "next_token": 260,
+          "max_logit": 44.23357009887695,
+          "latency_ms": 188.62298177555203
+        },
+        {
+          "start_pos": 203,
+          "input_tokens": 1,
+          "next_token": 1167,
+          "max_logit": 49.423133850097656,
+          "latency_ms": 195.68541273474693
+        },
+        {
+          "start_pos": 204,
+          "input_tokens": 1,
+          "next_token": 344,
+          "max_logit": 42.64365768432617,
+          "latency_ms": 187.00014520436525
+        },
+        {
+          "start_pos": 205,
+          "input_tokens": 1,
+          "next_token": 1749,
+          "max_logit": 43.616416931152344,
+          "latency_ms": 187.40706099197268
+        },
+        {
+          "start_pos": 206,
+          "input_tokens": 1,
+          "next_token": 14,
+          "max_logit": 37.00649642944336,
+          "latency_ms": 187.68741795793176
+        },
+        {
+          "start_pos": 207,
+          "input_tokens": 1,
+          "next_token": 579,
+          "max_logit": 39.68439865112305,
+          "latency_ms": 196.58713601529598
+        },
+        {
+          "start_pos": 208,
+          "input_tokens": 1,
+          "next_token": 1347,
+          "max_logit": 35.87724685668945,
+          "latency_ms": 187.17624293640256
+        },
+        {
+          "start_pos": 209,
+          "input_tokens": 1,
+          "next_token": 3608,
+          "max_logit": 37.927711486816406,
+          "latency_ms": 186.8713852018118
+        },
+        {
+          "start_pos": 210,
+          "input_tokens": 1,
+          "next_token": 80,
+          "max_logit": 42.04627990722656,
+          "latency_ms": 186.85907498002052
+        },
+        {
+          "start_pos": 211,
+          "input_tokens": 1,
+          "next_token": 3104,
+          "max_logit": 43.698997497558594,
+          "latency_ms": 195.88303193449974
+        },
+        {
+          "start_pos": 212,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 36.31790542602539,
+          "latency_ms": 187.7556978724897
+        },
+        {
+          "start_pos": 213,
+          "input_tokens": 1,
+          "next_token": 20,
+          "max_logit": 40.07806396484375,
+          "latency_ms": 187.46520997956395
+        },
+        {
+          "start_pos": 214,
+          "input_tokens": 1,
+          "next_token": 66,
+          "max_logit": 35.104713439941406,
+          "latency_ms": 187.1001529507339
+        },
+        {
+          "start_pos": 215,
+          "input_tokens": 1,
+          "next_token": 1137,
+          "max_logit": 38.379844665527344,
+          "latency_ms": 196.30799908190966
+        },
+        {
+          "start_pos": 216,
+          "input_tokens": 1,
+          "next_token": 15,
+          "max_logit": 42.71229934692383,
+          "latency_ms": 186.5264279767871
+        },
+        {
+          "start_pos": 217,
+          "input_tokens": 1,
+          "next_token": 2052,
+          "max_logit": 39.17903518676758,
+          "latency_ms": 186.15028215572238
+        },
+        {
+          "start_pos": 218,
+          "input_tokens": 1,
+          "next_token": 3608,
+          "max_logit": 36.479801177978516,
+          "latency_ms": 186.31399981677532
+        },
+        {
+          "start_pos": 219,
+          "input_tokens": 1,
+          "next_token": 80,
+          "max_logit": 45.38951873779297,
+          "latency_ms": 195.94537327066064
+        },
+        {
+          "start_pos": 220,
+          "input_tokens": 1,
+          "next_token": 66,
+          "max_logit": 36.79313278198242,
+          "latency_ms": 186.6576774045825
+        },
+        {
+          "start_pos": 221,
+          "input_tokens": 1,
+          "next_token": 344,
+          "max_logit": 40.22599411010742,
+          "latency_ms": 186.50012789294124
+        },
+        {
+          "start_pos": 222,
+          "input_tokens": 1,
+          "next_token": 1749,
+          "max_logit": 40.3996467590332,
+          "latency_ms": 186.78258592262864
+        },
+        {
+          "start_pos": 223,
+          "input_tokens": 1,
+          "next_token": 14,
+          "max_logit": 36.79557418823242,
+          "latency_ms": 197.6483380421996
+        },
+        {
+          "start_pos": 224,
+          "input_tokens": 1,
+          "next_token": 436,
+          "max_logit": 35.68291091918945,
+          "latency_ms": 186.3673203624785
+        },
+        {
+          "start_pos": 225,
+          "input_tokens": 1,
+          "next_token": 734,
+          "max_logit": 35.949703216552734,
+          "latency_ms": 186.79986614733934
+        },
+        {
+          "start_pos": 226,
+          "input_tokens": 1,
+          "next_token": 24490,
+          "max_logit": 36.68058776855469,
+          "latency_ms": 186.5670378319919
+        },
+        {
+          "start_pos": 227,
+          "input_tokens": 1,
+          "next_token": 513,
+          "max_logit": 42.58377456665039,
+          "latency_ms": 195.90724306181073
+        },
+        {
+          "start_pos": 228,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 39.60112762451172,
+          "latency_ms": 188.47705191001296
+        },
+        {
+          "start_pos": 229,
+          "input_tokens": 1,
+          "next_token": 20,
+          "max_logit": 42.72774887084961,
+          "latency_ms": 189.2276657745242
+        },
+        {
+          "start_pos": 230,
+          "input_tokens": 1,
+          "next_token": 418,
+          "max_logit": 35.53064727783203,
+          "latency_ms": 188.116196077317
+        },
+        {
+          "start_pos": 231,
+          "input_tokens": 1,
+          "next_token": 1119,
+          "max_logit": 38.34541320800781,
+          "latency_ms": 196.29923021420836
+        },
+        {
+          "start_pos": 232,
+          "input_tokens": 1,
+          "next_token": 17347,
+          "max_logit": 42.67845916748047,
+          "latency_ms": 186.2293817102909
+        },
+        {
+          "start_pos": 233,
+          "input_tokens": 1,
+          "next_token": 14,
+          "max_logit": 35.82462692260742,
+          "latency_ms": 187.36001197248697
+        },
+        {
+          "start_pos": 234,
+          "input_tokens": 1,
+          "next_token": 832,
+          "max_logit": 40.55403137207031,
+          "latency_ms": 187.41652183234692
+        },
+        {
+          "start_pos": 235,
+          "input_tokens": 1,
+          "next_token": 3608,
+          "max_logit": 39.72886276245117,
+          "latency_ms": 195.51964616402984
+        },
+        {
+          "start_pos": 236,
+          "input_tokens": 1,
+          "next_token": 80,
+          "max_logit": 45.379295349121094,
+          "latency_ms": 186.83449691161513
+        },
+        {
+          "start_pos": 237,
+          "input_tokens": 1,
+          "next_token": 3104,
+          "max_logit": 43.15100860595703,
+          "latency_ms": 187.0944043621421
+        },
+        {
+          "start_pos": 238,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 36.73992156982422,
+          "latency_ms": 186.90496683120728
+        },
+        {
+          "start_pos": 239,
+          "input_tokens": 1,
+          "next_token": 20,
+          "max_logit": 40.14476013183594,
+          "latency_ms": 196.51281787082553
+        },
+        {
+          "start_pos": 240,
+          "input_tokens": 1,
+          "next_token": 66,
+          "max_logit": 38.37392807006836,
+          "latency_ms": 186.9084658101201
+        },
+        {
+          "start_pos": 241,
+          "input_tokens": 1,
+          "next_token": 9615,
+          "max_logit": 37.053951263427734,
+          "latency_ms": 187.09613429382443
+        },
+        {
+          "start_pos": 242,
+          "input_tokens": 1,
+          "next_token": 3608,
+          "max_logit": 36.23066329956055,
+          "latency_ms": 187.71315971389413
+        },
+        {
+          "start_pos": 243,
+          "input_tokens": 1,
+          "next_token": 18,
+          "max_logit": 43.22431945800781,
+          "latency_ms": 196.98125403374434
+        },
+        {
+          "start_pos": 244,
+          "input_tokens": 1,
+          "next_token": 16153,
+          "max_logit": 37.67159652709961,
+          "latency_ms": 187.94894684106112
+        },
+        {
+          "start_pos": 245,
+          "input_tokens": 1,
+          "next_token": 15,
+          "max_logit": 37.63621520996094,
+          "latency_ms": 187.35676305368543
+        },
+        {
+          "start_pos": 246,
+          "input_tokens": 1,
+          "next_token": 2052,
+          "max_logit": 39.43202209472656,
+          "latency_ms": 187.2933330014348
+        },
+        {
+          "start_pos": 247,
+          "input_tokens": 1,
+          "next_token": 3608,
+          "max_logit": 39.68900680541992,
+          "latency_ms": 196.69384602457285
+        },
+        {
+          "start_pos": 248,
+          "input_tokens": 1,
+          "next_token": 80,
+          "max_logit": 41.89397048950195,
+          "latency_ms": 187.39314330741763
+        },
+        {
+          "start_pos": 249,
+          "input_tokens": 1,
+          "next_token": 66,
+          "max_logit": 36.90530014038086,
+          "latency_ms": 187.3473427258432
+        },
+        {
+          "start_pos": 250,
+          "input_tokens": 1,
+          "next_token": 344,
+          "max_logit": 36.798866271972656,
+          "latency_ms": 186.39053078368306
+        },
+        {
+          "start_pos": 251,
+          "input_tokens": 1,
+          "next_token": 12601,
+          "max_logit": 43.54540252685547,
+          "latency_ms": 196.0873417556286
+        },
+        {
+          "start_pos": 252,
+          "input_tokens": 1,
+          "next_token": 14,
+          "max_logit": 39.5955924987793,
+          "latency_ms": 187.3764730989933
+        },
+        {
+          "start_pos": 253,
+          "input_tokens": 1,
+          "next_token": 26843,
+          "max_logit": 35.63817596435547,
+          "latency_ms": 187.2033653780818
+        },
+        {
+          "start_pos": 254,
+          "input_tokens": 1,
+          "next_token": 513,
+          "max_logit": 41.74256896972656,
+          "latency_ms": 187.32523266226053
+        },
+        {
+          "start_pos": 255,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 39.17454147338867,
+          "latency_ms": 201.28857996314764
+        },
+        {
+          "start_pos": 256,
+          "input_tokens": 1,
+          "next_token": 20,
+          "max_logit": 42.48551940917969,
+          "latency_ms": 187.83697905018926
+        },
+        {
+          "start_pos": 257,
+          "input_tokens": 1,
+          "next_token": 9120,
+          "max_logit": 41.288841247558594,
+          "latency_ms": 186.63365812972188
+        },
+        {
+          "start_pos": 258,
+          "input_tokens": 1,
+          "next_token": 260,
+          "max_logit": 39.30998992919922,
+          "latency_ms": 187.2328338213265
+        },
+        {
+          "start_pos": 259,
+          "input_tokens": 1,
+          "next_token": 17347,
+          "max_logit": 45.419189453125,
+          "latency_ms": 196.54513895511627
+        },
+        {
+          "start_pos": 260,
+          "input_tokens": 1,
+          "next_token": 294,
+          "max_logit": 38.60958480834961,
+          "latency_ms": 187.23653396591544
+        },
+        {
+          "start_pos": 261,
+          "input_tokens": 1,
+          "next_token": 3608,
+          "max_logit": 34.854637145996094,
+          "latency_ms": 186.52599025517702
+        },
+        {
+          "start_pos": 262,
+          "input_tokens": 1,
+          "next_token": 19,
+          "max_logit": 39.96432876586914,
+          "latency_ms": 187.17181403189898
+        },
+        {
+          "start_pos": 263,
+          "input_tokens": 1,
+          "next_token": 16781,
+          "max_logit": 36.85116958618164,
+          "latency_ms": 195.78040484339
+        },
+        {
+          "start_pos": 264,
+          "input_tokens": 1,
+          "next_token": 832,
+          "max_logit": 39.25762176513672,
+          "latency_ms": 187.30546487495303
+        },
+        {
+          "start_pos": 265,
+          "input_tokens": 1,
+          "next_token": 3608,
+          "max_logit": 38.566837310791016,
+          "latency_ms": 187.63331230729818
+        },
+        {
+          "start_pos": 266,
+          "input_tokens": 1,
+          "next_token": 80,
+          "max_logit": 38.83839797973633,
+          "latency_ms": 187.00423697009683
+        },
+        {
+          "start_pos": 267,
+          "input_tokens": 1,
+          "next_token": 3104,
+          "max_logit": 39.014713287353516,
+          "latency_ms": 196.0419239476323
+        },
+        {
+          "start_pos": 268,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 33.75346374511719,
+          "latency_ms": 186.62411998957396
+        },
+        {
+          "start_pos": 269,
+          "input_tokens": 1,
+          "next_token": 20,
+          "max_logit": 35.49960708618164,
+          "latency_ms": 186.49379070848227
+        },
+        {
+          "start_pos": 270,
+          "input_tokens": 1,
+          "next_token": 66,
+          "max_logit": 38.92351150512695,
+          "latency_ms": 186.92318676039577
+        },
+        {
+          "start_pos": 271,
+          "input_tokens": 1,
+          "next_token": 9615,
+          "max_logit": 40.019107818603516,
+          "latency_ms": 196.60654803737998
+        },
+        {
+          "start_pos": 272,
+          "input_tokens": 1,
+          "next_token": 3608,
+          "max_logit": 38.54265213012695,
+          "latency_ms": 186.7138589732349
+        },
+        {
+          "start_pos": 273,
+          "input_tokens": 1,
+          "next_token": 19,
+          "max_logit": 35.510833740234375,
+          "latency_ms": 187.00681580230594
+        },
+        {
+          "start_pos": 274,
+          "input_tokens": 1,
+          "next_token": 31903,
+          "max_logit": 36.97686767578125,
+          "latency_ms": 186.47993076592684
+        },
+        {
+          "start_pos": 275,
+          "input_tokens": 1,
+          "next_token": 666,
+          "max_logit": 38.06804275512695,
+          "latency_ms": 198.43071419745684
+        },
+        {
+          "start_pos": 276,
+          "input_tokens": 1,
+          "next_token": 16221,
+          "max_logit": 39.697200775146484,
+          "latency_ms": 187.03365698456764
+        },
+        {
+          "start_pos": 277,
+          "input_tokens": 1,
+          "next_token": 14629,
+          "max_logit": 40.58964157104492,
+          "latency_ms": 186.95846665650606
+        },
+        {
+          "start_pos": 278,
+          "input_tokens": 1,
+          "next_token": 28,
+          "max_logit": 39.896270751953125,
+          "latency_ms": 187.15400574728847
+        },
+        {
+          "start_pos": 279,
+          "input_tokens": 1,
+          "next_token": 5866,
+          "max_logit": 45.61979675292969,
+          "latency_ms": 196.43184961751103
+        },
+        {
+          "start_pos": 280,
+          "input_tokens": 1,
+          "next_token": 9854,
+          "max_logit": 46.699073791503906,
+          "latency_ms": 187.56769225001335
+        },
+        {
+          "start_pos": 281,
+          "input_tokens": 1,
+          "next_token": 36490,
+          "max_logit": 49.235286712646484,
+          "latency_ms": 187.4732719734311
+        },
+        {
+          "start_pos": 282,
+          "input_tokens": 1,
+          "next_token": 201,
+          "max_logit": 37.881141662597656,
+          "latency_ms": 187.53182282671332
+        },
+        {
+          "start_pos": 283,
+          "input_tokens": 1,
+          "next_token": 3098,
+          "max_logit": 44.80458068847656,
+          "latency_ms": 195.45917911455035
+        },
+        {
+          "start_pos": 284,
+          "input_tokens": 1,
+          "next_token": 40391,
+          "max_logit": 46.87451934814453,
+          "latency_ms": 186.5049209445715
+        },
+        {
+          "start_pos": 285,
+          "input_tokens": 1,
+          "next_token": 17856,
+          "max_logit": 49.088958740234375,
+          "latency_ms": 186.5344112738967
+        },
+        {
+          "start_pos": 286,
+          "input_tokens": 1,
+          "next_token": 1615,
+          "max_logit": 57.87986755371094,
+          "latency_ms": 187.20436515286565
+        }
+      ],
+      "case_id": "code_en",
+      "input_format": "chat",
+      "chat": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "Write a Python function named is_even(n) that returns whether an integer n is even. Include a short explanation of the modulo operation."
+          }
+        ],
+        "thinking_mode": "chat",
+        "drop_thinking": true,
+        "reasoning_effort": "low",
+        "codec": {
+          "format": "deepseek-v4-checkpoint-encoding",
+          "encoding_path": "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/encoding/encoding_dsv4.py",
+          "encoding_sha256": "abc0d26120250dda0ae077dc64aa28836026e61e970854aaeb792445e6a0dde6",
+          "tokenizer_backend_sha256": "0e546c51529290ed4b18dc8b3e481a9ea39a2df2175b65ecb281af6bac79af73",
+          "bos_id": 0,
+          "eos_id": 1,
+          "add_special_tokens": false,
+          "tool_execution": false,
+          "fallback": false
+        }
+      },
+      "expected_contains": "% 2",
+      "expected_match": false,
+      "completion": {
+        "raw_text": "Here's the solution with an explanation:\n\n```python\ndef is_even(n):\n    \"\"\"\n    Returns True if n is even, False otherwise.\n    \n    Uses the modulo operator (%) which returns the remainder\n    of division. If n % 2 == 0, then n is perfectly divisible\n    by 2 with no remainder, meaning it's even.\n    \"\"\"\n    return n % 2 == 0\n```\n\n**Explanation of the modulo operation:**\n\nThe modulo operator (`%`) in Python returns the **remainder** of a division operation. For example:\n- `7 % 3` = 1 (because 7 divided by 3 is 2 with remainder 1)\n- `10 % 5` = 0 (because 10 divided by 5 is exactly 2 with no remainder)\n\nWhen checking if a number is even, we use `n % 2`:\n- If `n` is even, it's divisible by 2 with no remainder, so `n % 2` equals `0`\n- If `n` is odd, dividing by 2 leaves a remainder of `1`, so `n % 2` equals `1`\n\n**Example usage:**\n```python\nprint(is_even",
+        "finish_reason": "length",
+        "message": null,
+        "parse_error": null,
+        "complete": false
+      },
+      "expected_exact": null
+    },
+    {
+      "prompt": "<｜begin▁of▁sentence｜><｜User｜>What temperature did the sensor report? Reply with only the integer.<｜Assistant｜></think>\n\n<｜DSML｜tool_calls>\n<｜DSML｜invoke name=\"read_sensor\">\n\n</｜DSML｜invoke>\n</｜DSML｜tool_calls><｜end▁of▁sentence｜><｜User｜><tool_result>{\"temperature\": 24}</tool_result><｜Assistant｜></think>",
+      "prompt_tokens": 62,
+      "token_replay_tested": false,
+      "accuracy": null,
+      "layer_diagnostics": null,
+      "generated_ids": [
+        1173,
+        1
+      ],
+      "max_new_tokens": 256,
+      "stop_on_eos": true,
+      "finish_reason": "stop",
+      "generated_text": "24<｜end▁of▁sentence｜>",
+      "teacher_forced_ids": null,
+      "golden_comparison": null,
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 62,
+          "next_token": 1173,
+          "max_logit": 34.65847396850586,
+          "latency_ms": 1801.5071200206876
+        },
+        {
+          "start_pos": 62,
+          "input_tokens": 1,
+          "next_token": 1,
+          "max_logit": 37.71996307373047,
+          "latency_ms": 191.32915325462818
+        }
+      ],
+      "case_id": "tool_result",
+      "input_format": "chat",
+      "chat": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "What temperature did the sensor report? Reply with only the integer."
+          },
+          {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+              {
+                "id": "sensor1",
+                "type": "function",
+                "function": {
+                  "name": "read_sensor",
+                  "arguments": "{}"
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "tool_call_id": "sensor1",
+            "content": "{\"temperature\": 24}"
+          }
+        ],
+        "thinking_mode": "chat",
+        "drop_thinking": true,
+        "reasoning_effort": "low",
+        "codec": {
+          "format": "deepseek-v4-checkpoint-encoding",
+          "encoding_path": "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/encoding/encoding_dsv4.py",
+          "encoding_sha256": "abc0d26120250dda0ae077dc64aa28836026e61e970854aaeb792445e6a0dde6",
+          "tokenizer_backend_sha256": "0e546c51529290ed4b18dc8b3e481a9ea39a2df2175b65ecb281af6bac79af73",
+          "bos_id": 0,
+          "eos_id": 1,
+          "add_special_tokens": false,
+          "tool_execution": false,
+          "fallback": false
+        }
+      },
+      "expected_contains": null,
+      "expected_match": true,
+      "completion": {
+        "raw_text": "24<｜end▁of▁sentence｜>",
+        "finish_reason": "stop",
+        "message": {
+          "role": "assistant",
+          "content": "24",
+          "reasoning_content": "",
+          "tool_calls": []
+        },
+        "parse_error": null,
+        "complete": true
+      },
+      "expected_exact": "24"
+    },
+    {
+      "prompt": "<｜begin▁of▁sentence｜>Read the supplied ledger carefully. Reply with the requested quantity as an integer only.<｜User｜>Ledger:\nR001|zone=east|quantity=7\nR002|zone=west|quantity=14\nR003|zone=north|quantity=21\nR004|zone=south|quantity=28\nR005|zone=east|quantity=35\nR006|zone=west|quantity=42\nR007|zone=north|quantity=49\nR008|zone=south|quantity=56\nR009|zone=east|quantity=63\nR010|zone=west|quantity=70\nR011|zone=north|quantity=77\nR012|zone=south|quantity=84\nR013|zone=east|quantity=91\nR014|zone=west|quantity=1\nR015|zone=north|quantity=8\nR016|zone=south|quantity=15\nR017|zone=east|quantity=22\nR018|zone=west|quantity=29\nR019|zone=north|quantity=36\nR020|zone=south|quantity=43\nR021|zone=east|quantity=50\nR022|zone=west|quantity=57\nR023|zone=north|quantity=64\nR024|zone=south|quantity=71\nR025|zone=east|quantity=78\nR026|zone=west|quantity=85\nR027|zone=north|quantity=92\nR028|zone=south|quantity=2\nR029|zone=east|quantity=9\nR030|zone=west|quantity=16\nR031|zone=north|quantity=23\nR032|zone=south|quantity=30\nR033|zone=east|quantity=37\nR034|zone=west|quantity=44\nR035|zone=north|quantity=51\nR036|zone=south|quantity=58\nR037|zone=east|quantity=65\nR038|zone=west|quantity=72\nR039|zone=north|quantity=79\nR040|zone=south|quantity=86\nR041|zone=east|quantity=93\nR042|zone=west|quantity=3\nR043|zone=north|quantity=10\nR044|zone=south|quantity=17\nR045|zone=east|quantity=24\nR046|zone=west|quantity=31\nR047|zone=north|quantity=38\nR048|zone=south|quantity=45\nR049|zone=east|quantity=52\nR050|zone=west|quantity=59\nR051|zone=north|quantity=66\nR052|zone=south|quantity=73\nR053|zone=east|quantity=80\nR054|zone=west|quantity=87\nR055|zone=north|quantity=94\nR056|zone=south|quantity=4\nR057|zone=east|quantity=11\nR058|zone=west|quantity=18\nR059|zone=north|quantity=25\nR060|zone=south|quantity=32\nR061|zone=east|quantity=39\nR062|zone=west|quantity=46\nR063|zone=north|quantity=53\nR064|zone=south|quantity=60\nR065|zone=east|quantity=67\nR066|zone=west|quantity=74\nR067|zone=north|quantity=81\nR068|zone=south|quantity=88\nR069|zone=east|quantity=95\nR070|zone=west|quantity=5\nR071|zone=north|quantity=12\nR072|zone=south|quantity=19\nR073|zone=east|quantity=26\nR074|zone=west|quantity=33\nR075|zone=north|quantity=40\nR076|zone=south|quantity=47\nR077|zone=east|quantity=54\nR078|zone=west|quantity=61\nR079|zone=north|quantity=68\nR080|zone=south|quantity=75\nR081|zone=east|quantity=82\nR082|zone=west|quantity=89\nR083|zone=north|quantity=96\nR084|zone=south|quantity=6\nR085|zone=east|quantity=13\nR086|zone=west|quantity=20\nR087|zone=north|quantity=27\nR088|zone=south|quantity=34\nR089|zone=east|quantity=41\nR090|zone=west|quantity=48\nR091|zone=north|quantity=55\nR092|zone=south|quantity=62\nR093|zone=east|quantity=69\nR094|zone=west|quantity=76\nR095|zone=north|quantity=83\nR096|zone=south|quantity=90\nR097|zone=east|quantity=0\nR098|zone=west|quantity=7\nR099|zone=north|quantity=14\nR100|zone=south|quantity=21\nR101|zone=east|quantity=28\nR102|zone=west|quantity=35\nR103|zone=north|quantity=42\nR104|zone=south|quantity=49\nR105|zone=east|quantity=56\nR106|zone=west|quantity=63\nR107|zone=north|quantity=70\nR108|zone=south|quantity=77\nR109|zone=east|quantity=84\nR110|zone=west|quantity=91\nR111|zone=north|quantity=1\nR112|zone=south|quantity=8\nR113|zone=east|quantity=15\nR114|zone=west|quantity=22\nR115|zone=north|quantity=29\nR116|zone=south|quantity=36\nR117|zone=east|quantity=43\nR118|zone=west|quantity=50\nR119|zone=north|quantity=57\nR120|zone=south|quantity=64\nR121|zone=east|quantity=71\nR122|zone=west|quantity=78\nR123|zone=north|quantity=85\nR124|zone=south|quantity=92\nR125|zone=east|quantity=2\nR126|zone=west|quantity=9\nR127|zone=north|quantity=16\nR128|zone=south|quantity=23\nR129|zone=east|quantity=30\nR130|zone=west|quantity=37\nR131|zone=north|quantity=44\nR132|zone=south|quantity=51\nR133|zone=east|quantity=58\nR134|zone=west|quantity=65\nR135|zone=north|quantity=72\nR136|zone=south|quantity=79\nR137|zone=east|quantity=86\nR138|zone=west|quantity=93\nR139|zone=north|quantity=3\nR140|zone=south|quantity=10\nR141|zone=east|quantity=17\nR142|zone=west|quantity=24\nR143|zone=north|quantity=31\nR144|zone=south|quantity=38\nR145|zone=east|quantity=45\nR146|zone=west|quantity=52\nR147|zone=north|quantity=59\nR148|zone=south|quantity=66\nR149|zone=east|quantity=73\nR150|zone=west|quantity=80\nR151|zone=north|quantity=87\nR152|zone=south|quantity=94\nR153|zone=east|quantity=4\nR154|zone=west|quantity=11\nR155|zone=north|quantity=18\nR156|zone=south|quantity=25\nR157|zone=east|quantity=32\nR158|zone=west|quantity=39\nR159|zone=north|quantity=46\nR160|zone=south|quantity=53\nR161|zone=east|quantity=60\nR162|zone=west|quantity=67\nR163|zone=north|quantity=74\nR164|zone=south|quantity=81\nR165|zone=east|quantity=88\nR166|zone=west|quantity=95\nR167|zone=north|quantity=5\nR168|zone=south|quantity=12\nR169|zone=east|quantity=19\nR170|zone=west|quantity=26\nR171|zone=north|quantity=33\nR172|zone=south|quantity=40\nR173|zone=east|quantity=47\nR174|zone=west|quantity=54\nR175|zone=north|quantity=61\nR176|zone=south|quantity=68\nR177|zone=east|quantity=75\nR178|zone=west|quantity=82\nR179|zone=north|quantity=89\nR180|zone=south|quantity=96\n\nWhat is the quantity for R137?<｜Assistant｜></think>",
+      "prompt_tokens": 2011,
+      "token_replay_tested": false,
+      "accuracy": null,
+      "layer_diagnostics": null,
+      "generated_ids": [
+        5926,
+        1
+      ],
+      "max_new_tokens": 256,
+      "stop_on_eos": true,
+      "finish_reason": "stop",
+      "generated_text": "86<｜end▁of▁sentence｜>",
+      "teacher_forced_ids": null,
+      "golden_comparison": null,
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 2011,
+          "next_token": 5926,
+          "max_logit": 37.01980209350586,
+          "latency_ms": 3809.770757332444
+        },
+        {
+          "start_pos": 2011,
+          "input_tokens": 1,
+          "next_token": 1,
+          "max_logit": 40.4073600769043,
+          "latency_ms": 198.42355838045478
+        }
+      ],
+      "case_id": "ledger_lookup_long",
+      "input_format": "chat",
+      "chat": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "Read the supplied ledger carefully. Reply with the requested quantity as an integer only."
+          },
+          {
+            "role": "user",
+            "content": "Ledger:\nR001|zone=east|quantity=7\nR002|zone=west|quantity=14\nR003|zone=north|quantity=21\nR004|zone=south|quantity=28\nR005|zone=east|quantity=35\nR006|zone=west|quantity=42\nR007|zone=north|quantity=49\nR008|zone=south|quantity=56\nR009|zone=east|quantity=63\nR010|zone=west|quantity=70\nR011|zone=north|quantity=77\nR012|zone=south|quantity=84\nR013|zone=east|quantity=91\nR014|zone=west|quantity=1\nR015|zone=north|quantity=8\nR016|zone=south|quantity=15\nR017|zone=east|quantity=22\nR018|zone=west|quantity=29\nR019|zone=north|quantity=36\nR020|zone=south|quantity=43\nR021|zone=east|quantity=50\nR022|zone=west|quantity=57\nR023|zone=north|quantity=64\nR024|zone=south|quantity=71\nR025|zone=east|quantity=78\nR026|zone=west|quantity=85\nR027|zone=north|quantity=92\nR028|zone=south|quantity=2\nR029|zone=east|quantity=9\nR030|zone=west|quantity=16\nR031|zone=north|quantity=23\nR032|zone=south|quantity=30\nR033|zone=east|quantity=37\nR034|zone=west|quantity=44\nR035|zone=north|quantity=51\nR036|zone=south|quantity=58\nR037|zone=east|quantity=65\nR038|zone=west|quantity=72\nR039|zone=north|quantity=79\nR040|zone=south|quantity=86\nR041|zone=east|quantity=93\nR042|zone=west|quantity=3\nR043|zone=north|quantity=10\nR044|zone=south|quantity=17\nR045|zone=east|quantity=24\nR046|zone=west|quantity=31\nR047|zone=north|quantity=38\nR048|zone=south|quantity=45\nR049|zone=east|quantity=52\nR050|zone=west|quantity=59\nR051|zone=north|quantity=66\nR052|zone=south|quantity=73\nR053|zone=east|quantity=80\nR054|zone=west|quantity=87\nR055|zone=north|quantity=94\nR056|zone=south|quantity=4\nR057|zone=east|quantity=11\nR058|zone=west|quantity=18\nR059|zone=north|quantity=25\nR060|zone=south|quantity=32\nR061|zone=east|quantity=39\nR062|zone=west|quantity=46\nR063|zone=north|quantity=53\nR064|zone=south|quantity=60\nR065|zone=east|quantity=67\nR066|zone=west|quantity=74\nR067|zone=north|quantity=81\nR068|zone=south|quantity=88\nR069|zone=east|quantity=95\nR070|zone=west|quantity=5\nR071|zone=north|quantity=12\nR072|zone=south|quantity=19\nR073|zone=east|quantity=26\nR074|zone=west|quantity=33\nR075|zone=north|quantity=40\nR076|zone=south|quantity=47\nR077|zone=east|quantity=54\nR078|zone=west|quantity=61\nR079|zone=north|quantity=68\nR080|zone=south|quantity=75\nR081|zone=east|quantity=82\nR082|zone=west|quantity=89\nR083|zone=north|quantity=96\nR084|zone=south|quantity=6\nR085|zone=east|quantity=13\nR086|zone=west|quantity=20\nR087|zone=north|quantity=27\nR088|zone=south|quantity=34\nR089|zone=east|quantity=41\nR090|zone=west|quantity=48\nR091|zone=north|quantity=55\nR092|zone=south|quantity=62\nR093|zone=east|quantity=69\nR094|zone=west|quantity=76\nR095|zone=north|quantity=83\nR096|zone=south|quantity=90\nR097|zone=east|quantity=0\nR098|zone=west|quantity=7\nR099|zone=north|quantity=14\nR100|zone=south|quantity=21\nR101|zone=east|quantity=28\nR102|zone=west|quantity=35\nR103|zone=north|quantity=42\nR104|zone=south|quantity=49\nR105|zone=east|quantity=56\nR106|zone=west|quantity=63\nR107|zone=north|quantity=70\nR108|zone=south|quantity=77\nR109|zone=east|quantity=84\nR110|zone=west|quantity=91\nR111|zone=north|quantity=1\nR112|zone=south|quantity=8\nR113|zone=east|quantity=15\nR114|zone=west|quantity=22\nR115|zone=north|quantity=29\nR116|zone=south|quantity=36\nR117|zone=east|quantity=43\nR118|zone=west|quantity=50\nR119|zone=north|quantity=57\nR120|zone=south|quantity=64\nR121|zone=east|quantity=71\nR122|zone=west|quantity=78\nR123|zone=north|quantity=85\nR124|zone=south|quantity=92\nR125|zone=east|quantity=2\nR126|zone=west|quantity=9\nR127|zone=north|quantity=16\nR128|zone=south|quantity=23\nR129|zone=east|quantity=30\nR130|zone=west|quantity=37\nR131|zone=north|quantity=44\nR132|zone=south|quantity=51\nR133|zone=east|quantity=58\nR134|zone=west|quantity=65\nR135|zone=north|quantity=72\nR136|zone=south|quantity=79\nR137|zone=east|quantity=86\nR138|zone=west|quantity=93\nR139|zone=north|quantity=3\nR140|zone=south|quantity=10\nR141|zone=east|quantity=17\nR142|zone=west|quantity=24\nR143|zone=north|quantity=31\nR144|zone=south|quantity=38\nR145|zone=east|quantity=45\nR146|zone=west|quantity=52\nR147|zone=north|quantity=59\nR148|zone=south|quantity=66\nR149|zone=east|quantity=73\nR150|zone=west|quantity=80\nR151|zone=north|quantity=87\nR152|zone=south|quantity=94\nR153|zone=east|quantity=4\nR154|zone=west|quantity=11\nR155|zone=north|quantity=18\nR156|zone=south|quantity=25\nR157|zone=east|quantity=32\nR158|zone=west|quantity=39\nR159|zone=north|quantity=46\nR160|zone=south|quantity=53\nR161|zone=east|quantity=60\nR162|zone=west|quantity=67\nR163|zone=north|quantity=74\nR164|zone=south|quantity=81\nR165|zone=east|quantity=88\nR166|zone=west|quantity=95\nR167|zone=north|quantity=5\nR168|zone=south|quantity=12\nR169|zone=east|quantity=19\nR170|zone=west|quantity=26\nR171|zone=north|quantity=33\nR172|zone=south|quantity=40\nR173|zone=east|quantity=47\nR174|zone=west|quantity=54\nR175|zone=north|quantity=61\nR176|zone=south|quantity=68\nR177|zone=east|quantity=75\nR178|zone=west|quantity=82\nR179|zone=north|quantity=89\nR180|zone=south|quantity=96\n\nWhat is the quantity for R137?"
+          }
+        ],
+        "thinking_mode": "chat",
+        "drop_thinking": true,
+        "reasoning_effort": "low",
+        "codec": {
+          "format": "deepseek-v4-checkpoint-encoding",
+          "encoding_path": "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/encoding/encoding_dsv4.py",
+          "encoding_sha256": "abc0d26120250dda0ae077dc64aa28836026e61e970854aaeb792445e6a0dde6",
+          "tokenizer_backend_sha256": "0e546c51529290ed4b18dc8b3e481a9ea39a2df2175b65ecb281af6bac79af73",
+          "bos_id": 0,
+          "eos_id": 1,
+          "add_special_tokens": false,
+          "tool_execution": false,
+          "fallback": false
+        }
+      },
+      "expected_contains": null,
+      "expected_match": true,
+      "completion": {
+        "raw_text": "86<｜end▁of▁sentence｜>",
+        "finish_reason": "stop",
+        "message": {
+          "role": "assistant",
+          "content": "86",
+          "reasoning_content": "",
+          "tool_calls": []
+        },
+        "parse_error": null,
+        "complete": true
+      },
+      "expected_exact": "86"
+    },
+    {
+      "prompt": "<｜begin▁of▁sentence｜><｜User｜>What is 7 + 8? Give the final answer as a single integer.<｜Assistant｜><think>",
+      "prompt_tokens": 21,
+      "token_replay_tested": false,
+      "accuracy": null,
+      "layer_diagnostics": null,
+      "generated_ids": [
+        2581,
+        1309,
+        3287,
+        4654,
+        16,
+        223,
+        25,
+        13,
+        26,
+        31,
+        856,
+        16,
+        19160,
+        4031,
+        9132,
+        16,
+        128822,
+        856,
+        1
+      ],
+      "max_new_tokens": 256,
+      "stop_on_eos": true,
+      "finish_reason": "stop",
+      "generated_text": "We need answer simple. 7+8=15. Final single integer.</think>15<｜end▁of▁sentence｜>",
+      "teacher_forced_ids": null,
+      "golden_comparison": null,
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 21,
+          "next_token": 2581,
+          "max_logit": 37.27569580078125,
+          "latency_ms": 998.4109960496426
+        },
+        {
+          "start_pos": 21,
+          "input_tokens": 1,
+          "next_token": 1309,
+          "max_logit": 39.708560943603516,
+          "latency_ms": 190.69956010207534
+        },
+        {
+          "start_pos": 22,
+          "input_tokens": 1,
+          "next_token": 3287,
+          "max_logit": 44.401432037353516,
+          "latency_ms": 187.49603582546115
+        },
+        {
+          "start_pos": 23,
+          "input_tokens": 1,
+          "next_token": 4654,
+          "max_logit": 39.643699645996094,
+          "latency_ms": 195.39741287007928
+        },
+        {
+          "start_pos": 24,
+          "input_tokens": 1,
+          "next_token": 16,
+          "max_logit": 42.408050537109375,
+          "latency_ms": 185.89618895202875
+        },
+        {
+          "start_pos": 25,
+          "input_tokens": 1,
+          "next_token": 223,
+          "max_logit": 35.52997970581055,
+          "latency_ms": 185.79387990757823
+        },
+        {
+          "start_pos": 26,
+          "input_tokens": 1,
+          "next_token": 25,
+          "max_logit": 48.150291442871094,
+          "latency_ms": 187.8310739994049
+        },
+        {
+          "start_pos": 27,
+          "input_tokens": 1,
+          "next_token": 13,
+          "max_logit": 55.70188903808594,
+          "latency_ms": 198.89153353869915
+        },
+        {
+          "start_pos": 28,
+          "input_tokens": 1,
+          "next_token": 26,
+          "max_logit": 46.21393585205078,
+          "latency_ms": 186.23422691598535
+        },
+        {
+          "start_pos": 29,
+          "input_tokens": 1,
+          "next_token": 31,
+          "max_logit": 49.3487548828125,
+          "latency_ms": 184.58495987579226
+        },
+        {
+          "start_pos": 30,
+          "input_tokens": 1,
+          "next_token": 856,
+          "max_logit": 55.28997802734375,
+          "latency_ms": 184.96696557849646
+        },
+        {
+          "start_pos": 31,
+          "input_tokens": 1,
+          "next_token": 16,
+          "max_logit": 42.34040451049805,
+          "latency_ms": 194.6993782185018
+        },
+        {
+          "start_pos": 32,
+          "input_tokens": 1,
+          "next_token": 19160,
+          "max_logit": 38.38557052612305,
+          "latency_ms": 185.20331615582108
+        },
+        {
+          "start_pos": 33,
+          "input_tokens": 1,
+          "next_token": 4031,
+          "max_logit": 40.461299896240234,
+          "latency_ms": 185.47947192564607
+        },
+        {
+          "start_pos": 34,
+          "input_tokens": 1,
+          "next_token": 9132,
+          "max_logit": 50.319252014160156,
+          "latency_ms": 184.8996370099485
+        },
+        {
+          "start_pos": 35,
+          "input_tokens": 1,
+          "next_token": 16,
+          "max_logit": 42.822166442871094,
+          "latency_ms": 193.34354996681213
+        },
+        {
+          "start_pos": 36,
+          "input_tokens": 1,
+          "next_token": 128822,
+          "max_logit": 39.882591247558594,
+          "latency_ms": 184.66757889837027
+        },
+        {
+          "start_pos": 37,
+          "input_tokens": 1,
+          "next_token": 856,
+          "max_logit": 49.0953254699707,
+          "latency_ms": 184.66627784073353
+        },
+        {
+          "start_pos": 38,
+          "input_tokens": 1,
+          "next_token": 1,
+          "max_logit": 43.66199493408203,
+          "latency_ms": 184.58889983594418
+        }
+      ],
+      "case_id": "thinking_arithmetic",
+      "input_format": "chat",
+      "chat": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "What is 7 + 8? Give the final answer as a single integer."
+          }
+        ],
+        "thinking_mode": "thinking",
+        "drop_thinking": true,
+        "reasoning_effort": "low",
+        "codec": {
+          "format": "deepseek-v4-checkpoint-encoding",
+          "encoding_path": "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/encoding/encoding_dsv4.py",
+          "encoding_sha256": "abc0d26120250dda0ae077dc64aa28836026e61e970854aaeb792445e6a0dde6",
+          "tokenizer_backend_sha256": "0e546c51529290ed4b18dc8b3e481a9ea39a2df2175b65ecb281af6bac79af73",
+          "bos_id": 0,
+          "eos_id": 1,
+          "add_special_tokens": false,
+          "tool_execution": false,
+          "fallback": false
+        }
+      },
+      "expected_contains": null,
+      "expected_match": true,
+      "completion": {
+        "raw_text": "We need answer simple. 7+8=15. Final single integer.</think>15<｜end▁of▁sentence｜>",
+        "finish_reason": "stop",
+        "message": {
+          "role": "assistant",
+          "content": "15",
+          "reasoning_content": "We need answer simple. 7+8=15. Final single integer.",
+          "tool_calls": []
+        },
+        "parse_error": null,
+        "complete": true
+      },
+      "expected_exact": "15"
+    }
+  ],
+  "all_argmax_equal": null,
+  "all_expected_match": false,
+  "all_golden_comparisons_pass": null,
+  "all_compressor_comparisons_pass": null,
+  "all_indexer_comparisons_pass": null,
+  "peak_memory_bytes": 171319824384,
+  "native_operation_counts": null
+}

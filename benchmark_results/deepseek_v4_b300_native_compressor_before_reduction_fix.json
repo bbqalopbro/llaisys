@@ -1,0 +1,591 @@
+{
+  "gpu": "NVIDIA B300 SXM6 AC",
+  "compute_capability": [
+    10,
+    3
+  ],
+  "torch": "2.13.0+cu130",
+  "cuda": "13.0",
+  "backend": "cublas-fp32-gemm+native-quant-decode-attention-hc-router-actquant+native-streaming-compressor",
+  "provenance": {
+    "commit": "05784b4da6483f77821a061e521ea1b98fa271e1",
+    "branch": "feat/vllm-paged-attention",
+    "worktree_dirty": true,
+    "file_sha256": {
+      "/home/lcpu/57682329/workspace/llaisys/tools/deepseek_v4_reference/run_single_gpu.py": "70367a986e11a8e21b9ec2165f046d14b3433838dffa0fd2b00db4d94628c76b",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/inference/model.py": "c0c19e6c9fa439bac7fbb1c5bc1868232dfd5aa2f439a548d0e33dcc2a9edd3f",
+      "python/llaisys/libllaisys/libllaisys.so": "ccbac429fed51710039ed0b5cbf5bb655104458fef7565145485d5be7d1dc35f",
+      "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_native.py": "bd686fdba56b2298b85dabd78a8dca22aca8e2b7238314de3c98f1bde4f50d99"
+    },
+    "command": [
+      "tools/deepseek_v4_reference/run_single_gpu.py",
+      "--source-model",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731",
+      "--converted-model",
+      "/tmp/llaisys-deepseek-v4-flash-mp1",
+      "--cases-file",
+      "test/data/deepseek_v4_compressor_cases.json",
+      "--max-new-tokens",
+      "4",
+      "--max-seq-len",
+      "384",
+      "--torch-reference-structural-ops",
+      "--dequantized-pytorch-linear",
+      "--native-structural-library",
+      "python/llaisys/libllaisys/libllaisys.so",
+      "--operator-library-linear",
+      "--native-compressor",
+      "--compare-compressor",
+      "--output",
+      "benchmark_results/deepseek_v4_b300_native_compressor_accuracy.json"
+    ]
+  },
+  "measurement": {
+    "kind": "correctness_runner_step_latency_not_serving_ttft_tpot",
+    "batch_size": 1,
+    "concurrency": 1,
+    "cuda_graph": false,
+    "prefix_cache": false,
+    "warmup": "one full prefill and one token replay per case",
+    "timed_repeats": 1,
+    "fallback": false,
+    "weights": "FP8 E4M3 dense, FP4 E2M1 experts, E8M0 scales",
+    "activation_dtype": "BF16 with explicit QAT boundaries"
+  },
+  "source_model": "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731",
+  "converted_model": "/tmp/llaisys-deepseek-v4-flash-mp1",
+  "weight_load_seconds": 135.5201307241805,
+  "cases": [
+    {
+      "prompt": "The capital of France is",
+      "prompt_tokens": 5,
+      "accuracy": {
+        "full_prefill_argmax": 11111,
+        "token_replay_argmax": 11111,
+        "argmax_equal": true,
+        "logits_max_abs_error": 1.465743064880371,
+        "logits_mean_abs_error": 0.23774807155132294,
+        "logits_cosine_similarity": 0.998677134513855
+      },
+      "layer_diagnostics": null,
+      "generated_ids": [
+        11111,
+        16,
+        455,
+        6102
+      ],
+      "generated_text": " Paris. The capital",
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 5,
+          "next_token": 11111,
+          "max_logit": 24.798803329467773,
+          "latency_ms": 423.27419808134437
+        },
+        {
+          "start_pos": 5,
+          "input_tokens": 1,
+          "next_token": 16,
+          "max_logit": 22.943918228149414,
+          "latency_ms": 174.12004573270679
+        },
+        {
+          "start_pos": 6,
+          "input_tokens": 1,
+          "next_token": 455,
+          "max_logit": 22.7324161529541,
+          "latency_ms": 171.8307980336249
+        },
+        {
+          "start_pos": 7,
+          "input_tokens": 1,
+          "next_token": 6102,
+          "max_logit": 24.613807678222656,
+          "latency_ms": 230.10945366695523
+        }
+      ],
+      "expected_contains": "Paris",
+      "expected_match": true,
+      "compressor_comparison": [
+        {
+          "phase": "prefill",
+          "step": 0,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0
+        },
+        {
+          "phase": "decode",
+          "step": 1,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 0.9999999403953552
+        },
+        {
+          "phase": "decode",
+          "step": 2,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0
+        },
+        {
+          "phase": "decode",
+          "step": 3,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0000001192092896
+        }
+      ]
+    },
+    {
+      "prompt": "1 + 1 =",
+      "prompt_tokens": 5,
+      "accuracy": {
+        "full_prefill_argmax": 223,
+        "token_replay_argmax": 223,
+        "argmax_equal": true,
+        "logits_max_abs_error": 0.7986135482788086,
+        "logits_mean_abs_error": 0.12103557586669922,
+        "logits_cosine_similarity": 0.999577522277832
+      },
+      "layer_diagnostics": null,
+      "generated_ids": [
+        223,
+        20,
+        201,
+        361
+      ],
+      "generated_text": " 2\n   ",
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 5,
+          "next_token": 223,
+          "max_logit": 23.305923461914062,
+          "latency_ms": 412.1296829544008
+        },
+        {
+          "start_pos": 5,
+          "input_tokens": 1,
+          "next_token": 20,
+          "max_logit": 23.15773582458496,
+          "latency_ms": 171.48458492010832
+        },
+        {
+          "start_pos": 6,
+          "input_tokens": 1,
+          "next_token": 201,
+          "max_logit": 19.278709411621094,
+          "latency_ms": 169.46490295231342
+        },
+        {
+          "start_pos": 7,
+          "input_tokens": 1,
+          "next_token": 361,
+          "max_logit": 18.539583206176758,
+          "latency_ms": 180.95024395734072
+        }
+      ],
+      "expected_contains": "2",
+      "expected_match": true,
+      "compressor_comparison": [
+        {
+          "phase": "prefill",
+          "step": 0,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 0.9999999403953552
+        },
+        {
+          "phase": "decode",
+          "step": 1,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0
+        },
+        {
+          "phase": "decode",
+          "step": 2,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 0.9999999403953552
+        },
+        {
+          "phase": "decode",
+          "step": 3,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0
+        }
+      ]
+    },
+    {
+      "prompt": "The opposite of hot is",
+      "prompt_tokens": 5,
+      "accuracy": {
+        "full_prefill_argmax": 8147,
+        "token_replay_argmax": 8147,
+        "argmax_equal": true,
+        "logits_max_abs_error": 1.0022531747817993,
+        "logits_mean_abs_error": 0.17885400354862213,
+        "logits_cosine_similarity": 0.9992042183876038
+      },
+      "layer_diagnostics": null,
+      "generated_ids": [
+        8147,
+        16,
+        455,
+        12236
+      ],
+      "generated_text": " cold. The opposite",
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 5,
+          "next_token": 8147,
+          "max_logit": 24.08645248413086,
+          "latency_ms": 452.02263398095965
+        },
+        {
+          "start_pos": 5,
+          "input_tokens": 1,
+          "next_token": 16,
+          "max_logit": 22.821380615234375,
+          "latency_ms": 171.6099069453776
+        },
+        {
+          "start_pos": 6,
+          "input_tokens": 1,
+          "next_token": 455,
+          "max_logit": 20.06606674194336,
+          "latency_ms": 170.70731474086642
+        },
+        {
+          "start_pos": 7,
+          "input_tokens": 1,
+          "next_token": 12236,
+          "max_logit": 23.863771438598633,
+          "latency_ms": 179.97510684654117
+        }
+      ],
+      "expected_contains": "cold",
+      "expected_match": true,
+      "compressor_comparison": [
+        {
+          "phase": "prefill",
+          "step": 0,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0
+        },
+        {
+          "phase": "decode",
+          "step": 1,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0
+        },
+        {
+          "phase": "decode",
+          "step": 2,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0000001192092896
+        },
+        {
+          "phase": "decode",
+          "step": 3,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0
+        }
+      ]
+    },
+    {
+      "prompt": "中国的首都是",
+      "prompt_tokens": 3,
+      "accuracy": {
+        "full_prefill_argmax": 6127,
+        "token_replay_argmax": 6127,
+        "argmax_equal": true,
+        "logits_max_abs_error": 0.8470430374145508,
+        "logits_mean_abs_error": 0.13100048899650574,
+        "logits_cosine_similarity": 0.999265193939209
+      },
+      "layer_diagnostics": null,
+      "generated_ids": [
+        6127,
+        303,
+        867,
+        6127
+      ],
+      "generated_text": "北京，而北京",
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 3,
+          "next_token": 6127,
+          "max_logit": 20.02202796936035,
+          "latency_ms": 320.1676057651639
+        },
+        {
+          "start_pos": 3,
+          "input_tokens": 1,
+          "next_token": 303,
+          "max_logit": 21.02300453186035,
+          "latency_ms": 179.13328763097525
+        },
+        {
+          "start_pos": 4,
+          "input_tokens": 1,
+          "next_token": 867,
+          "max_logit": 16.662431716918945,
+          "latency_ms": 169.25870208069682
+        },
+        {
+          "start_pos": 5,
+          "input_tokens": 1,
+          "next_token": 6127,
+          "max_logit": 16.37053108215332,
+          "latency_ms": 169.1114129498601
+        }
+      ],
+      "expected_contains": "北京",
+      "expected_match": true,
+      "compressor_comparison": [
+        {
+          "phase": "prefill",
+          "step": 0,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 0.9999998807907104
+        },
+        {
+          "phase": "decode",
+          "step": 1,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 0.9999998211860657
+        },
+        {
+          "phase": "decode",
+          "step": 2,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0
+        },
+        {
+          "phase": "decode",
+          "step": 3,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0000001192092896
+        }
+      ]
+    },
+    {
+      "prompt": "hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello",
+      "prompt_tokens": 134,
+      "accuracy": {
+        "full_prefill_argmax": 44388,
+        "token_replay_argmax": 44388,
+        "argmax_equal": true,
+        "logits_max_abs_error": 1.792473554611206,
+        "logits_mean_abs_error": 0.2577292323112488,
+        "logits_cosine_similarity": 0.998146116733551
+      },
+      "layer_diagnostics": null,
+      "generated_ids": [
+        44388,
+        44388,
+        44388,
+        44388
+      ],
+      "generated_text": " hello hello hello hello",
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 134,
+          "next_token": 44388,
+          "max_logit": 34.28218460083008,
+          "latency_ms": 1187.8112838603556
+        },
+        {
+          "start_pos": 134,
+          "input_tokens": 1,
+          "next_token": 44388,
+          "max_logit": 33.9924201965332,
+          "latency_ms": 237.04678704962134
+        },
+        {
+          "start_pos": 135,
+          "input_tokens": 1,
+          "next_token": 44388,
+          "max_logit": 33.80815887451172,
+          "latency_ms": 244.22619910910726
+        },
+        {
+          "start_pos": 136,
+          "input_tokens": 1,
+          "next_token": 44388,
+          "max_logit": 34.57429122924805,
+          "latency_ms": 236.40918172895908
+        }
+      ],
+      "expected_contains": null,
+      "expected_match": null,
+      "compressor_comparison": [
+        {
+          "phase": "prefill",
+          "step": 0,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 0.9999999403953552
+        },
+        {
+          "phase": "decode",
+          "step": 1,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0
+        },
+        {
+          "phase": "decode",
+          "step": 2,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 1.0
+        },
+        {
+          "phase": "decode",
+          "step": 3,
+          "argmax_equal": true,
+          "max_abs_error": 0.0,
+          "mean_abs_error": 0.0,
+          "cosine_similarity": 0.9999998807907104
+        }
+      ]
+    },
+    {
+      "prompt": "hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello",
+      "prompt_tokens": 259,
+      "accuracy": {
+        "full_prefill_argmax": 44388,
+        "token_replay_argmax": 44388,
+        "argmax_equal": true,
+        "logits_max_abs_error": 2.6119422912597656,
+        "logits_mean_abs_error": 0.26166126132011414,
+        "logits_cosine_similarity": 0.9981378316879272
+      },
+      "layer_diagnostics": null,
+      "generated_ids": [
+        44388,
+        44388,
+        44388,
+        44388
+      ],
+      "generated_text": " hello hello hello hello",
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 259,
+          "next_token": 44388,
+          "max_logit": 34.378116607666016,
+          "latency_ms": 1813.1958339363337
+        },
+        {
+          "start_pos": 259,
+          "input_tokens": 1,
+          "next_token": 44388,
+          "max_logit": 35.18169403076172,
+          "latency_ms": 256.7143519409001
+        },
+        {
+          "start_pos": 260,
+          "input_tokens": 1,
+          "next_token": 44388,
+          "max_logit": 34.60676574707031,
+          "latency_ms": 245.97648903727531
+        },
+        {
+          "start_pos": 261,
+          "input_tokens": 1,
+          "next_token": 44388,
+          "max_logit": 33.18150329589844,
+          "latency_ms": 245.8142009563744
+        }
+      ],
+      "expected_contains": null,
+      "expected_match": null,
+      "compressor_comparison": [
+        {
+          "phase": "prefill",
+          "step": 0,
+          "argmax_equal": true,
+          "max_abs_error": 1.7714128494262695,
+          "mean_abs_error": 0.2607609033584595,
+          "cosine_similarity": 0.9981496334075928
+        },
+        {
+          "phase": "decode",
+          "step": 1,
+          "argmax_equal": true,
+          "max_abs_error": 1.3792400360107422,
+          "mean_abs_error": 0.21463145315647125,
+          "cosine_similarity": 0.9987136125564575
+        },
+        {
+          "phase": "decode",
+          "step": 2,
+          "argmax_equal": true,
+          "max_abs_error": 2.5340404510498047,
+          "mean_abs_error": 0.25192180275917053,
+          "cosine_similarity": 0.9984524846076965
+        },
+        {
+          "phase": "decode",
+          "step": 3,
+          "argmax_equal": true,
+          "max_abs_error": 1.7576828002929688,
+          "mean_abs_error": 0.2369621992111206,
+          "cosine_similarity": 0.9983345866203308
+        }
+      ]
+    }
+  ],
+  "all_argmax_equal": true,
+  "all_expected_match": true,
+  "all_compressor_comparisons_pass": false,
+  "peak_memory_bytes": 170378900480,
+  "native_operation_counts": {
+    "sparse_attention": 21027,
+    "hyperconnection": 42054,
+    "sqrt_softplus_router": 19560,
+    "activation_quant": 648673,
+    "fp8_linear": 0,
+    "fp4_linear": 0,
+    "fp8_cublas_linear": 157458,
+    "fp4_cublas_linear": 453903,
+    "compress_projected": 28830
+  }
+}

@@ -1,0 +1,2601 @@
+{
+  "all_passed": true,
+  "started_utc": "2026-09-12T06:20:39Z",
+  "command": [
+    "tools/deepseek_v4_cuda/bench_w4a8_memory.py",
+    "--weights",
+    "/tmp/llaisys-deepseek-v4-flash-mp1/model0-mp1.safetensors",
+    "--source-model",
+    "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731",
+    "--library",
+    "build/standalone_cuda/libw4a8_decode_sm103_final.so",
+    "--output",
+    "benchmark_results/deepseek_v4_b300_w4a8_memory_final_20260912.json",
+    "--samples",
+    "9"
+  ],
+  "scope": "real-weight W4A8 operator memory experiment; no full-model acceptance",
+  "cases": [
+    {
+      "weight": "layers.0.ffn.experts.0.w1",
+      "m": 1,
+      "n": 2048,
+      "k": 4096,
+      "passed": true,
+      "weight_sha256": "8b8124ab561c2954c4f8d590c60c5478efb7b6726035d1328d89e806988ccceb",
+      "scale_sha256": "e2e52dd1cf8e590514eec022f7115e5c1cf7c2305bbe8372f03b1af517b5871a",
+      "weight_dtype": "torch.float4_e2m1fn_x2",
+      "scale_dtype": "torch.float8_e8m0fnu",
+      "logical_footprint_bytes": 4464672,
+      "measurement_order": [
+        "simt_4warps",
+        "simt_splitk4",
+        "tilelang",
+        "simt_8warps",
+        "deepgemm_adapter"
+      ],
+      "baseline_vs_oracle": {
+        "finite": true,
+        "relative_l2": 0.0,
+        "cosine": 1.0,
+        "max_abs": 0.0,
+        "different_elements": 0,
+        "passed": true
+      },
+      "backends": {
+        "simt_4warps": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 3.5180000122636557,
+            "min_us": 3.476999932900071,
+            "max_us": 3.622000105679035,
+            "samples_us": [
+              3.622000105679035,
+              3.476999932900071,
+              3.4839999862015247,
+              3.5180000122636557,
+              3.5359999164938927,
+              3.527000080794096,
+              3.5149999894201756,
+              3.515999997034669,
+              3.5429999697953463
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 4.768964167571082,
+            "footprint_gbytes_per_second": 1269.0937988733003,
+            "speedup_vs_tilelang": 25.998294737253133
+          },
+          "cold_single_op": {
+            "median_us": 10.239999741315842,
+            "min_us": 10.080000385642052,
+            "max_us": 10.432000271975994,
+            "samples_us": [
+              10.367999784648418,
+              10.239999741315842,
+              10.432000271975994,
+              10.33599954098463,
+              10.239999741315842,
+              10.239999741315842,
+              10.080000385642052,
+              10.111999697983265,
+              10.239999741315842
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 1.6384000413894664,
+            "footprint_gbytes_per_second": 436.0031360143656,
+            "speedup_vs_tilelang": 10.200000072759577
+          },
+          "eager_warm_us": 19.422033801674843
+        },
+        "simt_splitk4": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 3.324999939650297,
+            "min_us": 3.269999986514449,
+            "max_us": 3.3499998971819878,
+            "samples_us": [
+              3.3499998971819878,
+              3.3360000234097242,
+              3.335000015795231,
+              3.324999939650297,
+              3.269999986514449,
+              3.2820000778883696,
+              3.3279999624937773,
+              3.2889998983591795,
+              3.2760000322014093
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 5.045779339702642,
+            "footprint_gbytes_per_second": 1342.7585206120534,
+            "speedup_vs_tilelang": 27.507369282572096
+          },
+          "cold_single_op": {
+            "median_us": 8.191999979317188,
+            "min_us": 8.031999692320824,
+            "max_us": 8.63999966531992,
+            "samples_us": [
+              8.191999979317188,
+              8.63999966531992,
+              8.191999979317188,
+              8.576000109314919,
+              8.031999692320824,
+              8.191999979317188,
+              8.191999979317188,
+              8.63999966531992,
+              8.191999979317188
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 2.048000005170703,
+            "footprint_gbytes_per_second": 545.0039076260026,
+            "speedup_vs_tilelang": 12.749999801048034
+          },
+          "eager_warm_us": 19.446088117547333
+        },
+        "tilelang": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 91.46200120449066,
+            "min_us": 91.44199639558792,
+            "max_us": 91.55700355768204,
+            "samples_us": [
+              91.55700355768204,
+              91.44899994134903,
+              91.48400276899338,
+              91.45999699831009,
+              91.46200120449066,
+              91.5059968829155,
+              91.49400144815445,
+              91.45800024271011,
+              91.44199639558792
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 0.18343372962602814,
+            "footprint_gbytes_per_second": 48.814501554781096,
+            "speedup_vs_tilelang": 1.0
+          },
+          "cold_single_op": {
+            "median_us": 104.44799810647964,
+            "min_us": 104.44799810647964,
+            "max_us": 106.49599879980087,
+            "samples_us": [
+              106.49599879980087,
+              104.44799810647964,
+              106.49599879980087,
+              104.44799810647964,
+              104.47999835014343,
+              104.44799810647964,
+              104.44799810647964,
+              104.44799810647964,
+              104.44799810647964
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 0.16062745389238045,
+            "footprint_gbytes_per_second": 42.74540518668902,
+            "speedup_vs_tilelang": 1.0
+          },
+          "eager_warm_us": 94.5855863392353
+        },
+        "simt_8warps": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 3.4409998916089535,
+            "min_us": 3.4099998883903027,
+            "max_us": 3.4719998948276043,
+            "samples_us": [
+              3.4390001092106104,
+              3.4719998948276043,
+              3.4519999753683805,
+              3.4409998916089535,
+              3.432000055909157,
+              3.4439999144524336,
+              3.4099998883903027,
+              3.4409998916089535,
+              3.432000055909157
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 4.87568047907007,
+            "footprint_gbytes_per_second": 1297.492630234404,
+            "speedup_vs_tilelang": 26.580065122212073
+          },
+          "cold_single_op": {
+            "median_us": 10.239999741315842,
+            "min_us": 10.143999941647053,
+            "max_us": 10.27199998497963,
+            "samples_us": [
+              10.239999741315842,
+              10.239999741315842,
+              10.143999941647053,
+              10.239999741315842,
+              10.27199998497963,
+              10.208000428974628,
+              10.239999741315842,
+              10.208000428974628,
+              10.239999741315842
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 1.6384000413894664,
+            "footprint_gbytes_per_second": 436.0031360143656,
+            "speedup_vs_tilelang": 10.200000072759577
+          },
+          "eager_warm_us": 19.846760551445186
+        },
+        "deepgemm_adapter": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 16.465000808238983,
+            "min_us": 16.436999663710594,
+            "max_us": 16.496000811457634,
+            "samples_us": [
+              16.496000811457634,
+              16.465000808238983,
+              16.465000808238983,
+              16.436999663710594,
+              16.473999246954918,
+              16.447000205516815,
+              16.447000205516815,
+              16.464000567793846,
+              16.474999487400055
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 1.0189623550825935,
+            "footprint_gbytes_per_second": 271.16135929771144,
+            "speedup_vs_tilelang": 5.554934510463167
+          },
+          "cold_single_op": {
+            "median_us": 24.57600086927414,
+            "min_us": 22.52800017595291,
+            "max_us": 24.768000468611717,
+            "samples_us": [
+              24.768000468611717,
+              22.975999861955643,
+              24.512000381946564,
+              24.57600086927414,
+              24.512000381946564,
+              24.607999250292778,
+              24.57600086927414,
+              24.768000468611717,
+              22.52800017595291
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 0.6826666425201636,
+            "footprint_gbytes_per_second": 181.6679623242488,
+            "speedup_vs_tilelang": 4.2499997726263326
+          },
+          "eager_warm_us": 41.163439163938165
+        }
+      }
+    },
+    {
+      "weight": "layers.0.ffn.experts.0.w1",
+      "m": 4,
+      "n": 2048,
+      "k": 4096,
+      "passed": true,
+      "weight_sha256": "8b8124ab561c2954c4f8d590c60c5478efb7b6726035d1328d89e806988ccceb",
+      "scale_sha256": "e2e52dd1cf8e590514eec022f7115e5c1cf7c2305bbe8372f03b1af517b5871a",
+      "weight_dtype": "torch.float4_e2m1fn_x2",
+      "scale_dtype": "torch.float8_e8m0fnu",
+      "logical_footprint_bytes": 4489344,
+      "measurement_order": [
+        "tilelang",
+        "deepgemm_adapter",
+        "simt_8warps",
+        "simt_4warps",
+        "simt_splitk4"
+      ],
+      "baseline_vs_oracle": {
+        "finite": true,
+        "relative_l2": 0.0,
+        "cosine": 1.0,
+        "max_abs": 0.0,
+        "different_elements": 0,
+        "passed": true
+      },
+      "backends": {
+        "tilelang": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 91.63200110197067,
+            "min_us": 91.61199629306793,
+            "max_us": 91.74299985170364,
+            "samples_us": [
+              91.74299985170364,
+              91.61199629306793,
+              91.6529968380928,
+              91.63700044155121,
+              91.64600074291229,
+              91.61499887704849,
+              91.62899851799011,
+              91.63200110197067,
+              91.63100272417068
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 0.7323736597798335,
+            "footprint_gbytes_per_second": 48.99318956271763,
+            "speedup_vs_tilelang": 1.0
+          },
+          "cold_single_op": {
+            "median_us": 104.47999835014343,
+            "min_us": 104.22399640083313,
+            "max_us": 108.5439994931221,
+            "samples_us": [
+              108.5439994931221,
+              106.49599879980087,
+              106.49599879980087,
+              104.22399640083313,
+              104.44799810647964,
+              104.25599664449692,
+              104.47999835014343,
+              104.51199859380722,
+              104.44799810647964
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 0.6423130269881735,
+            "footprint_gbytes_per_second": 42.96845397101633,
+            "speedup_vs_tilelang": 1.0
+          },
+          "eager_warm_us": 95.32587137073278
+        },
+        "deepgemm_adapter": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 16.651000827550888,
+            "min_us": 16.620000824332237,
+            "max_us": 16.72999933362007,
+            "samples_us": [
+              16.72999933362007,
+              16.651000827550888,
+              16.685999929904938,
+              16.631999984383583,
+              16.66099950671196,
+              16.63300022482872,
+              16.620000824332237,
+              16.68200083076954,
+              16.635000705718994
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 4.030320140814665,
+            "footprint_gbytes_per_second": 269.6140638328414,
+            "speedup_vs_tilelang": 5.503092700010895
+          },
+          "cold_single_op": {
+            "median_us": 24.57600086927414,
+            "min_us": 24.447999894618988,
+            "max_us": 24.607999250292778,
+            "samples_us": [
+              24.607999250292778,
+              24.57600086927414,
+              24.54400062561035,
+              24.57600086927414,
+              24.57600086927414,
+              24.57600086927414,
+              24.57600086927414,
+              24.447999894618988,
+              24.607999250292778
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 2.7306665700806545,
+            "footprint_gbytes_per_second": 182.67186853873977,
+            "speedup_vs_tilelang": 4.251301865828315
+          },
+          "eager_warm_us": 41.21659731026739
+        },
+        "simt_8warps": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 6.97400001809001,
+            "min_us": 6.9149998016655445,
+            "max_us": 6.994999945163727,
+            "samples_us": [
+              6.984000094234943,
+              6.940999999642372,
+              6.945999804884195,
+              6.994999945163727,
+              6.976999808102846,
+              6.9690002128481865,
+              6.9149998016655445,
+              6.974999792873859,
+              6.97400001809001
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 9.622722085736287,
+            "footprint_gbytes_per_second": 643.7258371601654,
+            "speedup_vs_tilelang": 13.13908816522576
+          },
+          "cold_single_op": {
+            "median_us": 12.28800043463707,
+            "min_us": 12.28800043463707,
+            "max_us": 12.35199999064207,
+            "samples_us": [
+              12.319999746978283,
+              12.28800043463707,
+              12.28800043463707,
+              12.28800043463707,
+              12.28800043463707,
+              12.28800043463707,
+              12.28800043463707,
+              12.35199999064207,
+              12.28800043463707
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 5.461333140161309,
+            "footprint_gbytes_per_second": 365.34373707747955,
+            "speedup_vs_tilelang": 8.50260373165663
+          },
+          "eager_warm_us": 20.088322344236076
+        },
+        "simt_4warps": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 6.903000175952911,
+            "min_us": 6.893999874591827,
+            "max_us": 7.054000161588192,
+            "samples_us": [
+              6.940999999642372,
+              6.930999923497438,
+              6.899000145494938,
+              6.897999905049801,
+              6.895999889820814,
+              6.893999874591827,
+              7.054000161588192,
+              6.903000175952911,
+              6.903999950736761
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 9.721695246912851,
+            "footprint_gbytes_per_second": 650.3467891597261,
+            "speedup_vs_tilelang": 13.274228417547665
+          },
+          "cold_single_op": {
+            "median_us": 12.28800043463707,
+            "min_us": 12.128000147640705,
+            "max_us": 12.28800043463707,
+            "samples_us": [
+              12.128000147640705,
+              12.28800043463707,
+              12.28800043463707,
+              12.28800043463707,
+              12.28800043463707,
+              12.28800043463707,
+              12.28800043463707,
+              12.28800043463707,
+              12.28800043463707
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 5.461333140161309,
+            "footprint_gbytes_per_second": 365.34373707747955,
+            "speedup_vs_tilelang": 8.50260373165663
+          },
+          "eager_warm_us": 19.61459929589182
+        },
+        "simt_splitk4": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 6.328000221401453,
+            "min_us": 6.3149998895823956,
+            "max_us": 6.399000063538551,
+            "samples_us": [
+              6.399000063538551,
+              6.328999996185303,
+              6.34900014847517,
+              6.318000145256519,
+              6.316000130027533,
+              6.34399987757206,
+              6.328000221401453,
+              6.316000130027533,
+              6.3149998895823956
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 10.605066632746972,
+            "footprint_gbytes_per_second": 709.4411888319675,
+            "speedup_vs_tilelang": 14.48040421870862
+          },
+          "cold_single_op": {
+            "median_us": 12.28800043463707,
+            "min_us": 12.223999947309494,
+            "max_us": 12.35199999064207,
+            "samples_us": [
+              12.223999947309494,
+              12.28800043463707,
+              12.28800043463707,
+              12.319999746978283,
+              12.256000190973282,
+              12.35199999064207,
+              12.319999746978283,
+              12.28800043463707,
+              12.28800043463707
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 5.461333140161309,
+            "footprint_gbytes_per_second": 365.34373707747955,
+            "speedup_vs_tilelang": 8.50260373165663
+          },
+          "eager_warm_us": 19.187034922651947
+        }
+      }
+    },
+    {
+      "weight": "layers.0.ffn.experts.0.w1",
+      "m": 8,
+      "n": 2048,
+      "k": 4096,
+      "passed": true,
+      "weight_sha256": "8b8124ab561c2954c4f8d590c60c5478efb7b6726035d1328d89e806988ccceb",
+      "scale_sha256": "e2e52dd1cf8e590514eec022f7115e5c1cf7c2305bbe8372f03b1af517b5871a",
+      "weight_dtype": "torch.float4_e2m1fn_x2",
+      "scale_dtype": "torch.float8_e8m0fnu",
+      "logical_footprint_bytes": 4522240,
+      "measurement_order": [
+        "simt_8warps",
+        "simt_4warps",
+        "simt_splitk4",
+        "deepgemm_adapter",
+        "tilelang"
+      ],
+      "baseline_vs_oracle": {
+        "finite": true,
+        "relative_l2": 0.0,
+        "cosine": 1.0,
+        "max_abs": 0.0,
+        "different_elements": 0,
+        "passed": true
+      },
+      "backends": {
+        "simt_8warps": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 11.749000288546085,
+            "min_us": 11.714000254869461,
+            "max_us": 11.81000005453825,
+            "samples_us": [
+              11.81000005453825,
+              11.777999810874462,
+              11.71599980443716,
+              11.756000109016895,
+              11.749000288546085,
+              11.749000288546085,
+              11.788000352680683,
+              11.719999834895134,
+              11.714000254869461
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 11.423757315832798,
+            "footprint_gbytes_per_second": 384.9042377170303,
+            "speedup_vs_tilelang": 7.805004568625012
+          },
+          "cold_single_op": {
+            "median_us": 20.479999482631683,
+            "min_us": 20.38400061428547,
+            "max_us": 20.479999482631683,
+            "samples_us": [
+              20.416000857949257,
+              20.479999482631683,
+              20.447999238967896,
+              20.479999482631683,
+              20.479999482631683,
+              20.38400061428547,
+              20.479999482631683,
+              20.479999482631683,
+              20.479999482631683
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 6.5536001655578655,
+            "footprint_gbytes_per_second": 220.81250557819308,
+            "speedup_vs_tilelang": 5.100000036379789
+          },
+          "eager_warm_us": 20.11457399930805
+        },
+        "simt_4warps": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 12.157999910414219,
+            "min_us": 12.133000418543816,
+            "max_us": 12.199999764561653,
+            "samples_us": [
+              12.198000214993954,
+              12.153999879956245,
+              12.160999700427055,
+              12.157999910414219,
+              12.199999764561653,
+              12.133000418543816,
+              12.160000391304493,
+              12.143000029027462,
+              12.15600036084652
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 11.03945788690397,
+            "footprint_gbytes_per_second": 371.95591654235574,
+            "speedup_vs_tilelang": 7.542441322962188
+          },
+          "cold_single_op": {
+            "median_us": 20.51199972629547,
+            "min_us": 20.479999482631683,
+            "max_us": 22.52800017595291,
+            "samples_us": [
+              20.51199972629547,
+              20.51199972629547,
+              20.479999482631683,
+              22.52800017595291,
+              22.495999932289124,
+              20.479999482631683,
+              22.52800017595291,
+              22.52800017595291,
+              20.479999482631683
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 6.5433760623513875,
+            "footprint_gbytes_per_second": 220.46802166259243,
+            "speedup_vs_tilelang": 5.092043657380804
+          },
+          "eager_warm_us": 19.828323274850845
+        },
+        "simt_splitk4": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 10.766999796032906,
+            "min_us": 10.743999853730202,
+            "max_us": 10.805999860167503,
+            "samples_us": [
+              10.766999796032906,
+              10.765000246465206,
+              10.743999853730202,
+              10.796000249683857,
+              10.79300045967102,
+              10.766999796032906,
+              10.765000246465206,
+              10.805999860167503,
+              10.792000219225883
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 12.465657150792595,
+            "footprint_gbytes_per_second": 420.0092955946945,
+            "speedup_vs_tilelang": 8.516857310860726
+          },
+          "cold_single_op": {
+            "median_us": 16.383999958634377,
+            "min_us": 16.256000846624374,
+            "max_us": 16.51199907064438,
+            "samples_us": [
+              16.35199971497059,
+              16.383999958634377,
+              16.51199907064438,
+              16.35199971497059,
+              16.256000846624374,
+              16.383999958634377,
+              16.383999958634377,
+              16.383999958634377,
+              16.383999958634377
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 8.192000020682812,
+            "footprint_gbytes_per_second": 276.01562569687246,
+            "speedup_vs_tilelang": 6.374999900524017
+          },
+          "eager_warm_us": 20.07144212257117
+        },
+        "deepgemm_adapter": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 16.86600036919117,
+            "min_us": 16.831999644637108,
+            "max_us": 17.024999484419823,
+            "samples_us": [
+              17.024999484419823,
+              16.860000789165497,
+              16.831999644637108,
+              16.86600036919117,
+              16.89399965107441,
+              16.845999285578728,
+              16.839999705553055,
+              16.896000131964684,
+              16.898000612854958
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 7.95788717313046,
+            "footprint_gbytes_per_second": 268.12758810682215,
+            "speedup_vs_tilelang": 5.4370330203708175
+          },
+          "cold_single_op": {
+            "median_us": 24.607999250292778,
+            "min_us": 24.383999407291412,
+            "max_us": 25.02400055527687,
+            "samples_us": [
+              24.57600086927414,
+              24.671999737620354,
+              24.607999250292778,
+              25.02400055527687,
+              24.57600086927414,
+              24.992000311613083,
+              24.57600086927414,
+              25.02400055527687,
+              24.383999407291412
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 5.45423163560943,
+            "footprint_gbytes_per_second": 183.77113693817248,
+            "speedup_vs_tilelang": 4.24447339436736
+          },
+          "eager_warm_us": 45.08062556851655
+        },
+        "tilelang": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 91.70100092887878,
+            "min_us": 91.6299968957901,
+            "max_us": 91.75600111484528,
+            "samples_us": [
+              91.75600111484528,
+              91.67099744081497,
+              91.70600026845932,
+              91.70100092887878,
+              91.70600026845932,
+              91.6299968957901,
+              91.64600074291229,
+              91.64600074291229,
+              91.70199930667877
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 1.4636451798830006,
+            "footprint_gbytes_per_second": 49.31505604292528,
+            "speedup_vs_tilelang": 1.0
+          },
+          "cold_single_op": {
+            "median_us": 104.44799810647964,
+            "min_us": 104.2879968881607,
+            "max_us": 106.49599879980087,
+            "samples_us": [
+              104.44799810647964,
+              106.49599879980087,
+              104.44799810647964,
+              104.44799810647964,
+              104.2879968881607,
+              106.33599758148193,
+              104.44799810647964,
+              106.46399855613708,
+              104.44799810647964
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 1.2850196311390436,
+            "footprint_gbytes_per_second": 43.29656941236726,
+            "speedup_vs_tilelang": 1.0
+          },
+          "eager_warm_us": 95.13649274595082
+        }
+      }
+    },
+    {
+      "weight": "layers.0.ffn.experts.0.w2",
+      "m": 1,
+      "n": 4096,
+      "k": 2048,
+      "passed": true,
+      "weight_sha256": "c013d9e37391314d6b8d9e7cadb4d0863aa39e249863c0694cd35e0c17a5e871",
+      "scale_sha256": "7c60715f1e31b4c2e64dfa01713c6293e7fa3af437e1d988be0a1b06cc01d579",
+      "weight_dtype": "torch.float4_e2m1fn_x2",
+      "scale_dtype": "torch.float8_e8m0fnu",
+      "logical_footprint_bytes": 4466704,
+      "measurement_order": [
+        "simt_4warps",
+        "tilelang",
+        "deepgemm_adapter",
+        "simt_splitk4",
+        "simt_8warps"
+      ],
+      "baseline_vs_oracle": {
+        "finite": true,
+        "relative_l2": 0.0,
+        "cosine": 1.0,
+        "max_abs": 0.0,
+        "different_elements": 0,
+        "passed": true
+      },
+      "backends": {
+        "simt_4warps": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 3.155000042170286,
+            "min_us": 3.1210000161081553,
+            "max_us": 3.266999963670969,
+            "samples_us": [
+              3.266999963670969,
+              3.155000042170286,
+              3.160000080242753,
+              3.1510000117123127,
+              3.191000083461404,
+              3.137999912723899,
+              3.1880000606179237,
+              3.1510000117123127,
+              3.1210000161081553
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 5.317659516878852,
+            "footprint_gbytes_per_second": 1415.7540222812195,
+            "speedup_vs_tilelang": 14.748969604494908
+          },
+          "cold_single_op": {
+            "median_us": 8.191999979317188,
+            "min_us": 8.1599997356534,
+            "max_us": 8.224000222980976,
+            "samples_us": [
+              8.191999979317188,
+              8.191999979317188,
+              8.191999979317188,
+              8.191999979317188,
+              8.224000222980976,
+              8.191999979317188,
+              8.1599997356534,
+              8.1599997356534,
+              8.191999979317188
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 2.048000005170703,
+            "footprint_gbytes_per_second": 545.2519545016288,
+            "speedup_vs_tilelang": 6.750000028421709
+          },
+          "eager_warm_us": 19.356724806129932
+        },
+        "tilelang": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 46.532999724149704,
+            "min_us": 46.507999300956726,
+            "max_us": 46.581000089645386,
+            "samples_us": [
+              46.54400050640106,
+              46.55199870467186,
+              46.52800038456917,
+              46.581000089645386,
+              46.519000083208084,
+              46.507999300956726,
+              46.53099924325943,
+              46.532999724149704,
+              46.55500128865242
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 0.3605444759516107,
+            "footprint_gbytes_per_second": 95.99002915090104,
+            "speedup_vs_tilelang": 1.0
+          },
+          "cold_single_op": {
+            "median_us": 55.296000093221664,
+            "min_us": 55.10399863123894,
+            "max_us": 55.424001067876816,
+            "samples_us": [
+              55.26399984955788,
+              55.32800033688545,
+              55.296000093221664,
+              55.32800033688545,
+              55.26399984955788,
+              55.23199960589409,
+              55.424001067876816,
+              55.10399863123894,
+              55.296000093221664
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 0.30340740689590306,
+            "footprint_gbytes_per_second": 80.7780669934486,
+            "speedup_vs_tilelang": 1.0
+          },
+          "eager_warm_us": 50.24712299928069
+        },
+        "deepgemm_adapter": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 13.295000419020653,
+            "min_us": 13.255000114440918,
+            "max_us": 13.337000273168087,
+            "samples_us": [
+              13.337000273168087,
+              13.311999849975109,
+              13.256999664008617,
+              13.295000419020653,
+              13.290000148117542,
+              13.255000114440918,
+              13.311999849975109,
+              13.29100038856268,
+              13.309000059962273
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 1.2619191779789245,
+            "footprint_gbytes_per_second": 335.9686994525894,
+            "speedup_vs_tilelang": 3.5000374770636866
+          },
+          "cold_single_op": {
+            "median_us": 20.479999482631683,
+            "min_us": 20.320000126957893,
+            "max_us": 20.51199972629547,
+            "samples_us": [
+              20.479999482631683,
+              20.479999482631683,
+              20.479999482631683,
+              20.320000126957893,
+              20.479999482631683,
+              20.51199972629547,
+              20.35200037062168,
+              20.479999482631683,
+              20.51199972629547
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 0.8192000206947332,
+            "footprint_gbytes_per_second": 218.1007867596893,
+            "speedup_vs_tilelang": 2.700000072759578
+          },
+          "eager_warm_us": 44.564061681739986
+        },
+        "simt_splitk4": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 3.6349999718368053,
+            "min_us": 3.6180000752210617,
+            "max_us": 3.6979999858886003,
+            "samples_us": [
+              3.6979999858886003,
+              3.6410000175237656,
+              3.6460000555962324,
+              3.6279999185353518,
+              3.633999964222312,
+              3.6379999946802855,
+              3.6180000752210617,
+              3.630999941378832,
+              3.6349999718368053
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 4.615465235209421,
+            "footprint_gbytes_per_second": 1228.8044111711301,
+            "speedup_vs_tilelang": 12.801375539113435
+          },
+          "cold_single_op": {
+            "median_us": 8.54399986565113,
+            "min_us": 8.191999979317188,
+            "max_us": 10.27199998497963,
+            "samples_us": [
+              8.54399986565113,
+              10.17600018531084,
+              10.27199998497963,
+              10.239999741315842,
+              8.191999979317188,
+              8.191999979317188,
+              8.191999979317188,
+              8.191999979317188,
+              10.048000141978264
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 1.9636254990415338,
+            "footprint_gbytes_per_second": 522.7883977336178,
+            "speedup_vs_tilelang": 6.4719102250369245
+          },
+          "eager_warm_us": 19.61014640983194
+        },
+        "simt_8warps": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 3.254000097513199,
+            "min_us": 3.2259998843073845,
+            "max_us": 3.2730000093579292,
+            "samples_us": [
+              3.258999902755022,
+              3.2259998843073845,
+              3.2730000093579292,
+              3.249000059440732,
+              3.254000097513199,
+              3.246000036597252,
+              3.243000013753772,
+              3.258999902755022,
+              3.266999963670969
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 5.155874461350396,
+            "footprint_gbytes_per_second": 1372.6809668547903,
+            "speedup_vs_tilelang": 14.300245337949304
+          },
+          "cold_single_op": {
+            "median_us": 8.191999979317188,
+            "min_us": 8.0960001796484,
+            "max_us": 8.576000109314919,
+            "samples_us": [
+              8.576000109314919,
+              8.287999778985977,
+              8.191999979317188,
+              8.191999979317188,
+              8.54399986565113,
+              8.0960001796484,
+              8.191999979317188,
+              8.191999979317188,
+              8.1599997356534
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 2.048000005170703,
+            "footprint_gbytes_per_second": 545.2519545016288,
+            "speedup_vs_tilelang": 6.750000028421709
+          },
+          "eager_warm_us": 19.96140053961426
+        }
+      }
+    },
+    {
+      "weight": "layers.0.ffn.experts.0.w2",
+      "m": 4,
+      "n": 4096,
+      "k": 2048,
+      "passed": true,
+      "weight_sha256": "c013d9e37391314d6b8d9e7cadb4d0863aa39e249863c0694cd35e0c17a5e871",
+      "scale_sha256": "7c60715f1e31b4c2e64dfa01713c6293e7fa3af437e1d988be0a1b06cc01d579",
+      "weight_dtype": "torch.float4_e2m1fn_x2",
+      "scale_dtype": "torch.float8_e8m0fnu",
+      "logical_footprint_bytes": 4497472,
+      "measurement_order": [
+        "tilelang",
+        "deepgemm_adapter",
+        "simt_8warps",
+        "simt_4warps",
+        "simt_splitk4"
+      ],
+      "baseline_vs_oracle": {
+        "finite": true,
+        "relative_l2": 0.0,
+        "cosine": 1.0000001192092896,
+        "max_abs": 0.0,
+        "different_elements": 0,
+        "passed": true
+      },
+      "backends": {
+        "tilelang": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0000001192092896,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0000001192092896,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 46.606000512838364,
+            "min_us": 46.57899960875511,
+            "max_us": 46.68499901890755,
+            "samples_us": [
+              46.68499901890755,
+              46.619001775979996,
+              46.606000512838364,
+              46.6109998524189,
+              46.581000089645386,
+              46.57899960875511,
+              46.60499840974808,
+              46.61000147461891,
+              46.59400135278702
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0000001192092896,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 1.4399189645443573,
+            "footprint_gbytes_per_second": 96.49984874289095,
+            "speedup_vs_tilelang": 1.0
+          },
+          "cold_single_op": {
+            "median_us": 55.296000093221664,
+            "min_us": 55.1999993622303,
+            "max_us": 57.53599852323532,
+            "samples_us": [
+              55.26399984955788,
+              55.296000093221664,
+              55.1999993622303,
+              55.296000093221664,
+              55.296000093221664,
+              55.36000058054924,
+              55.296000093221664,
+              55.26399984955788,
+              57.53599852323532
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0000001192092896,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 1.2136296275836123,
+            "footprint_gbytes_per_second": 81.33449060362166,
+            "speedup_vs_tilelang": 1.0
+          },
+          "eager_warm_us": 50.282469601370394
+        },
+        "deepgemm_adapter": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0000001192092896,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0000001192092896,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 13.194999657571316,
+            "min_us": 13.17100040614605,
+            "max_us": 13.247000053524971,
+            "samples_us": [
+              13.2039999589324,
+              13.247000053524971,
+              13.186999596655369,
+              13.194999657571316,
+              13.18500004708767,
+              13.182999566197395,
+              13.224000111222267,
+              13.232000172138214,
+              13.17100040614605
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0000001192092896,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 5.085931469614916,
+            "footprint_gbytes_per_second": 340.8466931955805,
+            "speedup_vs_tilelang": 3.5320956212451096
+          },
+          "cold_single_op": {
+            "median_us": 20.479999482631683,
+            "min_us": 20.447999238967896,
+            "max_us": 20.576000213623047,
+            "samples_us": [
+              20.479999482631683,
+              20.447999238967896,
+              20.479999482631683,
+              20.447999238967896,
+              20.576000213623047,
+              20.479999482631683,
+              20.479999482631683,
+              20.479999482631683,
+              20.479999482631683
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0000001192092896,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 3.2768000827789328,
+            "footprint_gbytes_per_second": 219.6031305476417,
+            "speedup_vs_tilelang": 2.700000072759578
+          },
+          "eager_warm_us": 45.193752157501876
+        },
+        "simt_8warps": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0000001192092896,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0000001192092896,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 6.955999881029129,
+            "min_us": 6.918000057339668,
+            "max_us": 6.978000048547983,
+            "samples_us": [
+              6.978000048547983,
+              6.918000057339668,
+              6.957999896258116,
+              6.953999865800142,
+              6.963999941945076,
+              6.918999832123518,
+              6.953000091016293,
+              6.957000121474266,
+              6.955999881029129
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0000001192092896,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 9.647622936714505,
+            "footprint_gbytes_per_second": 646.5601030652413,
+            "speedup_vs_tilelang": 6.700115196946076
+          },
+          "cold_single_op": {
+            "median_us": 12.28800043463707,
+            "min_us": 12.256000190973282,
+            "max_us": 12.35199999064207,
+            "samples_us": [
+              12.256000190973282,
+              12.28800043463707,
+              12.28800043463707,
+              12.28800043463707,
+              12.28800043463707,
+              12.35199999064207,
+              12.28800043463707,
+              12.28800043463707,
+              12.28800043463707
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0000001192092896,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 5.461333140161309,
+            "footprint_gbytes_per_second": 366.00519538741656,
+            "speedup_vs_tilelang": 4.499999848417555
+          },
+          "eager_warm_us": 19.95550701394677
+        },
+        "simt_4warps": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0000001192092896,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0000001192092896,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 6.219999864697456,
+            "min_us": 6.2060002237558365,
+            "max_us": 6.306999828666449,
+            "samples_us": [
+              6.306999828666449,
+              6.219999864697456,
+              6.268000230193138,
+              6.260999944061041,
+              6.219000089913607,
+              6.262999959290028,
+              6.213000044226646,
+              6.21100002899766,
+              6.2060002237558365
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0000001192092896,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 10.789206665563844,
+            "footprint_gbytes_per_second": 723.0662536708526,
+            "speedup_vs_tilelang": 7.492926290458255
+          },
+          "cold_single_op": {
+            "median_us": 12.256000190973282,
+            "min_us": 10.239999741315842,
+            "max_us": 12.28800043463707,
+            "samples_us": [
+              12.256000190973282,
+              12.256000190973282,
+              12.28800043463707,
+              12.28800043463707,
+              12.256000190973282,
+              10.239999741315842,
+              12.28800043463707,
+              12.256000190973282,
+              10.239999741315842
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0000001192092896,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 5.475592603974226,
+            "footprint_gbytes_per_second": 366.96082979114607,
+            "speedup_vs_tilelang": 4.511749284562508
+          },
+          "eager_warm_us": 19.001439795829356
+        },
+        "simt_splitk4": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0000001192092896,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0000001192092896,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 7.046999875456095,
+            "min_us": 7.032999768853188,
+            "max_us": 7.133999839425087,
+            "samples_us": [
+              7.133999839425087,
+              7.046999875456095,
+              7.040000054985285,
+              7.046999875456095,
+              7.032999768853188,
+              7.079000119119883,
+              7.0489998906850815,
+              7.087999954819679,
+              7.038999814540148
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0000001192092896,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 9.523040327236645,
+            "footprint_gbytes_per_second": 638.210881153012,
+            "speedup_vs_tilelang": 6.613594627007417
+          },
+          "cold_single_op": {
+            "median_us": 12.28800043463707,
+            "min_us": 12.256000190973282,
+            "max_us": 12.480000033974648,
+            "samples_us": [
+              12.28800043463707,
+              12.28800043463707,
+              12.28800043463707,
+              12.28800043463707,
+              12.28800043463707,
+              12.28800043463707,
+              12.256000190973282,
+              12.480000033974648,
+              12.28800043463707
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0000001192092896,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 5.461333140161309,
+            "footprint_gbytes_per_second": 366.00519538741656,
+            "speedup_vs_tilelang": 4.499999848417555
+          },
+          "eager_warm_us": 19.69576987903565
+        }
+      }
+    },
+    {
+      "weight": "layers.0.ffn.experts.0.w2",
+      "m": 8,
+      "n": 4096,
+      "k": 2048,
+      "passed": true,
+      "weight_sha256": "c013d9e37391314d6b8d9e7cadb4d0863aa39e249863c0694cd35e0c17a5e871",
+      "scale_sha256": "7c60715f1e31b4c2e64dfa01713c6293e7fa3af437e1d988be0a1b06cc01d579",
+      "weight_dtype": "torch.float4_e2m1fn_x2",
+      "scale_dtype": "torch.float8_e8m0fnu",
+      "logical_footprint_bytes": 4538496,
+      "measurement_order": [
+        "tilelang",
+        "simt_8warps",
+        "simt_4warps",
+        "simt_splitk4",
+        "deepgemm_adapter"
+      ],
+      "baseline_vs_oracle": {
+        "finite": true,
+        "relative_l2": 0.0,
+        "cosine": 1.0,
+        "max_abs": 0.0,
+        "different_elements": 0,
+        "passed": true
+      },
+      "backends": {
+        "tilelang": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 46.622999012470245,
+            "min_us": 46.585001051425934,
+            "max_us": 46.66699841618538,
+            "samples_us": [
+              46.619001775979996,
+              46.585001051425934,
+              46.60800099372864,
+              46.585001051425934,
+              46.64500057697296,
+              46.65699973702431,
+              46.6650016605854,
+              46.66699841618538,
+              46.622999012470245
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 2.878787955362992,
+            "footprint_gbytes_per_second": 97.34457448320923,
+            "speedup_vs_tilelang": 1.0
+          },
+          "cold_single_op": {
+            "median_us": 55.296000093221664,
+            "min_us": 55.07199838757515,
+            "max_us": 55.48800155520439,
+            "samples_us": [
+              55.296000093221664,
+              55.07199838757515,
+              55.296000093221664,
+              55.296000093221664,
+              55.48800155520439,
+              55.32800033688545,
+              55.10399863123894,
+              55.296000093221664,
+              55.296000093221664
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 2.4272592551672245,
+            "footprint_gbytes_per_second": 82.07638875051907,
+            "speedup_vs_tilelang": 1.0
+          },
+          "eager_warm_us": 50.27868610341102
+        },
+        "simt_8warps": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 11.893000453710556,
+            "min_us": 11.861000210046768,
+            "max_us": 11.916999705135822,
+            "samples_us": [
+              11.916999705135822,
+              11.861000210046768,
+              11.908999644219875,
+              11.893000453710556,
+              11.893999762833118,
+              11.882999911904335,
+              11.893999762833118,
+              11.882999911904335,
+              11.873999610543251
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 11.285438735363433,
+            "footprint_gbytes_per_second": 381.6106808088124,
+            "speedup_vs_tilelang": 3.92020493011283
+          },
+          "cold_single_op": {
+            "median_us": 16.383999958634377,
+            "min_us": 16.224000602960587,
+            "max_us": 16.543999314308167,
+            "samples_us": [
+              16.383999958634377,
+              16.383999958634377,
+              16.383999958634377,
+              16.383999958634377,
+              16.224000602960587,
+              16.383999958634377,
+              16.543999314308167,
+              16.383999958634377,
+              16.287999227643013
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 8.192000020682812,
+            "footprint_gbytes_per_second": 277.0078131993775,
+            "speedup_vs_tilelang": 3.3750000142108547
+          },
+          "eager_warm_us": 19.735773093998432
+        },
+        "simt_4warps": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 10.863999836146832,
+            "min_us": 10.803000070154667,
+            "max_us": 10.882999747991562,
+            "samples_us": [
+              10.882999747991562,
+              10.862000286579132,
+              10.877000167965889,
+              10.874000377953053,
+              10.874000377953053,
+              10.862000286579132,
+              10.863999836146832,
+              10.808000341057777,
+              10.803000070154667
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 12.354356592811163,
+            "footprint_gbytes_per_second": 417.7555291283659,
+            "speedup_vs_tilelang": 4.291513228612692
+          },
+          "cold_single_op": {
+            "median_us": 16.383999958634377,
+            "min_us": 16.35199971497059,
+            "max_us": 16.48000068962574,
+            "samples_us": [
+              16.35199971497059,
+              16.416000202298164,
+              16.383999958634377,
+              16.383999958634377,
+              16.383999958634377,
+              16.383999958634377,
+              16.383999958634377,
+              16.35199971497059,
+              16.48000068962574
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 8.192000020682812,
+            "footprint_gbytes_per_second": 277.0078131993775,
+            "speedup_vs_tilelang": 3.3750000142108547
+          },
+          "eager_warm_us": 19.367667846381664
+        },
+        "simt_splitk4": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 11.981000192463398,
+            "min_us": 11.96299958974123,
+            "max_us": 12.051999568939209,
+            "samples_us": [
+              12.051999568939209,
+              11.981000192463398,
+              12.044999748468399,
+              11.982000432908535,
+              12.036999687552452,
+              11.963999830186367,
+              11.96299958974123,
+              11.978000402450562,
+              11.966999620199203
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 11.202547854429477,
+            "footprint_gbytes_per_second": 378.80777289820287,
+            "speedup_vs_tilelang": 3.8914112564490453
+          },
+          "cold_single_op": {
+            "median_us": 18.432000651955605,
+            "min_us": 18.271999433636665,
+            "max_us": 18.49599927663803,
+            "samples_us": [
+              18.432000651955605,
+              18.271999433636665,
+              18.400000408291817,
+              18.49599927663803,
+              18.432000651955605,
+              18.432000651955605,
+              18.432000651955605,
+              18.432000651955605,
+              18.464000895619392
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 7.281777520215079,
+            "footprint_gbytes_per_second": 246.22915795733076,
+            "speedup_vs_tilelang": 2.9999998989450365
+          },
+          "eager_warm_us": 19.50984005816281
+        },
+        "deepgemm_adapter": {
+          "passed": true,
+          "vs_oracle": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "vs_tilelang": {
+            "finite": true,
+            "relative_l2": 0.0,
+            "cosine": 1.0,
+            "max_abs": 0.0,
+            "different_elements": 0,
+            "passed": true
+          },
+          "warm_graph": {
+            "median_us": 13.394000008702278,
+            "min_us": 13.377999886870384,
+            "max_us": 13.44399992376566,
+            "samples_us": [
+              13.423999771475792,
+              13.394000008702278,
+              13.383000157773495,
+              13.384999707341194,
+              13.410000130534172,
+              13.433000072836876,
+              13.377999886870384,
+              13.38099967688322,
+              13.44399992376566
+            ],
+            "operations_per_graph": 32,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "nominal_tflops": 10.020735248080989,
+            "footprint_gbytes_per_second": 338.84545296784177,
+            "speedup_vs_tilelang": 3.480886888321532
+          },
+          "cold_single_op": {
+            "median_us": 20.479999482631683,
+            "min_us": 20.320000126957893,
+            "max_us": 20.479999482631683,
+            "samples_us": [
+              20.479999482631683,
+              20.416000857949257,
+              20.447999238967896,
+              20.479999482631683,
+              20.479999482631683,
+              20.479999482631683,
+              20.447999238967896,
+              20.320000126957893,
+              20.479999482631683
+            ],
+            "operations_per_graph": 1,
+            "capture_output": {
+              "finite": true,
+              "relative_l2": 0.0,
+              "cosine": 1.0,
+              "max_abs": 0.0,
+              "different_elements": 0,
+              "passed": true
+            },
+            "eviction_bytes": 530579456,
+            "interval": "external graph start/end events; eviction excluded",
+            "nominal_tflops": 6.5536001655578655,
+            "footprint_gbytes_per_second": 221.6062555982449,
+            "speedup_vs_tilelang": 2.700000072759578
+          },
+          "eager_warm_us": 45.90999742504209
+        }
+      }
+    }
+  ],
+  "numeric_gate": {
+    "relative_l2_max": 0.005,
+    "cosine_min": 0.99999
+  },
+  "weights_path": "/tmp/llaisys-deepseek-v4-flash-mp1/model0-mp1.safetensors",
+  "activation_seed": 12092026,
+  "activation_kind": "synthetic BF16 normal values; same A and SA for every backend",
+  "activation_quantization": {
+    "block_size": 128,
+    "scale_fmt": "ue8m0",
+    "scale_dtype": "float8_e8m0fnu"
+  },
+  "timing_scope": {
+    "warm": "repeated same operands in CUDA graph, warm cache",
+    "cold": "L2-sized independent buffer read/write before every single-operation graph event interval",
+    "deepgemm": "SA.float(), SB.float(), any DeepGEMM internal scale layout kernels, and GEMM included; no preconverted scale reuse",
+    "excluded": "weight I/O, activation quantization, JIT, graph construction, eviction, Python allocation/dispatch overhead",
+    "eager": "separate Python wall time includes complete adapter allocation/dispatch; warm cache",
+    "bandwidth": "logical operand/output footprint divided by elapsed time; not measured hardware DRAM traffic",
+    "cache_limit": "capacity overwrite perturbs L2; no hardware guarantee that every prior line is invalidated"
+  },
+  "gpu": "NVIDIA B300 SXM6 AC",
+  "capability": [
+    10,
+    3
+  ],
+  "gpu_uuid": "689f6481-e310-b8ed-4641-37c4ac1c76b4",
+  "sm_count": 148,
+  "l2_bytes": 132644864,
+  "eviction_bytes": 530579456,
+  "samples": 9,
+  "warm_repetitions": 32,
+  "slurm_job_id": "26586",
+  "torch": "2.13.0+cu130",
+  "tilelang": "0.1.8",
+  "cuda": "13.0",
+  "deepgemm": {
+    "version": "2.6.1",
+    "source": {
+      "path": "/home/lcpu/57682329/workspace/llaisys/third_party/DeepGEMM",
+      "commit": "559d79fb6994a58b8a15b4b93bf13ccc16edf247",
+      "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "submodules": [
+        " f3fde58372d33e9a5650ba7b80fc48b3b49d40c8 third-party/cutlass (v4.1.0-50-gf3fde583)",
+        " 553ec11ec06fbe0beebfbb45f9dc3c9eabd83d28 third-party/fmt (11.2.0-57-g553ec11e)"
+      ]
+    },
+    "package": "/home/lcpu/57682329/workspace/llaisys/third_party/DeepGEMM/build-llaisys/lib.linux-x86_64-cpython-312/deep_gemm/__init__.py",
+    "adapter": "fp8_fp4_gemm_nt; recipe_a=(1,128), recipe_b=(1,32)",
+    "jit_environment": {}
+  },
+  "source_sha256": {
+    "/home/lcpu/57682329/workspace/llaisys/tools/deepseek_v4_cuda/bench_w4a8_memory.py": "634b9a13430084ec5fb9dc9574a0a5e8f32e5d0a30268ec27a152991e4486413",
+    "/home/lcpu/57682329/workspace/llaisys/tools/deepseek_v4_cuda/bench_w4a8_decode.py": "599c633f79e47f2f23826182b7a52f948f3d7ad4220d0c6d2c316c643137572c",
+    "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_w4a8_cuda.py": "880ebf9a70144d5704d1e9a5ae43c4d06a682afa3805762b423487506c88ffb1",
+    "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/inference/kernel.py": "59b325083d7103975cba025bd0d60ea343bb82d8fff53088afb7c04bd380c0c2",
+    "/home/lcpu/57682329/workspace/llaisys/build/standalone_cuda/libw4a8_decode_sm103_final.so": "29cddd675c940e49ab32183dee0956bb6714754c1609ce140fcfadcb4c33e7f0",
+    "/home/lcpu/57682329/workspace/llaisys/src/ops/deepseek_v4/nvidia/w4a8_decode_sm103.cu": "24236330188c6bd85a79fe264b995a63dcab921e9a340047c2abe6ca1e4d456e",
+    "/home/lcpu/57682329/workspace/llaisys/src/ops/deepseek_v4/nvidia/w4a8_decode_sm103.h": "9a7beec1cc5697bdd13f210555aff4345b2de3f261f7930396f98a84d89d5688",
+    "/home/lcpu/57682329/workspace/llaisys/third_party/DeepGEMM/build-llaisys/lib.linux-x86_64-cpython-312/deep_gemm/__init__.py": "05075513e4ddff743bd5d13745cc2c2e4600ae890b0114f5df2094292c4460f9",
+    "/home/lcpu/57682329/workspace/llaisys/third_party/DeepGEMM/build-llaisys/lib.linux-x86_64-cpython-312/deep_gemm/_C.cpython-312-x86_64-linux-gnu.so": "6f5e45d42635172b29ed383f19a051504e591352135da40ef68e790f9b3d5440"
+  },
+  "native_version": "llaisys-w4a8-sm103-experimental-v2",
+  "tf32_enabled": false,
+  "source_unchanged": true,
+  "deepgemm_source_unchanged": true,
+  "finished_utc": "2026-09-12T06:20:44Z"
+}

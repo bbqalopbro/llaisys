@@ -1,0 +1,463 @@
+{
+  "experiment": "ascending K32 group accumulation, variant 1/2; unchanged variant 3",
+  "original_source": "/home/lcpu/57682329/workspace/llaisys/src/ops/deepseek_v4/nvidia/w4a8_decode_sm103.cu",
+  "original_sha256": "24236330188c6bd85a79fe264b995a63dcab921e9a340047c2abe6ca1e4d456e",
+  "experimental_source": "/home/lcpu/57682329/workspace/llaisys/build/experiments/w4a8_ordered_k32/w4a8_decode_sm103_ordered_k32.cu",
+  "experimental_sha256": "817027b2ce5bec32ba4b4d6d4d25658b106cc786d5ee8de97c44d90cf96ced33",
+  "header_sha256": "9a7beec1cc5697bdd13f210555aff4345b2de3f261f7930396f98a84d89d5688",
+  "gpu_tested": false,
+  "precision_claim": "unproven until real-activation and model tests pass",
+  "library": "/home/lcpu/57682329/workspace/llaisys/build/experiments/w4a8_ordered_k32/libw4a8_ordered_k32_sm103.so",
+  "library_sha256": "cb7a8759ae5c36855f977abb4ce7756a98d2c389ccc047dfd1f12c01251a8fa2",
+  "version": "llaisys-w4a8-sm103-experimental-v2",
+  "version_note": "ABI version string retained; distinguish this numerical experiment by source/library SHA256 and manifest",
+  "compile_command": [
+    "/usr/local/cuda/bin/nvcc",
+    "-O3",
+    "-std=c++17",
+    "-arch=sm_103a",
+    "-DLLAISYS_B300_STANDALONE",
+    "--shared",
+    "-Xcompiler=-fPIC",
+    "--ptxas-options=-v",
+    "build/experiments/w4a8_ordered_k32/w4a8_decode_sm103_ordered_k32.cu",
+    "-o",
+    "build/experiments/w4a8_ordered_k32/libw4a8_ordered_k32_sm103.so"
+  ],
+  "compile_cwd": "/home/lcpu/57682329/workspace/llaisys",
+  "compile_exit_code": 0,
+  "nvcc_version": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Wed_Aug_20_01:58:59_PM_PDT_2025\nCuda compilation tools, release 13.0, V13.0.88\nBuild cuda_13.0.r13.0/compiler.36424714_0\n",
+  "compile_log_sha256": "9731f1033d57a8275e72e6f498b56afeb14225ba13d59ed433b4bfb2ba5a92e8",
+  "resources": [
+    {
+      "symbol": "_ZN65_GLOBAL__N__b3ebe706_32_w4a8_decode_sm103_ordered_k32_cu_e7867b876decodeILi8ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+      "architecture": "sm_103a",
+      "m": 8,
+      "warps": 4,
+      "split_k": false,
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 64,
+      "barriers": 0
+    },
+    {
+      "symbol": "_ZN65_GLOBAL__N__b3ebe706_32_w4a8_decode_sm103_ordered_k32_cu_e7867b876decodeILi7ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+      "architecture": "sm_103a",
+      "m": 7,
+      "warps": 4,
+      "split_k": false,
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 67,
+      "barriers": 0
+    },
+    {
+      "symbol": "_ZN65_GLOBAL__N__b3ebe706_32_w4a8_decode_sm103_ordered_k32_cu_e7867b876decodeILi6ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+      "architecture": "sm_103a",
+      "m": 6,
+      "warps": 4,
+      "split_k": false,
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 64,
+      "barriers": 0
+    },
+    {
+      "symbol": "_ZN65_GLOBAL__N__b3ebe706_32_w4a8_decode_sm103_ordered_k32_cu_e7867b876decodeILi5ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+      "architecture": "sm_103a",
+      "m": 5,
+      "warps": 4,
+      "split_k": false,
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 60,
+      "barriers": 0
+    },
+    {
+      "symbol": "_ZN65_GLOBAL__N__b3ebe706_32_w4a8_decode_sm103_ordered_k32_cu_e7867b876decodeILi4ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+      "architecture": "sm_103a",
+      "m": 4,
+      "warps": 4,
+      "split_k": false,
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 58,
+      "barriers": 0
+    },
+    {
+      "symbol": "_ZN65_GLOBAL__N__b3ebe706_32_w4a8_decode_sm103_ordered_k32_cu_e7867b876decodeILi3ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+      "architecture": "sm_103a",
+      "m": 3,
+      "warps": 4,
+      "split_k": false,
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 53,
+      "barriers": 0
+    },
+    {
+      "symbol": "_ZN65_GLOBAL__N__b3ebe706_32_w4a8_decode_sm103_ordered_k32_cu_e7867b876decodeILi2ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+      "architecture": "sm_103a",
+      "m": 2,
+      "warps": 4,
+      "split_k": false,
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 48,
+      "barriers": 0
+    },
+    {
+      "symbol": "_ZN65_GLOBAL__N__b3ebe706_32_w4a8_decode_sm103_ordered_k32_cu_e7867b876decodeILi1ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+      "architecture": "sm_103a",
+      "m": 1,
+      "warps": 4,
+      "split_k": false,
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 32,
+      "barriers": 0
+    },
+    {
+      "symbol": "_ZN65_GLOBAL__N__b3ebe706_32_w4a8_decode_sm103_ordered_k32_cu_e7867b876decodeILi8ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+      "architecture": "sm_103a",
+      "m": 8,
+      "warps": 8,
+      "split_k": false,
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 64,
+      "barriers": 0
+    },
+    {
+      "symbol": "_ZN65_GLOBAL__N__b3ebe706_32_w4a8_decode_sm103_ordered_k32_cu_e7867b876decodeILi7ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+      "architecture": "sm_103a",
+      "m": 7,
+      "warps": 8,
+      "split_k": false,
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 68,
+      "barriers": 0
+    },
+    {
+      "symbol": "_ZN65_GLOBAL__N__b3ebe706_32_w4a8_decode_sm103_ordered_k32_cu_e7867b876decodeILi6ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+      "architecture": "sm_103a",
+      "m": 6,
+      "warps": 8,
+      "split_k": false,
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 64,
+      "barriers": 0
+    },
+    {
+      "symbol": "_ZN65_GLOBAL__N__b3ebe706_32_w4a8_decode_sm103_ordered_k32_cu_e7867b876decodeILi5ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+      "architecture": "sm_103a",
+      "m": 5,
+      "warps": 8,
+      "split_k": false,
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 64,
+      "barriers": 0
+    },
+    {
+      "symbol": "_ZN65_GLOBAL__N__b3ebe706_32_w4a8_decode_sm103_ordered_k32_cu_e7867b876decodeILi4ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+      "architecture": "sm_103a",
+      "m": 4,
+      "warps": 8,
+      "split_k": false,
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 64,
+      "barriers": 0
+    },
+    {
+      "symbol": "_ZN65_GLOBAL__N__b3ebe706_32_w4a8_decode_sm103_ordered_k32_cu_e7867b876decodeILi3ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+      "architecture": "sm_103a",
+      "m": 3,
+      "warps": 8,
+      "split_k": false,
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 53,
+      "barriers": 0
+    },
+    {
+      "symbol": "_ZN65_GLOBAL__N__b3ebe706_32_w4a8_decode_sm103_ordered_k32_cu_e7867b876decodeILi2ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+      "architecture": "sm_103a",
+      "m": 2,
+      "warps": 8,
+      "split_k": false,
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 48,
+      "barriers": 0
+    },
+    {
+      "symbol": "_ZN65_GLOBAL__N__b3ebe706_32_w4a8_decode_sm103_ordered_k32_cu_e7867b876decodeILi1ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+      "architecture": "sm_103a",
+      "m": 1,
+      "warps": 8,
+      "split_k": false,
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 32,
+      "barriers": 0
+    },
+    {
+      "symbol": "_ZN65_GLOBAL__N__b3ebe706_32_w4a8_decode_sm103_ordered_k32_cu_e7867b8714decode_split_kILi8ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+      "architecture": "sm_103a",
+      "m": 8,
+      "warps": 4,
+      "split_k": true,
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 56,
+      "barriers": 1
+    },
+    {
+      "symbol": "_ZN65_GLOBAL__N__b3ebe706_32_w4a8_decode_sm103_ordered_k32_cu_e7867b8714decode_split_kILi7ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+      "architecture": "sm_103a",
+      "m": 7,
+      "warps": 4,
+      "split_k": true,
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 56,
+      "barriers": 1
+    },
+    {
+      "symbol": "_ZN65_GLOBAL__N__b3ebe706_32_w4a8_decode_sm103_ordered_k32_cu_e7867b8714decode_split_kILi6ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+      "architecture": "sm_103a",
+      "m": 6,
+      "warps": 4,
+      "split_k": true,
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 56,
+      "barriers": 1
+    },
+    {
+      "symbol": "_ZN65_GLOBAL__N__b3ebe706_32_w4a8_decode_sm103_ordered_k32_cu_e7867b8714decode_split_kILi5ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+      "architecture": "sm_103a",
+      "m": 5,
+      "warps": 4,
+      "split_k": true,
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 56,
+      "barriers": 1
+    },
+    {
+      "symbol": "_ZN65_GLOBAL__N__b3ebe706_32_w4a8_decode_sm103_ordered_k32_cu_e7867b8714decode_split_kILi4ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+      "architecture": "sm_103a",
+      "m": 4,
+      "warps": 4,
+      "split_k": true,
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 56,
+      "barriers": 1
+    },
+    {
+      "symbol": "_ZN65_GLOBAL__N__b3ebe706_32_w4a8_decode_sm103_ordered_k32_cu_e7867b8714decode_split_kILi3ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+      "architecture": "sm_103a",
+      "m": 3,
+      "warps": 4,
+      "split_k": true,
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 50,
+      "barriers": 1
+    },
+    {
+      "symbol": "_ZN65_GLOBAL__N__b3ebe706_32_w4a8_decode_sm103_ordered_k32_cu_e7867b8714decode_split_kILi2ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+      "architecture": "sm_103a",
+      "m": 2,
+      "warps": 4,
+      "split_k": true,
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 48,
+      "barriers": 1
+    },
+    {
+      "symbol": "_ZN65_GLOBAL__N__b3ebe706_32_w4a8_decode_sm103_ordered_k32_cu_e7867b8714decode_split_kILi1ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+      "architecture": "sm_103a",
+      "m": 1,
+      "warps": 4,
+      "split_k": true,
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "registers": 32,
+      "barriers": 1
+    }
+  ],
+  "host_abi_cases": [
+    {
+      "name": "null_activation",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "zero_rows",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "rows_above_decode_limit",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "zero_output_columns",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "columns_above_supported_limit",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "incomplete_quantization_group",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "k_above_supported_limit",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "unaligned_activation_row_stride",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "overlapping_activation_rows",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "short_scale_row_stride",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "negative_scale_row_stride",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "unknown_variant",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "negative_variant",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "output_aliases_activation",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "output_aliases_activation_scale",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "output_aliases_weight",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "output_aliases_weight_scale",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "activation_stride_address_overflow",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "scale_stride_address_overflow",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "unaligned_activation_address",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "unaligned_weight_address",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "unaligned_output_address",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    }
+  ],
+  "host_abi_checks_passed": true,
+  "source_change": "decode<M,Warps> only: parallel K32 dot/scaling per warp; ascending group shuffle to lane 0 with serial __fadd_rn; final tree reduction removed; all other code unchanged",
+  "frozen_source_unchanged": true,
+  "published_source": {
+    "path": "src/ops/deepseek_v4/nvidia/w4a8_decode_sm103_ordered_k32.cu",
+    "sha256": "817027b2ce5bec32ba4b4d6d4d25658b106cc786d5ee8de97c44d90cf96ced33",
+    "identical_to_build_source": true
+  }
+}

@@ -1,0 +1,121 @@
+{
+  "gpu": "NVIDIA B300 SXM6 AC",
+  "capability": [
+    10,
+    3
+  ],
+  "deep_gemm": "2.6.1",
+  "torch": "2.13.0+cu130",
+  "cases": [
+    {
+      "weight": "layers.0.attn.wq_a",
+      "mode": "fp8",
+      "m": 1,
+      "n": 1024,
+      "k": 4096,
+      "cosine": 1.0,
+      "relative_l2": 0.0,
+      "max_abs_error": 0.0,
+      "different_elements": 0
+    },
+    {
+      "weight": "layers.0.attn.wq_a",
+      "mode": "fp8",
+      "m": 5,
+      "n": 1024,
+      "k": 4096,
+      "cosine": 1.0,
+      "relative_l2": 0.0,
+      "max_abs_error": 0.0,
+      "different_elements": 0
+    },
+    {
+      "weight": "layers.0.attn.wq_a",
+      "mode": "fp8",
+      "m": 32,
+      "n": 1024,
+      "k": 4096,
+      "cosine": 1.0,
+      "relative_l2": 2.7715326723409817e-05,
+      "max_abs_error": 0.0078125,
+      "different_elements": 2
+    },
+    {
+      "weight": "layers.0.attn.wq_a",
+      "mode": "fp8",
+      "m": 129,
+      "n": 1024,
+      "k": 4096,
+      "cosine": 1.0,
+      "relative_l2": 2.7974872864433564e-05,
+      "max_abs_error": 0.015625,
+      "different_elements": 16
+    },
+    {
+      "weight": "layers.0.attn.wq_a",
+      "mode": "fp8",
+      "m": 259,
+      "n": 1024,
+      "k": 4096,
+      "cosine": 1.0,
+      "relative_l2": 2.1487461708602495e-05,
+      "max_abs_error": 0.015625,
+      "different_elements": 28
+    },
+    {
+      "weight": "layers.0.ffn.experts.0.w1",
+      "mode": "fp4",
+      "m": 1,
+      "n": 2048,
+      "k": 4096,
+      "cosine": 0.9999998807907104,
+      "relative_l2": 0.0,
+      "max_abs_error": 0.0,
+      "different_elements": 0
+    },
+    {
+      "weight": "layers.0.ffn.experts.0.w1",
+      "mode": "fp4",
+      "m": 5,
+      "n": 2048,
+      "k": 4096,
+      "cosine": 1.0,
+      "relative_l2": 0.0,
+      "max_abs_error": 0.0,
+      "different_elements": 0
+    },
+    {
+      "weight": "layers.0.ffn.experts.0.w1",
+      "mode": "fp4",
+      "m": 32,
+      "n": 2048,
+      "k": 4096,
+      "cosine": 1.0,
+      "relative_l2": 0.0,
+      "max_abs_error": 0.0,
+      "different_elements": 0
+    },
+    {
+      "weight": "layers.0.ffn.experts.0.w1",
+      "mode": "fp4",
+      "m": 129,
+      "n": 2048,
+      "k": 4096,
+      "cosine": 1.0000001192092896,
+      "relative_l2": 1.2120126484660432e-06,
+      "max_abs_error": 0.0009765625,
+      "different_elements": 1
+    },
+    {
+      "weight": "layers.0.ffn.experts.0.w1",
+      "mode": "fp4",
+      "m": 259,
+      "n": 2048,
+      "k": 4096,
+      "cosine": 1.0,
+      "relative_l2": 1.0700023267418146e-07,
+      "max_abs_error": 0.0001220703125,
+      "different_elements": 1
+    }
+  ]
+}

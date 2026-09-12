@@ -1,0 +1,121 @@
+ptxas info    : 0 bytes gmem
+ptxas info    : Compiling entry function '_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi8ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill' for 'sm_103a'
+ptxas info    : Function properties for _ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi8ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 58 registers, used 0 barriers
+ptxas info    : Compile time = 29.021 ms
+ptxas info    : Compiling entry function '_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi7ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill' for 'sm_103a'
+ptxas info    : Function properties for _ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi7ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 57 registers, used 0 barriers
+ptxas info    : Compile time = 23.394 ms
+ptxas info    : Compiling entry function '_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi6ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill' for 'sm_103a'
+ptxas info    : Function properties for _ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi6ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 58 registers, used 0 barriers
+ptxas info    : Compile time = 20.169 ms
+ptxas info    : Compiling entry function '_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi5ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill' for 'sm_103a'
+ptxas info    : Function properties for _ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi5ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, used 0 barriers
+ptxas info    : Compile time = 17.485 ms
+ptxas info    : Compiling entry function '_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi4ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill' for 'sm_103a'
+ptxas info    : Function properties for _ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi4ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 58 registers, used 0 barriers
+ptxas info    : Compile time = 14.835 ms
+ptxas info    : Compiling entry function '_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi3ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill' for 'sm_103a'
+ptxas info    : Function properties for _ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi3ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, used 0 barriers
+ptxas info    : Compile time = 11.442 ms
+ptxas info    : Compiling entry function '_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi2ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill' for 'sm_103a'
+ptxas info    : Function properties for _ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi2ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, used 0 barriers
+ptxas info    : Compile time = 8.465 ms
+ptxas info    : Compiling entry function '_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi1ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill' for 'sm_103a'
+ptxas info    : Function properties for _ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi1ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, used 0 barriers
+ptxas info    : Compile time = 5.338 ms
+ptxas info    : Compiling entry function '_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi8ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill' for 'sm_103a'
+ptxas info    : Function properties for _ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi8ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 58 registers, used 0 barriers
+ptxas info    : Compile time = 25.252 ms
+ptxas info    : Compiling entry function '_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi7ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill' for 'sm_103a'
+ptxas info    : Function properties for _ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi7ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 57 registers, used 0 barriers
+ptxas info    : Compile time = 22.800 ms
+ptxas info    : Compiling entry function '_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi6ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill' for 'sm_103a'
+ptxas info    : Function properties for _ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi6ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 58 registers, used 0 barriers
+ptxas info    : Compile time = 19.629 ms
+ptxas info    : Compiling entry function '_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi5ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill' for 'sm_103a'
+ptxas info    : Function properties for _ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi5ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 64 registers, used 0 barriers
+ptxas info    : Compile time = 17.147 ms
+ptxas info    : Compiling entry function '_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi4ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill' for 'sm_103a'
+ptxas info    : Function properties for _ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi4ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 63 registers, used 0 barriers
+ptxas info    : Compile time = 14.713 ms
+ptxas info    : Compiling entry function '_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi3ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill' for 'sm_103a'
+ptxas info    : Function properties for _ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi3ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, used 0 barriers
+ptxas info    : Compile time = 11.279 ms
+ptxas info    : Compiling entry function '_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi2ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill' for 'sm_103a'
+ptxas info    : Function properties for _ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi2ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, used 0 barriers
+ptxas info    : Compile time = 8.360 ms
+ptxas info    : Compiling entry function '_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi1ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill' for 'sm_103a'
+ptxas info    : Function properties for _ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi1ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, used 0 barriers
+ptxas info    : Compile time = 5.345 ms
+ptxas info    : Compiling entry function '_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b8714decode_split_kILi8ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill' for 'sm_103a'
+ptxas info    : Function properties for _ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b8714decode_split_kILi8ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, used 1 barriers, 128 bytes smem
+ptxas info    : Compile time = 25.293 ms
+ptxas info    : Compiling entry function '_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b8714decode_split_kILi7ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill' for 'sm_103a'
+ptxas info    : Function properties for _ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b8714decode_split_kILi7ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, used 1 barriers, 112 bytes smem
+ptxas info    : Compile time = 22.302 ms
+ptxas info    : Compiling entry function '_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b8714decode_split_kILi6ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill' for 'sm_103a'
+ptxas info    : Function properties for _ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b8714decode_split_kILi6ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, used 1 barriers, 96 bytes smem
+ptxas info    : Compile time = 20.047 ms
+ptxas info    : Compiling entry function '_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b8714decode_split_kILi5ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill' for 'sm_103a'
+ptxas info    : Function properties for _ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b8714decode_split_kILi5ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, used 1 barriers, 80 bytes smem
+ptxas info    : Compile time = 16.965 ms
+ptxas info    : Compiling entry function '_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b8714decode_split_kILi4ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill' for 'sm_103a'
+ptxas info    : Function properties for _ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b8714decode_split_kILi4ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, used 1 barriers, 64 bytes smem
+ptxas info    : Compile time = 14.210 ms
+ptxas info    : Compiling entry function '_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b8714decode_split_kILi3ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill' for 'sm_103a'
+ptxas info    : Function properties for _ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b8714decode_split_kILi3ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 50 registers, used 1 barriers, 48 bytes smem
+ptxas info    : Compile time = 12.547 ms
+ptxas info    : Compiling entry function '_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b8714decode_split_kILi2ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill' for 'sm_103a'
+ptxas info    : Function properties for _ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b8714decode_split_kILi2ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, used 1 barriers, 32 bytes smem
+ptxas info    : Compile time = 8.762 ms
+ptxas info    : Compiling entry function '_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b8714decode_split_kILi1ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill' for 'sm_103a'
+ptxas info    : Function properties for _ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b8714decode_split_kILi1ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, used 1 barriers, 16 bytes smem
+ptxas info    : Compile time = 5.861 ms

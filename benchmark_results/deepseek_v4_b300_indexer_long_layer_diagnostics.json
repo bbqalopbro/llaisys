@@ -1,0 +1,367 @@
+{
+  "gpu": "NVIDIA B300 SXM6 AC",
+  "compute_capability": [
+    10,
+    3
+  ],
+  "torch": "2.13.0+cu130",
+  "cuda": "13.0",
+  "backend": "cublas-fp32-gemm+native-quant-decode-attention-hc-router-actquant+native-streaming-compressor+cublas-bf16-indexer+cub-stable-topk",
+  "indexer_tie_policy": "score descending, candidate index ascending",
+  "provenance": {
+    "commit": "05784b4da6483f77821a061e521ea1b98fa271e1",
+    "branch": "feat/vllm-paged-attention",
+    "worktree_dirty": true,
+    "file_sha256": {
+      "/home/lcpu/57682329/workspace/llaisys/tools/deepseek_v4_reference/run_single_gpu.py": "3f566d80f93dea2d7a1f45465ebff6ae051dc07846015afd52797be985601900",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/inference/model.py": "c0c19e6c9fa439bac7fbb1c5bc1868232dfd5aa2f439a548d0e33dcc2a9edd3f",
+      "python/llaisys/libllaisys/libllaisys.so": "466351000af0a265b0313acb0cc1bfebf62e5a478da9ff1e14b1f3b8d572aa51",
+      "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_native.py": "456a6b5d653c7b1c24017ef3f5eebc2c7e89721d651295280c243d0150cf052d"
+    },
+    "command": [
+      "tools/deepseek_v4_reference/run_single_gpu.py",
+      "--source-model",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731",
+      "--converted-model",
+      "/tmp/llaisys-deepseek-v4-flash-mp1",
+      "--cases-file",
+      "test/data/deepseek_v4_indexer_long_case.json",
+      "--max-new-tokens",
+      "1",
+      "--max-seq-len",
+      "3072",
+      "--torch-reference-structural-ops",
+      "--dequantized-pytorch-linear",
+      "--native-structural-library",
+      "python/llaisys/libllaisys/libllaisys.so",
+      "--operator-library-linear",
+      "--native-compressor",
+      "--native-indexer",
+      "--layer-diagnostics",
+      "--output",
+      "benchmark_results/deepseek_v4_b300_indexer_long_layer_diagnostics.json"
+    ]
+  },
+  "measurement": {
+    "kind": "correctness_runner_step_latency_not_serving_ttft_tpot",
+    "batch_size": 1,
+    "concurrency": 1,
+    "cuda_graph": false,
+    "prefix_cache": false,
+    "warmup": "one full prefill and one token replay per case",
+    "timed_repeats": 1,
+    "fallback": false,
+    "weights": "FP8 E4M3 dense, FP4 E2M1 experts, E8M0 scales",
+    "activation_dtype": "BF16 with explicit QAT boundaries"
+  },
+  "source_model": "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731",
+  "converted_model": "/tmp/llaisys-deepseek-v4-flash-mp1",
+  "weight_load_seconds": 32.43173423083499,
+  "cases": [
+    {
+      "prompt": "The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is Paris. The capital of France is",
+      "prompt_tokens": 2105,
+      "accuracy": {
+        "full_prefill_argmax": 11111,
+        "token_replay_argmax": 11111,
+        "argmax_equal": true,
+        "logits_max_abs_error": 8.113855361938477,
+        "logits_mean_abs_error": 1.2610182762145996,
+        "logits_cosine_similarity": 0.974877119064331
+      },
+      "layer_diagnostics": [
+        {
+          "layer": 0,
+          "max_abs_error": 0.00048828125,
+          "mean_abs_error": 5.960509952274151e-08,
+          "cosine_similarity": 0.9999999403953552
+        },
+        {
+          "layer": 1,
+          "max_abs_error": 0.001953125,
+          "mean_abs_error": 0.00010486454993952066,
+          "cosine_similarity": 0.999992311000824
+        },
+        {
+          "layer": 2,
+          "max_abs_error": 0.00390625,
+          "mean_abs_error": 0.0002778528432827443,
+          "cosine_similarity": 0.9999666213989258
+        },
+        {
+          "layer": 3,
+          "max_abs_error": 0.0124969482421875,
+          "mean_abs_error": 0.001744955312460661,
+          "cosine_similarity": 0.9989942312240601
+        },
+        {
+          "layer": 4,
+          "max_abs_error": 0.0123443603515625,
+          "mean_abs_error": 0.0017510878387838602,
+          "cosine_similarity": 0.9991030097007751
+        },
+        {
+          "layer": 5,
+          "max_abs_error": 0.01953125,
+          "mean_abs_error": 0.0027092453092336655,
+          "cosine_similarity": 0.9977266788482666
+        },
+        {
+          "layer": 6,
+          "max_abs_error": 0.0330810546875,
+          "mean_abs_error": 0.0038758416194468737,
+          "cosine_similarity": 0.9945353269577026
+        },
+        {
+          "layer": 7,
+          "max_abs_error": 0.13671875,
+          "mean_abs_error": 0.006378233432769775,
+          "cosine_similarity": 0.9829086065292358
+        },
+        {
+          "layer": 8,
+          "max_abs_error": 0.1494140625,
+          "mean_abs_error": 0.010705513879656792,
+          "cosine_similarity": 0.9467124938964844
+        },
+        {
+          "layer": 9,
+          "max_abs_error": 0.2109375,
+          "mean_abs_error": 0.012158151715993881,
+          "cosine_similarity": 0.9507012963294983
+        },
+        {
+          "layer": 10,
+          "max_abs_error": 0.14501953125,
+          "mean_abs_error": 0.014520615339279175,
+          "cosine_similarity": 0.946695864200592
+        },
+        {
+          "layer": 11,
+          "max_abs_error": 0.2056884765625,
+          "mean_abs_error": 0.020299986004829407,
+          "cosine_similarity": 0.9082171320915222
+        },
+        {
+          "layer": 12,
+          "max_abs_error": 0.583984375,
+          "mean_abs_error": 0.040931157767772675,
+          "cosine_similarity": 0.7493083477020264
+        },
+        {
+          "layer": 13,
+          "max_abs_error": 0.73291015625,
+          "mean_abs_error": 0.05751407891511917,
+          "cosine_similarity": 0.7169785499572754
+        },
+        {
+          "layer": 14,
+          "max_abs_error": 2.07421875,
+          "mean_abs_error": 0.12028218805789948,
+          "cosine_similarity": 0.4811980128288269
+        },
+        {
+          "layer": 15,
+          "max_abs_error": 1.904296875,
+          "mean_abs_error": 0.13331493735313416,
+          "cosine_similarity": 0.5236530303955078
+        },
+        {
+          "layer": 16,
+          "max_abs_error": 2.5,
+          "mean_abs_error": 0.18265916407108307,
+          "cosine_similarity": 0.472084641456604
+        },
+        {
+          "layer": 17,
+          "max_abs_error": 3.5,
+          "mean_abs_error": 0.21562673151493073,
+          "cosine_similarity": 0.4998685121536255
+        },
+        {
+          "layer": 18,
+          "max_abs_error": 5.6953125,
+          "mean_abs_error": 0.32191193103790283,
+          "cosine_similarity": 0.4836796522140503
+        },
+        {
+          "layer": 19,
+          "max_abs_error": 5.234375,
+          "mean_abs_error": 0.3144632577896118,
+          "cosine_similarity": 0.6042187809944153
+        },
+        {
+          "layer": 20,
+          "max_abs_error": 5.796875,
+          "mean_abs_error": 0.4092257022857666,
+          "cosine_similarity": 0.6091586351394653
+        },
+        {
+          "layer": 21,
+          "max_abs_error": 6.125476837158203,
+          "mean_abs_error": 0.4448917806148529,
+          "cosine_similarity": 0.6259967088699341
+        },
+        {
+          "layer": 22,
+          "max_abs_error": 6.4375,
+          "mean_abs_error": 0.5665355920791626,
+          "cosine_similarity": 0.6043483018875122
+        },
+        {
+          "layer": 23,
+          "max_abs_error": 6.0859375,
+          "mean_abs_error": 0.6077615022659302,
+          "cosine_similarity": 0.5706543922424316
+        },
+        {
+          "layer": 24,
+          "max_abs_error": 5.8671875,
+          "mean_abs_error": 0.7994877696037292,
+          "cosine_similarity": 0.6077231168746948
+        },
+        {
+          "layer": 25,
+          "max_abs_error": 6.609375,
+          "mean_abs_error": 0.8572223782539368,
+          "cosine_similarity": 0.6301109194755554
+        },
+        {
+          "layer": 26,
+          "max_abs_error": 6.125,
+          "mean_abs_error": 0.9117634296417236,
+          "cosine_similarity": 0.5975474119186401
+        },
+        {
+          "layer": 27,
+          "max_abs_error": 5.796875,
+          "mean_abs_error": 0.9004296064376831,
+          "cosine_similarity": 0.6441752910614014
+        },
+        {
+          "layer": 28,
+          "max_abs_error": 21.1875,
+          "mean_abs_error": 0.9570918083190918,
+          "cosine_similarity": 0.6632622480392456
+        },
+        {
+          "layer": 29,
+          "max_abs_error": 24.9921875,
+          "mean_abs_error": 1.0101234912872314,
+          "cosine_similarity": 0.6368110179901123
+        },
+        {
+          "layer": 30,
+          "max_abs_error": 24.34375,
+          "mean_abs_error": 1.073994755744934,
+          "cosine_similarity": 0.6216577291488647
+        },
+        {
+          "layer": 31,
+          "max_abs_error": 27.796875,
+          "mean_abs_error": 1.189971923828125,
+          "cosine_similarity": 0.5687385201454163
+        },
+        {
+          "layer": 32,
+          "max_abs_error": 22.78125,
+          "mean_abs_error": 1.1956346035003662,
+          "cosine_similarity": 0.5749104619026184
+        },
+        {
+          "layer": 33,
+          "max_abs_error": 17.75,
+          "mean_abs_error": 1.2518247365951538,
+          "cosine_similarity": 0.6317521333694458
+        },
+        {
+          "layer": 34,
+          "max_abs_error": 16.625,
+          "mean_abs_error": 1.363592267036438,
+          "cosine_similarity": 0.5991779565811157
+        },
+        {
+          "layer": 35,
+          "max_abs_error": 16.0,
+          "mean_abs_error": 1.3544528484344482,
+          "cosine_similarity": 0.5919476747512817
+        },
+        {
+          "layer": 36,
+          "max_abs_error": 17.109375,
+          "mean_abs_error": 1.5535223484039307,
+          "cosine_similarity": 0.7254058122634888
+        },
+        {
+          "layer": 37,
+          "max_abs_error": 19.5,
+          "mean_abs_error": 1.6213264465332031,
+          "cosine_similarity": 0.7237456440925598
+        },
+        {
+          "layer": 38,
+          "max_abs_error": 37.5625,
+          "mean_abs_error": 1.7773171663284302,
+          "cosine_similarity": 0.7191102504730225
+        },
+        {
+          "layer": 39,
+          "max_abs_error": 36.1875,
+          "mean_abs_error": 1.82073175907135,
+          "cosine_similarity": 0.7538469433784485
+        },
+        {
+          "layer": 40,
+          "max_abs_error": 33.625,
+          "mean_abs_error": 1.8037176132202148,
+          "cosine_similarity": 0.7968790531158447
+        },
+        {
+          "layer": 41,
+          "max_abs_error": 31.125,
+          "mean_abs_error": 1.7625678777694702,
+          "cosine_similarity": 0.8307139873504639
+        },
+        {
+          "layer": 42,
+          "max_abs_error": 33.0,
+          "mean_abs_error": 1.7719746828079224,
+          "cosine_similarity": 0.8645619750022888
+        }
+      ],
+      "generated_ids": [
+        11111
+      ],
+      "generated_text": " Paris",
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 2105,
+          "next_token": 11111,
+          "max_logit": 38.10352325439453,
+          "latency_ms": 33031.42279712483
+        }
+      ],
+      "expected_contains": "Paris",
+      "expected_match": true
+    }
+  ],
+  "all_argmax_equal": true,
+  "all_expected_match": true,
+  "all_compressor_comparisons_pass": null,
+  "all_indexer_comparisons_pass": null,
+  "peak_memory_bytes": 171298495488,
+  "native_operation_counts": {
+    "sparse_attention": 90601,
+    "hyperconnection": 181202,
+    "sqrt_softplus_router": 84280,
+    "activation_quant": 2500076,
+    "fp8_linear": 0,
+    "fp4_linear": 0,
+    "fp8_cublas_linear": 678454,
+    "fp4_cublas_linear": 1664238,
+    "compress_projected": 130634,
+    "indexer_scores_cublas": 44184,
+    "indexer_topk_cub": 44184
+  }
+}

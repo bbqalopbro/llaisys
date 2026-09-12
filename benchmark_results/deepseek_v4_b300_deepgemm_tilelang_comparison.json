@@ -1,0 +1,526 @@
+{
+  "gpu": "NVIDIA B300 SXM6 AC",
+  "compute_capability": [
+    10,
+    3
+  ],
+  "torch": "2.13.0+cu130",
+  "cuda": "13.0",
+  "backend": "published-tilelang+deepgemm-w8a8-w4a8",
+  "operator_backends": {
+    "act_quant": {
+      "backend": "tilelang",
+      "version": "0.1.8",
+      "contract": {
+        "revision": 1,
+        "inputs": "BF16 [...,K]; block=128; FP32/UE8M0 scales",
+        "outputs": "FP8 [...,K], scale [...,K/128] or BF16 QDQ",
+        "mutation": "x only when inplace=True"
+      },
+      "calls": 58411,
+      "failures": 0,
+      "fallback": false
+    },
+    "fp4_act_quant": {
+      "backend": "tilelang",
+      "version": "0.1.8",
+      "contract": {
+        "revision": 1,
+        "inputs": "BF16 [...,K]; block=32; UE8M0 scales",
+        "outputs": "packed E2M1 [...,K/2], scale [...,K/32] or BF16 QDQ",
+        "mutation": "x only when inplace=True"
+      },
+      "calls": 1071,
+      "failures": 0,
+      "fallback": false
+    },
+    "fp8_gemm": {
+      "backend": "deepgemm",
+      "version": "2.6.1",
+      "contract": {
+        "revision": 1,
+        "inputs": "FP8 A[...,K], B[N,K]; scales A[...,K/128], B[ceil(N/128),K/128]",
+        "outputs": "BF16 [...,N]; FP32 accumulation; no activation requantization",
+        "mutation": "none"
+      },
+      "calls": 12236,
+      "failures": 0,
+      "fallback": false
+    },
+    "fp4_gemm": {
+      "backend": "deepgemm",
+      "version": "2.6.1",
+      "contract": {
+        "revision": 1,
+        "inputs": "FP8 A[...,K], packed E2M1 B[N,K/2]; scales A[...,K/128], B[N,K/32]",
+        "outputs": "BF16 [...,N]; FP32 accumulation; W4A8, not W4A4",
+        "mutation": "none"
+      },
+      "calls": 44268,
+      "failures": 0,
+      "fallback": false
+    },
+    "sparse_attn": {
+      "backend": "tilelang",
+      "version": "0.1.8",
+      "contract": {
+        "revision": 1,
+        "inputs": "BF16 Q[B,S,H,D], latent[B,L,D]; FP32 sink[H]; int32 indices[B,S,T], -1=invalid",
+        "outputs": "BF16 [B,S,H,D]; indexed attention with sink in softmax denominator",
+        "mutation": "none"
+      },
+      "calls": 1634,
+      "failures": 0,
+      "fallback": false
+    },
+    "hc_split_sinkhorn": {
+      "backend": "tilelang",
+      "version": "0.1.8",
+      "contract": {
+        "revision": 1,
+        "inputs": "FP32 mixes[B,S,(2+HC)*HC], scale[3], base[(2+HC)*HC]",
+        "outputs": "FP32 pre[B,S,HC], post[B,S,HC], combine[B,S,HC,HC]",
+        "mutation": "none"
+      },
+      "calls": 3268,
+      "failures": 0,
+      "fallback": false
+    }
+  },
+  "hadamard": {
+    "backend": "cuda",
+    "calls": 1071,
+    "fallback": false,
+    "extension": "/home/lcpu/57682329/.local/deepseek-v4-hadamard/fast_hadamard_transform_cuda.so"
+  },
+  "tilelang": "0.1.8",
+  "tvm_ffi": "0.1.8.post2",
+  "indexer_tie_policy": "published torch.topk",
+  "provenance": {
+    "commit": "05784b4da6483f77821a061e521ea1b98fa271e1",
+    "branch": "feat/vllm-paged-attention",
+    "worktree_dirty": true,
+    "file_sha256": {
+      "/home/lcpu/57682329/workspace/llaisys/tools/deepseek_v4_reference/run_single_gpu.py": "4e0a831fa717a4b5a1e48622ce04774b6297c25e66a91b3ee19b19cab2df0f14",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/inference/model.py": "c0c19e6c9fa439bac7fbb1c5bc1868232dfd5aa2f439a548d0e33dcc2a9edd3f",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/inference/kernel.py": "59b325083d7103975cba025bd0d60ea343bb82d8fff53088afb7c04bd380c0c2",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731/inference/config.json": "c90861f3d10a9e4ef5954f8f1a34c529d480da1c5799f84660028f4e38e14e71",
+      "/home/lcpu/57682329/workspace/llaisys/tools/deepseek_v4_reference/fast_hadamard_transform.py": "89e8c4002ed50b34283506f544e1a53d94aa5611eaa32b3231639ef46c1bf1da",
+      "/home/lcpu/57682329/workspace/llaisys/python/llaisys/models/deepseek_v4_backends.py": "6d569ddc934588e82dd8e07bdab26f502e36bb2f1509b90f13645bcd24392f2b",
+      "/home/lcpu/57682329/.local/deepseek-v4-hadamard/fast_hadamard_transform_cuda.so": "854f75c763ce3a9698b4e31dde765490ecc57d31a7bf87c074bf99378937ad88"
+    },
+    "command": [
+      "tools/deepseek_v4_reference/run_single_gpu.py",
+      "--source-model",
+      "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731",
+      "--converted-model",
+      "/tmp/llaisys-deepseek-v4-flash-mp1",
+      "--cases-file",
+      "test/data/deepseek_v4_accuracy_cases.json",
+      "--max-new-tokens",
+      "4",
+      "--max-seq-len",
+      "512",
+      "--gemm-backend",
+      "deepgemm",
+      "--hadamard-backend",
+      "cuda",
+      "--compare-logits-dir",
+      "benchmark_results/deepseek_v4_tilelang_golden",
+      "--output",
+      "benchmark_results/deepseek_v4_b300_deepgemm_tilelang_comparison.json"
+    ]
+  },
+  "measurement": {
+    "kind": "correctness_runner_step_latency_not_serving_ttft_tpot",
+    "batch_size": 1,
+    "concurrency": 1,
+    "cuda_graph": false,
+    "prefix_cache": false,
+    "warmup": "one full prefill and one token replay per case",
+    "timed_repeats": 1,
+    "fallback": false,
+    "weights": "FP8 E4M3 dense, FP4 E2M1 experts, E8M0 scales",
+    "activation_dtype": "BF16 with explicit QAT boundaries"
+  },
+  "source_model": "/home/lcpu/models/deepseek-ai/DeepSeek-V4-Flash-0731",
+  "converted_model": "/tmp/llaisys-deepseek-v4-flash-mp1",
+  "weight_load_seconds": 41.01449131779373,
+  "cases": [
+    {
+      "prompt": "The capital of France is",
+      "prompt_tokens": 5,
+      "accuracy": {
+        "full_prefill_argmax": 11111,
+        "token_replay_argmax": 11111,
+        "argmax_equal": true,
+        "logits_max_abs_error": 1.59675931930542,
+        "logits_mean_abs_error": 0.22269946336746216,
+        "logits_cosine_similarity": 0.9988132119178772
+      },
+      "layer_diagnostics": null,
+      "generated_ids": [
+        11111,
+        16,
+        455,
+        6102
+      ],
+      "generated_text": " Paris. The capital",
+      "teacher_forced_ids": [
+        11111,
+        16,
+        455,
+        6102
+      ],
+      "golden_comparison": [
+        {
+          "step": 0,
+          "phase": "prefill",
+          "argmax_equal": true,
+          "max_abs_error": 1.4091238975524902,
+          "relative_l2": 0.04942339286208153,
+          "cosine_similarity": 0.9987809658050537
+        },
+        {
+          "step": 1,
+          "phase": "decode",
+          "argmax_equal": true,
+          "max_abs_error": 1.2897396087646484,
+          "relative_l2": 0.05892308056354523,
+          "cosine_similarity": 0.9982803463935852
+        },
+        {
+          "step": 2,
+          "phase": "decode",
+          "argmax_equal": true,
+          "max_abs_error": 1.4358294010162354,
+          "relative_l2": 0.05743345618247986,
+          "cosine_similarity": 0.9983705282211304
+        },
+        {
+          "step": 3,
+          "phase": "decode",
+          "argmax_equal": true,
+          "max_abs_error": 1.569380760192871,
+          "relative_l2": 0.04878033697605133,
+          "cosine_similarity": 0.9988097548484802
+        }
+      ],
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 5,
+          "next_token": 11111,
+          "max_logit": 24.72475242614746,
+          "latency_ms": 520.1021628454328
+        },
+        {
+          "start_pos": 5,
+          "input_tokens": 1,
+          "next_token": 16,
+          "max_logit": 23.101886749267578,
+          "latency_ms": 219.67876283451915
+        },
+        {
+          "start_pos": 6,
+          "input_tokens": 1,
+          "next_token": 455,
+          "max_logit": 22.812528610229492,
+          "latency_ms": 216.89802827313542
+        },
+        {
+          "start_pos": 7,
+          "input_tokens": 1,
+          "next_token": 6102,
+          "max_logit": 24.547082901000977,
+          "latency_ms": 227.10725897923112
+        }
+      ],
+      "expected_contains": "Paris",
+      "expected_match": true
+    },
+    {
+      "prompt": "1 + 1 =",
+      "prompt_tokens": 5,
+      "accuracy": {
+        "full_prefill_argmax": 223,
+        "token_replay_argmax": 223,
+        "argmax_equal": true,
+        "logits_max_abs_error": 0.836054801940918,
+        "logits_mean_abs_error": 0.17010824382305145,
+        "logits_cosine_similarity": 0.999321460723877
+      },
+      "layer_diagnostics": null,
+      "generated_ids": [
+        223,
+        20,
+        201,
+        361
+      ],
+      "generated_text": " 2\n   ",
+      "teacher_forced_ids": [
+        223,
+        20,
+        201,
+        361
+      ],
+      "golden_comparison": [
+        {
+          "step": 0,
+          "phase": "prefill",
+          "argmax_equal": true,
+          "max_abs_error": 0.7722368240356445,
+          "relative_l2": 0.027192236855626106,
+          "cosine_similarity": 0.9996417164802551
+        },
+        {
+          "step": 1,
+          "phase": "decode",
+          "argmax_equal": true,
+          "max_abs_error": 0.8326992392539978,
+          "relative_l2": 0.05593289062380791,
+          "cosine_similarity": 0.9984471201896667
+        },
+        {
+          "step": 2,
+          "phase": "decode",
+          "argmax_equal": true,
+          "max_abs_error": 1.2159061431884766,
+          "relative_l2": 0.04533352330327034,
+          "cosine_similarity": 0.9989736080169678
+        },
+        {
+          "step": 3,
+          "phase": "decode",
+          "argmax_equal": true,
+          "max_abs_error": 0.8098001480102539,
+          "relative_l2": 0.03850867599248886,
+          "cosine_similarity": 0.9992971420288086
+        }
+      ],
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 5,
+          "next_token": 223,
+          "max_logit": 23.377256393432617,
+          "latency_ms": 505.97276678308845
+        },
+        {
+          "start_pos": 5,
+          "input_tokens": 1,
+          "next_token": 20,
+          "max_logit": 23.17390251159668,
+          "latency_ms": 217.42933196946979
+        },
+        {
+          "start_pos": 6,
+          "input_tokens": 1,
+          "next_token": 201,
+          "max_logit": 19.07895851135254,
+          "latency_ms": 217.2703631222248
+        },
+        {
+          "start_pos": 7,
+          "input_tokens": 1,
+          "next_token": 361,
+          "max_logit": 18.548646926879883,
+          "latency_ms": 225.57308292016387
+        }
+      ],
+      "expected_contains": "2",
+      "expected_match": true
+    },
+    {
+      "prompt": "The opposite of hot is",
+      "prompt_tokens": 5,
+      "accuracy": {
+        "full_prefill_argmax": 8147,
+        "token_replay_argmax": 8147,
+        "argmax_equal": true,
+        "logits_max_abs_error": 1.5376520156860352,
+        "logits_mean_abs_error": 0.23620545864105225,
+        "logits_cosine_similarity": 0.9983083009719849
+      },
+      "layer_diagnostics": null,
+      "generated_ids": [
+        8147,
+        16,
+        455,
+        12236
+      ],
+      "generated_text": " cold. The opposite",
+      "teacher_forced_ids": [
+        8147,
+        16,
+        455,
+        12236
+      ],
+      "golden_comparison": [
+        {
+          "step": 0,
+          "phase": "prefill",
+          "argmax_equal": true,
+          "max_abs_error": 1.3389482498168945,
+          "relative_l2": 0.05211539939045906,
+          "cosine_similarity": 0.9986969828605652
+        },
+        {
+          "step": 1,
+          "phase": "decode",
+          "argmax_equal": true,
+          "max_abs_error": 1.3576796054840088,
+          "relative_l2": 0.08155415952205658,
+          "cosine_similarity": 0.9968757629394531
+        },
+        {
+          "step": 2,
+          "phase": "decode",
+          "argmax_equal": true,
+          "max_abs_error": 1.8206653594970703,
+          "relative_l2": 0.07391434907913208,
+          "cosine_similarity": 0.9972972869873047
+        },
+        {
+          "step": 3,
+          "phase": "decode",
+          "argmax_equal": true,
+          "max_abs_error": 1.1222820281982422,
+          "relative_l2": 0.03773070499300957,
+          "cosine_similarity": 0.9993020296096802
+        }
+      ],
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 5,
+          "next_token": 8147,
+          "max_logit": 23.9578857421875,
+          "latency_ms": 561.8529878556728
+        },
+        {
+          "start_pos": 5,
+          "input_tokens": 1,
+          "next_token": 16,
+          "max_logit": 22.73441505432129,
+          "latency_ms": 217.66651095822453
+        },
+        {
+          "start_pos": 6,
+          "input_tokens": 1,
+          "next_token": 455,
+          "max_logit": 19.525312423706055,
+          "latency_ms": 216.5777855552733
+        },
+        {
+          "start_pos": 7,
+          "input_tokens": 1,
+          "next_token": 12236,
+          "max_logit": 23.759899139404297,
+          "latency_ms": 225.94082122668624
+        }
+      ],
+      "expected_contains": "cold",
+      "expected_match": true
+    },
+    {
+      "prompt": "中国的首都是",
+      "prompt_tokens": 3,
+      "accuracy": {
+        "full_prefill_argmax": 6127,
+        "token_replay_argmax": 6127,
+        "argmax_equal": true,
+        "logits_max_abs_error": 1.5299444198608398,
+        "logits_mean_abs_error": 0.2612469494342804,
+        "logits_cosine_similarity": 0.9974921941757202
+      },
+      "layer_diagnostics": null,
+      "generated_ids": [
+        6127,
+        303,
+        867,
+        6127
+      ],
+      "generated_text": "北京，而北京",
+      "teacher_forced_ids": [
+        6127,
+        303,
+        867,
+        6127
+      ],
+      "golden_comparison": [
+        {
+          "step": 0,
+          "phase": "prefill",
+          "argmax_equal": true,
+          "max_abs_error": 1.1791107654571533,
+          "relative_l2": 0.06188087537884712,
+          "cosine_similarity": 0.9982605576515198
+        },
+        {
+          "step": 1,
+          "phase": "decode",
+          "argmax_equal": true,
+          "max_abs_error": 1.3214187622070312,
+          "relative_l2": 0.07382690161466599,
+          "cosine_similarity": 0.9973822236061096
+        },
+        {
+          "step": 2,
+          "phase": "decode",
+          "argmax_equal": true,
+          "max_abs_error": 1.539730429649353,
+          "relative_l2": 0.06197725608944893,
+          "cosine_similarity": 0.9981126189231873
+        },
+        {
+          "step": 3,
+          "phase": "decode",
+          "argmax_equal": true,
+          "max_abs_error": 1.048696517944336,
+          "relative_l2": 0.05342458561062813,
+          "cosine_similarity": 0.9986411333084106
+        }
+      ],
+      "steps": [
+        {
+          "start_pos": 0,
+          "input_tokens": 3,
+          "next_token": 6127,
+          "max_logit": 20.35865592956543,
+          "latency_ms": 402.28765830397606
+        },
+        {
+          "start_pos": 3,
+          "input_tokens": 1,
+          "next_token": 303,
+          "max_logit": 21.352642059326172,
+          "latency_ms": 227.0187959074974
+        },
+        {
+          "start_pos": 4,
+          "input_tokens": 1,
+          "next_token": 867,
+          "max_logit": 16.881244659423828,
+          "latency_ms": 216.55829390510917
+        },
+        {
+          "start_pos": 5,
+          "input_tokens": 1,
+          "next_token": 6127,
+          "max_logit": 16.342538833618164,
+          "latency_ms": 217.0503130182624
+        }
+      ],
+      "expected_contains": "北京",
+      "expected_match": true
+    }
+  ],
+  "all_argmax_equal": true,
+  "all_expected_match": true,
+  "all_golden_comparisons_pass": false,
+  "all_compressor_comparisons_pass": null,
+  "all_indexer_comparisons_pass": null,
+  "peak_memory_bytes": 170291946496,
+  "native_operation_counts": null
+}

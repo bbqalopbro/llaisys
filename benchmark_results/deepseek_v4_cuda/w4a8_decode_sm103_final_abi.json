@@ -1,0 +1,479 @@
+{
+  "all_passed": true,
+  "scope": "host ABI argument rejection and optional compiler resource audit",
+  "gpu_execution": false,
+  "positive_shape_launches": 0,
+  "source_sha256": {
+    "/home/lcpu/57682329/workspace/llaisys/src/ops/deepseek_v4/nvidia/w4a8_decode_sm103.cu": "24236330188c6bd85a79fe264b995a63dcab921e9a340047c2abe6ca1e4d456e",
+    "/home/lcpu/57682329/workspace/llaisys/src/ops/deepseek_v4/nvidia/w4a8_decode_sm103.h": "9a7beec1cc5697bdd13f210555aff4345b2de3f261f7930396f98a84d89d5688",
+    "/home/lcpu/57682329/workspace/llaisys/tools/deepseek_v4_cuda/test_w4a8_abi.py": "234da6a80f4ce7d3185906c974dc6a4b5e386952c532b831af77b365166f3608"
+  },
+  "command": [
+    "tools/deepseek_v4_cuda/test_w4a8_abi.py",
+    "--compile",
+    "--nvcc",
+    "/usr/local/cuda/bin/nvcc",
+    "--library",
+    "build/standalone_cuda/libw4a8_decode_sm103_final.so",
+    "--output",
+    "benchmark_results/deepseek_v4_cuda/w4a8_decode_sm103_final_abi.json",
+    "--resource-log",
+    "benchmark_results/deepseek_v4_cuda/w4a8_decode_sm103_final_compile.log"
+  ],
+  "started_utc": "2026-09-12T06:19:10Z",
+  "compilation": {
+    "command": [
+      "/usr/local/cuda/bin/nvcc",
+      "-O3",
+      "-std=c++17",
+      "-arch=sm_103a",
+      "-DLLAISYS_B300_STANDALONE",
+      "--shared",
+      "-Xcompiler=-fPIC",
+      "-lineinfo",
+      "--ptxas-options=-v",
+      "/home/lcpu/57682329/workspace/llaisys/src/ops/deepseek_v4/nvidia/w4a8_decode_sm103.cu",
+      "-o",
+      "/home/lcpu/57682329/workspace/llaisys/build/standalone_cuda/libw4a8_decode_sm103_final.so"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 3.64959718612954,
+    "nvcc_version": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Wed_Aug_20_01:58:59_PM_PDT_2025\nCuda compilation tools, release 13.0, V13.0.88\nBuild cuda_13.0.r13.0/compiler.36424714_0\n",
+    "resource_log": "/home/lcpu/57682329/workspace/llaisys/benchmark_results/deepseek_v4_cuda/w4a8_decode_sm103_final_compile.log",
+    "resource_log_sha256": "c1621e1c66a3350604e377f4806911c888a454db704865022f0621579d9449da",
+    "kernels": [
+      {
+        "symbol": "_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi8ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+        "architecture": "sm_103a",
+        "m": 8,
+        "warps": 4,
+        "split_k": false,
+        "stack_bytes": 0,
+        "spill_store_bytes": 0,
+        "spill_load_bytes": 0,
+        "registers": 58,
+        "barriers": 0
+      },
+      {
+        "symbol": "_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi7ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+        "architecture": "sm_103a",
+        "m": 7,
+        "warps": 4,
+        "split_k": false,
+        "stack_bytes": 0,
+        "spill_store_bytes": 0,
+        "spill_load_bytes": 0,
+        "registers": 57,
+        "barriers": 0
+      },
+      {
+        "symbol": "_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi6ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+        "architecture": "sm_103a",
+        "m": 6,
+        "warps": 4,
+        "split_k": false,
+        "stack_bytes": 0,
+        "spill_store_bytes": 0,
+        "spill_load_bytes": 0,
+        "registers": 58,
+        "barriers": 0
+      },
+      {
+        "symbol": "_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi5ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+        "architecture": "sm_103a",
+        "m": 5,
+        "warps": 4,
+        "split_k": false,
+        "stack_bytes": 0,
+        "spill_store_bytes": 0,
+        "spill_load_bytes": 0,
+        "registers": 56,
+        "barriers": 0
+      },
+      {
+        "symbol": "_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi4ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+        "architecture": "sm_103a",
+        "m": 4,
+        "warps": 4,
+        "split_k": false,
+        "stack_bytes": 0,
+        "spill_store_bytes": 0,
+        "spill_load_bytes": 0,
+        "registers": 58,
+        "barriers": 0
+      },
+      {
+        "symbol": "_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi3ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+        "architecture": "sm_103a",
+        "m": 3,
+        "warps": 4,
+        "split_k": false,
+        "stack_bytes": 0,
+        "spill_store_bytes": 0,
+        "spill_load_bytes": 0,
+        "registers": 48,
+        "barriers": 0
+      },
+      {
+        "symbol": "_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi2ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+        "architecture": "sm_103a",
+        "m": 2,
+        "warps": 4,
+        "split_k": false,
+        "stack_bytes": 0,
+        "spill_store_bytes": 0,
+        "spill_load_bytes": 0,
+        "registers": 48,
+        "barriers": 0
+      },
+      {
+        "symbol": "_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi1ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+        "architecture": "sm_103a",
+        "m": 1,
+        "warps": 4,
+        "split_k": false,
+        "stack_bytes": 0,
+        "spill_store_bytes": 0,
+        "spill_load_bytes": 0,
+        "registers": 32,
+        "barriers": 0
+      },
+      {
+        "symbol": "_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi8ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+        "architecture": "sm_103a",
+        "m": 8,
+        "warps": 8,
+        "split_k": false,
+        "stack_bytes": 0,
+        "spill_store_bytes": 0,
+        "spill_load_bytes": 0,
+        "registers": 58,
+        "barriers": 0
+      },
+      {
+        "symbol": "_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi7ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+        "architecture": "sm_103a",
+        "m": 7,
+        "warps": 8,
+        "split_k": false,
+        "stack_bytes": 0,
+        "spill_store_bytes": 0,
+        "spill_load_bytes": 0,
+        "registers": 57,
+        "barriers": 0
+      },
+      {
+        "symbol": "_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi6ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+        "architecture": "sm_103a",
+        "m": 6,
+        "warps": 8,
+        "split_k": false,
+        "stack_bytes": 0,
+        "spill_store_bytes": 0,
+        "spill_load_bytes": 0,
+        "registers": 58,
+        "barriers": 0
+      },
+      {
+        "symbol": "_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi5ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+        "architecture": "sm_103a",
+        "m": 5,
+        "warps": 8,
+        "split_k": false,
+        "stack_bytes": 0,
+        "spill_store_bytes": 0,
+        "spill_load_bytes": 0,
+        "registers": 64,
+        "barriers": 0
+      },
+      {
+        "symbol": "_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi4ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+        "architecture": "sm_103a",
+        "m": 4,
+        "warps": 8,
+        "split_k": false,
+        "stack_bytes": 0,
+        "spill_store_bytes": 0,
+        "spill_load_bytes": 0,
+        "registers": 63,
+        "barriers": 0
+      },
+      {
+        "symbol": "_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi3ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+        "architecture": "sm_103a",
+        "m": 3,
+        "warps": 8,
+        "split_k": false,
+        "stack_bytes": 0,
+        "spill_store_bytes": 0,
+        "spill_load_bytes": 0,
+        "registers": 48,
+        "barriers": 0
+      },
+      {
+        "symbol": "_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi2ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+        "architecture": "sm_103a",
+        "m": 2,
+        "warps": 8,
+        "split_k": false,
+        "stack_bytes": 0,
+        "spill_store_bytes": 0,
+        "spill_load_bytes": 0,
+        "registers": 48,
+        "barriers": 0
+      },
+      {
+        "symbol": "_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b876decodeILi1ELi8EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+        "architecture": "sm_103a",
+        "m": 1,
+        "warps": 8,
+        "split_k": false,
+        "stack_bytes": 0,
+        "spill_store_bytes": 0,
+        "spill_load_bytes": 0,
+        "registers": 32,
+        "barriers": 0
+      },
+      {
+        "symbol": "_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b8714decode_split_kILi8ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+        "architecture": "sm_103a",
+        "m": 8,
+        "warps": 4,
+        "split_k": true,
+        "stack_bytes": 0,
+        "spill_store_bytes": 0,
+        "spill_load_bytes": 0,
+        "registers": 56,
+        "barriers": 1
+      },
+      {
+        "symbol": "_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b8714decode_split_kILi7ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+        "architecture": "sm_103a",
+        "m": 7,
+        "warps": 4,
+        "split_k": true,
+        "stack_bytes": 0,
+        "spill_store_bytes": 0,
+        "spill_load_bytes": 0,
+        "registers": 56,
+        "barriers": 1
+      },
+      {
+        "symbol": "_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b8714decode_split_kILi6ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+        "architecture": "sm_103a",
+        "m": 6,
+        "warps": 4,
+        "split_k": true,
+        "stack_bytes": 0,
+        "spill_store_bytes": 0,
+        "spill_load_bytes": 0,
+        "registers": 56,
+        "barriers": 1
+      },
+      {
+        "symbol": "_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b8714decode_split_kILi5ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+        "architecture": "sm_103a",
+        "m": 5,
+        "warps": 4,
+        "split_k": true,
+        "stack_bytes": 0,
+        "spill_store_bytes": 0,
+        "spill_load_bytes": 0,
+        "registers": 56,
+        "barriers": 1
+      },
+      {
+        "symbol": "_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b8714decode_split_kILi4ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+        "architecture": "sm_103a",
+        "m": 4,
+        "warps": 4,
+        "split_k": true,
+        "stack_bytes": 0,
+        "spill_store_bytes": 0,
+        "spill_load_bytes": 0,
+        "registers": 56,
+        "barriers": 1
+      },
+      {
+        "symbol": "_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b8714decode_split_kILi3ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+        "architecture": "sm_103a",
+        "m": 3,
+        "warps": 4,
+        "split_k": true,
+        "stack_bytes": 0,
+        "spill_store_bytes": 0,
+        "spill_load_bytes": 0,
+        "registers": 50,
+        "barriers": 1
+      },
+      {
+        "symbol": "_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b8714decode_split_kILi2ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+        "architecture": "sm_103a",
+        "m": 2,
+        "warps": 4,
+        "split_k": true,
+        "stack_bytes": 0,
+        "spill_store_bytes": 0,
+        "spill_load_bytes": 0,
+        "registers": 48,
+        "barriers": 1
+      },
+      {
+        "symbol": "_ZN53_GLOBAL__N__44cc059b_20_w4a8_decode_sm103_cu_e7867b8714decode_split_kILi1ELi4EEEvPKhS2_S2_S2_P13__nv_bfloat16iill",
+        "architecture": "sm_103a",
+        "m": 1,
+        "warps": 4,
+        "split_k": true,
+        "stack_bytes": 0,
+        "spill_store_bytes": 0,
+        "spill_load_bytes": 0,
+        "registers": 32,
+        "barriers": 1
+      }
+    ],
+    "all_24_specializations_zero_stack_and_spills": true
+  },
+  "library": "/home/lcpu/57682329/workspace/llaisys/build/standalone_cuda/libw4a8_decode_sm103_final.so",
+  "library_sha256": "29cddd675c940e49ab32183dee0956bb6714754c1609ce140fcfadcb4c33e7f0",
+  "version": "llaisys-w4a8-sm103-experimental-v2",
+  "abi_cases": [
+    {
+      "name": "null_activation",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "zero_rows",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "rows_above_decode_limit",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "zero_output_columns",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "columns_above_supported_limit",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "incomplete_quantization_group",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "k_above_supported_limit",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "unaligned_activation_row_stride",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "overlapping_activation_rows",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "short_scale_row_stride",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "negative_scale_row_stride",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "unknown_variant",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "negative_variant",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "output_aliases_activation",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "output_aliases_activation_scale",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "output_aliases_weight",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "output_aliases_weight_scale",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "activation_stride_address_overflow",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "scale_stride_address_overflow",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "unaligned_activation_address",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "unaligned_weight_address",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    },
+    {
+      "name": "unaligned_output_address",
+      "cuda_error": 1,
+      "expected_cuda_error": 1,
+      "passed": true
+    }
+  ],
+  "packed_half_product_exactness": {
+    "finite_input_pairs": 4064,
+    "passed": true,
+    "failures": [],
+    "scope": "finite unscaled products only; all accumulation remains FP32"
+  }
+}
