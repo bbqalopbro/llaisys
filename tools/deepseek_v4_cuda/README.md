@@ -1,5 +1,8 @@
 # B300 独立 GEMM 实验
 
+最新状态见[精度/计时复核与暂停交接](../../项目文档/B300_GEMM_RECHECK_PAUSED_2026-09-12.md)。
+`probe_fp8_model.py` 是尚缺缓存包装层的 WIP 草稿，不能运行，也未通过整模型验证。
+
 本目录提供 DeepSeek-V4-Flash-0731 的两条实验路径：
 
 - [W4A8 小 M CUDA 修正版](../../项目文档/B300_W4A8_ORDERED_2026-09-12.md)：
