@@ -13,12 +13,6 @@ option("nv-gpu")
     set_description("Whether to compile implementations for Nvidia GPU")
 option_end()
 
-option("cuda-arch")
-    set_default("sm_80")
-    set_showmenu(true)
-    set_description("CUDA architecture passed to nvcc (for example sm_80)")
-option_end()
-
 option("dist-nccl")
     set_default(false)
     set_showmenu(true)
@@ -32,9 +26,9 @@ option("dist-mpi")
 option_end()
 
 option("flashinfer")
-    set_default(true)
+    set_default(false)
     set_showmenu(true)
-    set_description("Enable vendored FlashInfer paged prefill/decode backend on NVIDIA")
+    set_description("Enable FlashInfer optimized attention kernel (requires FlashInfer headers)")
 option_end()
 
 option("flashinfer-include")
@@ -42,36 +36,6 @@ option("flashinfer-include")
     set_showmenu(true)
     set_description("Path to FlashInfer include directory")
 option_end()
-
-option("python-bindings")
-    set_default(false)
-    set_showmenu(true)
-    set_description("Build the optional pybind11 scheduling/runtime extension")
-option_end()
-
-option("pybind11-include")
-    set_default("")
-    set_showmenu(true)
-    set_description("Path to pybind11 headers (required when python-bindings=y)")
-option_end()
-
-option("python-include")
-    set_default("")
-    set_showmenu(true)
-    set_description("Path to Python headers (required when python-bindings=y)")
-option_end()
-
-option("dlpack-include")
-    set_default("")
-    set_showmenu(true)
-    set_description("Optional DLPack include root for native V4 paged storage views (DLPack >= 1.0)")
-option_end()
-
--- Optional native TileLang kernel backend --
-includes("xmake/tilelang.lua")
-includes("xmake/aten.lua")
-includes("xmake/native_tensor.lua")
-includes("xmake/native_model.lua")
 
 -- MetaX (沐曦) --
 option("metax-gpu")
@@ -85,7 +49,7 @@ if has_config("nv-gpu") then
     includes("xmake/nvidia.lua")
 end
 
-if has_config("nv-gpu") and has_config("flashinfer") then
+if has_config("flashinfer") then
     add_defines("ENABLE_FLASHINFER")
     add_includedirs("third_party/flashinfer")
     local fi_inc = get_config("flashinfer-include")
@@ -208,10 +172,7 @@ target("llaisys")
         add_links("cublas", "cudart")
         add_linkdirs("/usr/local/cuda/lib64")
         set_toolset("cu", "nvcc")
-        local cuda_arch = get_config("cuda-arch") or "sm_80"
-        add_cuflags("-Xcompiler=-fPIC", "-arch=" .. cuda_arch,
-                    "--default-stream=per-thread")
-        add_culdflags("-arch=" .. cuda_arch)
+        add_cuflags("-Xcompiler=-fPIC", "--default-stream=per-thread")
         add_files("src/device/nvidia/*.cu")
         add_files("src/ops/self_attention/paged_attention.cpp")
         add_files("src/ops/cache/cache_ops.cpp")
@@ -271,65 +232,6 @@ target("llaisys")
     end)
 target_end()
 
-if has_config("python-bindings") then
-    target("llaisys-python")
-        set_kind("shared")
-        set_languages("cxx17")
-        add_deps("llaisys")
-        add_files("python/bindings/module.cpp", "python/bindings/cache.cpp")
-        add_includedirs(".")
-        set_targetdir("python/llaisys")
-        set_filename("_C.so")
-        local py_inc = get_config("python-include")
-        if not py_inc or py_inc == "" then
-            raise("python-bindings requires --python-include=<Python include directory>")
-        end
-        local bind_inc = get_config("pybind11-include")
-        if not bind_inc or bind_inc == "" then
-            raise("python-bindings requires --pybind11-include=<pybind11 include directory>")
-        end
-        add_includedirs(py_inc, bind_inc)
-        local dlpack_inc = get_config("dlpack-include")
-        if dlpack_inc and dlpack_inc ~= "" then
-            if not os.isfile(path.join(dlpack_inc, "dlpack/dlpack.h")) then
-                raise("dlpack-include must contain dlpack/dlpack.h")
-            end
-            add_files("python/bindings/paged_storage.cpp")
-            add_defines("LLAISYS_ENABLE_DLPACK_CACHE")
-            add_includedirs(dlpack_inc)
-            if has_config("nv-gpu") then
-                add_links("cudart")
-                on_load(function (target)
-                    import("detect.sdks.find_cuda")
-                    local cuda = find_cuda()
-                    assert(cuda, "native CUDA storage requires a detected CUDA toolkit")
-                    target:add("includedirs", cuda.includedirs)
-                    target:add("linkdirs", cuda.linkdirs)
-                end)
-            end
-        end
-        add_rpathdirs("$ORIGIN/libllaisys")
-    target_end()
-end
-
-target("llaisys-cache-storage-test")
-    set_kind("binary")
-    set_languages("cxx17")
-    add_includedirs(".")
-    add_files("test/paged_storage_lifecycle_test.cpp")
-    add_deps("llaisys-core")
-target_end()
-
-target("llaisys-cache-lease-test")
-    set_kind("binary")
-    set_default(false)
-    set_languages("cxx17")
-    set_warnings("all", "error")
-    add_includedirs(".")
-    add_files("test/block_lease_test.cpp")
-    add_deps("llaisys-core")
-target_end()
-
 target("llaisys-dist-smoke")
     set_kind("binary")
     add_deps("llaisys")
@@ -342,15 +244,6 @@ target("llaisys-dist-smoke")
         add_cxflags("-fPIC", "-Wno-unknown-pragmas")
     end
     add_files("test/dist_smoke.cpp")
-target_end()
-
-target("llaisys-cache-core-test")
-    set_kind("binary")
-    add_deps("llaisys-core")
-    set_languages("cxx17")
-    set_warnings("all", "error")
-    add_includedirs(".")
-    add_files("test/cache_core_test.cpp")
 target_end()
 
 target("llaisys-tp-shard-smoke")
