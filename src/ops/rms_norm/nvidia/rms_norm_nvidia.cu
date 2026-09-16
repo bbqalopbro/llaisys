@@ -1,5 +1,9 @@
 #include "rms_norm_nvidia.cuh"
 
+#ifdef LLAISYS_USE_LLMOPS
+#include "adapter.hpp"
+#endif
+
 #include <cuda_runtime.h>
 #include <cuda_fp16.h>
 #include <cuda_bf16.h>
@@ -108,6 +112,9 @@ __global__ void rms_norm_mixed_kernel(
 namespace llaisys::ops::nvidia {
 
 void rms_norm(tensor_t out, tensor_t in, tensor_t weight, float eps) {
+#ifdef LLAISYS_USE_LLMOPS
+    if (llmops_integration::try_rmsnorm(out, in, weight, eps)) return;
+#endif
     auto in_dtype = in->dtype();
     auto w_dtype  = weight->dtype();
 

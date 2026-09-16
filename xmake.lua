@@ -1,3 +1,17 @@
+option("llmops-root")
+    set_default("")
+    set_showmenu(true)
+    set_description("Optional external llmops source root (build/libllmops.so required)")
+option_end()
+local llmops_root = get_config("llmops-root")
+if llmops_root and llmops_root ~= "" then
+    add_defines("LLAISYS_USE_LLMOPS")
+    add_includedirs(path.join(llmops_root, "include"), path.join(llmops_root, "integrations/llaisys"))
+    add_linkdirs(path.join(llmops_root, "build"))
+    add_rpathdirs(path.join(llmops_root, "build"))
+    add_links("llmops")
+end
+
 add_rules("mode.debug", "mode.release")
 set_encodings("utf-8")
 
@@ -157,6 +171,10 @@ target("llaisys-ops")
 target_end()
 
 target("llaisys")
+    if llmops_root and llmops_root ~= "" then
+        add_files(path.join(llmops_root, "integrations/llaisys/dispatch_stats.cpp"))
+        add_includedirs("src")
+    end
     set_kind("shared")
     add_deps("llaisys-utils")
     add_deps("llaisys-device")

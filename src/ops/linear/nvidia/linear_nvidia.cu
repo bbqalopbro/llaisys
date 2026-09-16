@@ -1,5 +1,9 @@
 #include "linear_nvidia.cuh"
 
+#ifdef LLAISYS_USE_LLMOPS
+#include "adapter.hpp"
+#endif
+
 #include "../../../utils.hpp"
 
 #include <cublas_v2.h>
@@ -418,6 +422,9 @@ namespace llaisys::ops::nvidia {
 // Y = X * W^T + bias
 // Uses cublasGemmEx to support F32/F16/BF16 with F32 compute.
 void linear(tensor_t out, tensor_t in, tensor_t weight, tensor_t bias) {
+#ifdef LLAISYS_USE_LLMOPS
+    if (llmops_integration::try_linear(out, in, weight, bias)) return;
+#endif
     auto w_dtype = weight->dtype();
     auto in_dtype = in->dtype();
     auto out_dtype = out->dtype();
@@ -618,6 +625,9 @@ void linear(tensor_t out, tensor_t in, tensor_t weight, tensor_t bias) {
 // Falls back to linear() + separate add for non-M=1 or non-FP16 cases
 void linear_add(tensor_t out, tensor_t in, tensor_t weight, tensor_t bias,
                 tensor_t residual) {
+#ifdef LLAISYS_USE_LLMOPS
+    if (llmops_integration::try_linear(out, in, weight, bias, residual)) return;
+#endif
     int64_t M = in->shape()[0];
     auto w_dtype = weight->dtype();
 

@@ -1,5 +1,9 @@
 #include "swiglu_nvidia.cuh"
 
+#ifdef LLAISYS_USE_LLMOPS
+#include "adapter.hpp"
+#endif
+
 #include <cuda_runtime.h>
 #include <cuda_fp16.h>
 #include <cuda_bf16.h>
@@ -51,6 +55,9 @@ __global__ void swiglu_kernel(
 namespace llaisys::ops::nvidia {
 
 void swiglu(tensor_t out, tensor_t gate, tensor_t up) {
+#ifdef LLAISYS_USE_LLMOPS
+    if (llmops_integration::try_swiglu(out, gate, up)) return;
+#endif
     auto dtype = gate->dtype();
 
     int64_t seq_len = gate->shape()[0];
