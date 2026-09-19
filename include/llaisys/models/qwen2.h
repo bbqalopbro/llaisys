@@ -31,6 +31,9 @@ __C {
         llaisysTensor_t *mlp_up_w;
         llaisysTensor_t *mlp_down_w;
 
+        llaisysTensor_t *attn_q_norm_w; // Qwen3 per-head RMSNorm, before RoPE
+        llaisysTensor_t *attn_k_norm_w;
+
         // INT8 量化 per-channel scale (shape [out_features], FP32)
         // 当权重为 INT8 时使用, 否则为 nullptr
         llaisysTensor_t out_embed_scale;
@@ -90,6 +93,9 @@ __C {
     // 执行推理 (带采样参数)
     __export int64_t llaisysQwen2ModelInferSample(struct LlaisysQwen2Model * model, int64_t * token_ids, size_t ntoken,
                                                   float temperature, int top_k, float top_p);
+
+    __export void llaisysQwen2GraphCounts(struct LlaisysQwen2Model *model, size_t *captures, size_t *replays);
+    __export void llaisysQwen2CopyLogits(struct LlaisysQwen2Model *model, float *host, size_t count);
 
     // 重置 KV-Cache 位置 (不重新加载权重)
     __export void llaisysQwen2ResetCache(struct LlaisysQwen2Model * model);
@@ -159,6 +165,14 @@ __C {
     __export void llaisysQwen2BatchSlotReset(
         struct LlaisysQwen2BatchContext * ctx, size_t slot_id);
 
+    // Append to existing KV; -2 means a successful intermediate chunk, -1 error.
+    // A final chunk returns a sampled next token. Does not reset the slot.
+    __export int64_t llaisysQwen2BatchPrefillChunk(
+        struct LlaisysQwen2BatchContext *ctx,size_t slot_id,int64_t *tokens,size_t count,
+        int final_chunk,float temperature,int top_k,float top_p);
+    __export void llaisysQwen2BatchSlotTruncate(
+        struct LlaisysQwen2BatchContext *ctx,size_t slot_id,size_t position);
+
     // Prefill: 在指定 slot 上对完整 prompt 执行 prefill, 返回首个 next token
     __export int64_t llaisysQwen2BatchPrefill(
         struct LlaisysQwen2BatchContext * ctx,
@@ -197,6 +211,15 @@ __C {
         int64_t * current_tokens,
         float * temperatures, int * top_ks, float * top_ps,
         int64_t * output_tokens);
+
+    __export int llaisysQwen2BatchCopyLogits(struct LlaisysQwen2BatchContext *ctx, float *output, size_t rows);
+
+    // Full batch decode graphs. Configure before first decode/preparation.
+    __export int llaisysQwen2BatchPrepareGraphs(struct LlaisysQwen2BatchContext *ctx);
+    __export int llaisysQwen2BatchSetCaptureSizes(struct LlaisysQwen2BatchContext *ctx,
+                                                const size_t *sizes, size_t count);
+    __export const char *llaisysQwen2BatchGraphStats(struct LlaisysQwen2BatchContext *ctx);
+    __export const char *llaisysQwen2BatchLastError(struct LlaisysQwen2BatchContext *ctx);
 
     // Paged KV-Cache block allocator queries
     __export size_t llaisysQwen2BatchGetFreeBlocks(

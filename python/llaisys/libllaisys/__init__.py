@@ -40,7 +40,7 @@ def load_shared_library():
     else:
         raise RuntimeError("Unsupported platform")
 
-    lib_path = os.path.join(lib_dir, libname)
+    lib_path = os.environ.get("LLAISYS_LIBRARY", os.path.join(lib_dir, libname))
 
     if not os.path.isfile(lib_path):
         raise FileNotFoundError(f"Shared library not found: {lib_path}")

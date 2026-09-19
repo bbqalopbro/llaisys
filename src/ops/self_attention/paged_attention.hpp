@@ -5,6 +5,12 @@
 
 namespace llaisys::ops {
 
+void paged_prefill(
+    void *output, const void *query, const void *k_pool, const void *v_pool,
+    const int *table, int nq, int nk, int heads, int kv_heads, int dim,
+    int block_size, int max_pages, size_t block_stride, size_t layer_stride,
+    int layer, float scale, llaisysDeviceType_t device, llaisysDataType_t dtype);
+
 // KV-Cache quantization type for paged attention
 enum class KVQuantMode : int {
     FP32 = 0,
@@ -50,7 +56,8 @@ void paged_attention_device(
     size_t pool_block_stride, size_t pool_layer_stride,
     int layer_idx, float scale,
     llaisysDeviceType_t device_type,
-    llaisysDataType_t dtype = LLAISYS_DTYPE_F32
+    llaisysDataType_t dtype = LLAISYS_DTYPE_F32,
+    void *workspace = nullptr, size_t workspace_bytes = 0
 );
 
 } // namespace llaisys::ops

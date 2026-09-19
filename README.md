@@ -1,3 +1,15 @@
+## 5090 / llmops / Qwen3 当前入口
+
+计算内核已拆入外部 llmops；本框架保留 Tensor/内存、KV 缓存和调度、模型执行、Graph 管理以及显式第三方后端。CPU-only 构建也需要 llmops CPU 库。以下段落优先于后文历史构建/性能说明。
+
+- NVIDIA 矩阵乘法默认 `LLAISYS_LLMOPS=native`；`auto` 同样只选自研，`cublas` 为显式框架第三方路径。不存在隐式 vendor fallback。
+- 连续 Attention 默认 `LLAISYS_ATTENTION=native`，可显式选择 `cublas`；分页/Graph 默认自研。CPU/NVIDIA 以 device_type 分发，不支持或未编译的设备明确报错。
+- Qwen3-8B 通过现有 `Qwen2` Python 类复用主体，按 config 的 model_type 加载/检查每层 Q/K Norm，在所有执行路径的 RoPE 前逐头归一化。执行为 FP16 存储、FP32 累加，拒绝权重转换溢出。
+- Python 加载器支持 `LLAISYS_LIBRARY` 指定当前共享库，避免误用安装目录中的旧版本。
+- `llaisysOperatorStats()` 查询实际宿主算子提交，Graph capture/replay 另由 `llaisysQwen2GraphCounts()` 查询。batch 目前验证 eager，不把单请求 Graph 结果当作 batch Graph 结果。
+
+服务器入口：`bash /root/projects/rebuild-5090.sh`；`bash /root/projects/verify-5090.sh`。算子测试使用已有 `python test/run_gpu_f32_tests.py --device cpu|nvidia`（文件名保留兼容，但现在覆盖 F32/F16/BF16）。完整数值/模型测试和 Qwen3 尺寸基准见 llmops README。
+
 # Welcome to LLAISYS
 
 <p align="center">

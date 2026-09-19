@@ -27,6 +27,7 @@ void paged_attention_device(
     int block_size, int max_blocks_per_seq,
     size_t pool_block_stride, size_t pool_layer_stride,
     int layer_idx, float scale,
-    llaisysDataType_t dtype = LLAISYS_DTYPE_F32);
+    llaisysDataType_t dtype = LLAISYS_DTYPE_F32,
+    void *workspace = nullptr, size_t workspace_bytes = 0);
 
 } // namespace llaisys::ops::nvidia

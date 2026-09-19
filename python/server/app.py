@@ -93,7 +93,9 @@ ENGINE: InferenceEngine | None = None
 # ── Model Management ─────────────────────────────────────────────────
 
 def load_model(model_path: str, device: str = "cpu",
-               tp_size: int = 1, tp_rank: int = 0) -> None:
+               tp_size: int = 1, tp_rank: int = 0, max_batch_size: int = 4,
+               max_seq_len: int = 2048, capture_sizes=None,
+               prefill_chunk_size: int = 256, max_num_batched_tokens: int = 512) -> None:
     """Load model and tokenizer (called once at startup)."""
     global MODEL, TOKENIZER, MODEL_PATH, DEVICE, SESSION_MGR, ENGINE
 
@@ -123,13 +125,16 @@ def load_model(model_path: str, device: str = "cpu",
 
     print(f"Loading LLAISYS model from {resolved_path} (device={device}, tp_size={tp_size}, tp_rank={tp_rank}) ...")
     MODEL = llaisys.models.Qwen2(resolved_path, DEVICE,
-                                  tp_size=tp_size, tp_rank=tp_rank)
+                                  tp_size=tp_size, tp_rank=tp_rank, max_seq_len=max_seq_len)
 
     # Phase 4: 初始化 Session Manager
     SESSION_MGR = SessionManager(MODEL)
 
     # Phase 5 (项目#4): 初始化 InferenceEngine
-    ENGINE = InferenceEngine(MODEL, TOKENIZER)
+    ENGINE = InferenceEngine(MODEL, TOKENIZER, max_batch_size=max_batch_size,
+                             max_seq_per_slot=max_seq_len, capture_sizes=capture_sizes,
+                             prefill_chunk_size=prefill_chunk_size,
+                             max_num_batched_tokens=max_num_batched_tokens)
     ENGINE.start()
 
     print("Model ready. Session manager initialized. Inference engine started.")
@@ -679,9 +684,28 @@ def main():
                         help="Tensor parallelism degree (default: 1 = single device)")
     parser.add_argument("--tp-rank", type=int, default=0,
                         help="Current TP rank (0-based, for manual launch)")
+    parser.add_argument("--max-batch-size", type=int, default=4)
+    parser.add_argument("--max-seq-len", type=int, default=2048)
+    parser.add_argument("--capture-sizes", default=None, help="Comma-separated decode graph buckets; empty disables graphs")
+    parser.add_argument("--prefill-chunk-size", type=int, default=256,
+                        help="Maximum prompt tokens per request per scheduler iteration")
+    parser.add_argument("--max-num-batched-tokens", type=int, default=512,
+                        help="Shared decode+prefill token budget per iteration")
+    parser.add_argument("--enforce-eager", action="store_true")
     args = parser.parse_args()
 
-    load_model(args.model, args.device, tp_size=args.tp_size, tp_rank=args.tp_rank)
+    if args.max_batch_size < 1 or args.max_seq_len < 1:
+        parser.error("batch size and sequence length must be positive")
+    if args.prefill_chunk_size < 1 or args.max_num_batched_tokens < args.max_batch_size:
+        parser.error("chunk size must be positive; token budget must cover max batch size")
+    if args.enforce_eager:
+        os.environ["LLAISYS_ENFORCE_EAGER"] = "1"
+    capture_sizes = None if args.capture_sizes is None else [int(x) for x in args.capture_sizes.split(",") if x]
+    if capture_sizes is not None and any(n < 1 or n > args.max_batch_size for n in capture_sizes):
+        parser.error("capture sizes must be within batch capacity")
+    load_model(args.model, args.device, tp_size=args.tp_size, tp_rank=args.tp_rank,
+               max_batch_size=args.max_batch_size, max_seq_len=args.max_seq_len, capture_sizes=capture_sizes,
+               prefill_chunk_size=args.prefill_chunk_size, max_num_batched_tokens=args.max_num_batched_tokens)
 
     import uvicorn
     uvicorn.run(app, host=args.host, port=args.port)

@@ -34,6 +34,13 @@ class Ops:
         )
 
     @staticmethod
+    def linear_add(out: Tensor, inp: Tensor, weight: Tensor, bias: Tensor, residual: Tensor):
+        LIB_LLAISYS.llaisysLinearAdd(
+            out.lib_tensor(), inp.lib_tensor(), weight.lib_tensor(),
+            bias.lib_tensor() if bias is not None else None,
+            residual.lib_tensor() if residual is not None else None)
+
+    @staticmethod
     def rearrange(out: Tensor, inp: Tensor):
         LIB_LLAISYS.llaisysRearrange(out.lib_tensor(), inp.lib_tensor())
 

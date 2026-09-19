@@ -8,7 +8,7 @@ target("llaisys-device-nvidia")
 
     if not is_plat("windows") then
         add_cxflags("-fPIC", "-Wno-unknown-pragmas")
-        add_cuflags("-Xcompiler=-fPIC", "-arch=sm_80", "--default-stream=per-thread")
+        add_cuflags("-Xcompiler=-fPIC", "-arch=" .. (get_config("cuda-arch") or "sm_89"), "--default-stream=per-thread")
         add_culdflags("-Xcompiler=-fPIC")
     end
 
@@ -29,7 +29,7 @@ target("llaisys-ops-nvidia")
 
     if not is_plat("windows") then
         add_cxflags("-fPIC", "-Wno-unknown-pragmas")
-        add_cuflags("-Xcompiler=-fPIC", "-arch=sm_80", "--default-stream=per-thread")
+        add_cuflags("-Xcompiler=-fPIC", "-arch=" .. (get_config("cuda-arch") or "sm_89"), "--default-stream=per-thread")
         add_culdflags("-Xcompiler=-fPIC")
     end
 

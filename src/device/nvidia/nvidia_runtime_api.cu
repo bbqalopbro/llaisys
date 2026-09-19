@@ -55,7 +55,11 @@ llaisysStream_t createStream() {
 }
 
 void destroyStream(llaisysStream_t stream) {
-    CUDA_CHECK(cudaStreamDestroy((cudaStream_t)stream));
+    const auto status = cudaStreamDestroy((cudaStream_t)stream);
+    // Thread-local framework contexts can outlive CUDA runtime unloading at process exit.
+    // Only the terminal unloading status is harmless; operational errors still propagate.
+    if (status == cudaErrorCudartUnloading) return;
+    CUDA_CHECK(status);
 }
 
 void streamSynchronize(llaisysStream_t stream) {

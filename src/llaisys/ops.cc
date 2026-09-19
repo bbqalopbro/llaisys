@@ -19,6 +19,10 @@ __C {
     void llaisysAdd(llaisysTensor_t c, llaisysTensor_t a, llaisysTensor_t b) {
         llaisys::ops::add(c->tensor, a->tensor, b->tensor);
     }
+    void llaisysArgmaxRows(llaisysTensor_t indices, llaisysTensor_t maxima, llaisysTensor_t values) {
+        llaisys::ops::argmax_rows(indices->tensor, maxima->tensor, values->tensor);
+    }
+
     void llaisysArgmax(llaisysTensor_t max_idx, llaisysTensor_t max_val, llaisysTensor_t vals) {
         llaisys::ops::argmax(max_idx->tensor, max_val->tensor, vals->tensor);
     }
@@ -27,6 +31,9 @@ __C {
     }
     void llaisysLinear(llaisysTensor_t out, llaisysTensor_t in, llaisysTensor_t weight, llaisysTensor_t bias) {
         llaisys::ops::linear(out->tensor, in->tensor, weight->tensor, bias ? bias->tensor : nullptr);
+    }
+    void llaisysLinearAdd(llaisysTensor_t out, llaisysTensor_t in, llaisysTensor_t weight, llaisysTensor_t bias, llaisysTensor_t residual) {
+        llaisys::ops::linear_add(out->tensor, in->tensor, weight->tensor, bias ? bias->tensor : nullptr, residual ? residual->tensor : nullptr);
     }
     void llaisysRearrange(llaisysTensor_t out, llaisysTensor_t in) {
         llaisys::ops::rearrange(out->tensor, in->tensor);

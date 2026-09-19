@@ -18,8 +18,8 @@ LLAISYS Inference Engine — 请求队列 + 异步推理服务 (Continuous Batch
                                └──────────────┘
 
 worker 循环的 4 个阶段:
-  1. Admit:  从队列取新请求, 检查 block 容量, 必要时 preempt 低优先级请求
-  2. Decode: 对所有活跃 slot 执行一步批量 decode (per-request 采样参数)
+  1. Decode: 优先对已完成 prompt 的 slot 执行一步 Graph decode
+  2. Admit/Prefill: 分配 slot，按剩余 token 预算推进 prompt 分块
   3. Finish: 完成的请求移出 batch, KV-Cache 存入前缀树池
   4. Wait:   空闲时阻塞等待新请求 (避免 busy loop)
 
@@ -37,6 +37,7 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass, field
+from collections import deque
 from enum import Enum
 from typing import AsyncGenerator, Dict, List, Optional, Sequence
 
@@ -84,6 +85,7 @@ class InferenceRequest:
     status: RequestStatus = RequestStatus.WAITING
     generated_tokens: List[int] = field(default_factory=list)
     last_token: int = 0
+    num_computed_tokens: int = 0  # tokens actually present in KV, excludes last sampled token
     kv_cache_snapshot: object = None  # C++ KV-Cache 快照句柄
 
     # 时间戳
@@ -146,6 +148,27 @@ class RequestQueue:
                 self._active[req.request_id] = req
             return batch
 
+    def transition(self, request, status):
+        """Do not overwrite a cancellation arriving during GPU work or snapshot I/O."""
+        with self._lock:
+            if request.status == RequestStatus.CANCELLED:
+                return False
+            request.status = status
+            return True
+
+    def pop_cancelled(self):
+        with self._lock:
+            cancelled = [r for r in self._waiting if r.status == RequestStatus.CANCELLED]
+            self._waiting = [r for r in self._waiting if r.status != RequestStatus.CANCELLED]
+            return cancelled
+
+    def requeue(self, request: InferenceRequest):
+        """An already admitted request keeps its place even if new submissions fill the queue."""
+        with self._lock:
+            self._active.pop(request.request_id, None)
+            self._waiting.append(request)
+            self._not_empty.notify()
+
     def wait_for_requests(self, timeout: float = 0.1) -> bool:
         """等待直到有请求可用或超时. 返回是否有请求."""
         with self._not_empty:
@@ -165,7 +188,7 @@ class RequestQueue:
             for i, req in enumerate(self._waiting):
                 if req.request_id == request_id:
                     req.status = RequestStatus.CANCELLED
-                    self._waiting.pop(i)
+                    self._not_empty.notify()
                     return True
             # 标记活跃请求为取消
             req = self._active.get(request_id)
@@ -196,8 +219,8 @@ class InferenceEngine:
     后台推理引擎 — 连续批处理 (Continuous Batching) with PagedAttention.
     
     每轮迭代:
-      1. 动态 Admission: 检查 block 容量后从队列取新请求 → 分配 slot → prefill
-      2. Per-request 采样: 对所有活跃 slot 执行一步批量 decode（独立采样参数）
+      1. Decode 优先：已就绪 slot 执行一步批量 decode（独立采样参数）
+      2. 动态 Admission 与 chunked prefill：共享每轮 token 预算
       3. 完成的请求移出 batch, 释放 slot
       4. Preemption: block 不足时 evict 低优先级请求
     """
@@ -210,16 +233,39 @@ class InferenceEngine:
         max_seq_per_slot: int = 2048,
         max_queue_size: int = 1024,
         block_watermark: float = 0.1,
+        capture_sizes: Optional[Sequence[int]] = None,
+        prefill_chunk_size: int = 256,
+        max_num_batched_tokens: int = 512,
+        scheduler_trace: bool = False,
     ):
+        if max_batch_size < 1 or max_seq_per_slot < 1 or prefill_chunk_size < 1:
+            raise ValueError("batch, sequence and chunk sizes must be positive")
+        if max_num_batched_tokens < max_batch_size:
+            raise ValueError("token budget must cover one decode token per slot")
+        self.prefill_chunk_size = prefill_chunk_size
+        self.max_num_batched_tokens = max_num_batched_tokens
+        self._trace_enabled = scheduler_trace
+        self._scheduler_trace = deque(maxlen=512)
+        self._prefill_chunks = 0
+        self._prefill_tokens = 0
+        self._prefix_hits = 0
+        self._prefix_tokens = 0
+        self._max_scheduled_tokens = 0
+        self._iteration = 0
         self.model = model
         self.tokenizer = tokenizer
         self.max_batch_size = max_batch_size
         self.max_seq_per_slot = max_seq_per_slot
         self.block_watermark = block_watermark
+        self.capture_sizes = None if capture_sizes is None else list(capture_sizes)
 
         self.queue = RequestQueue(max_size=max_queue_size)
         self._worker_thread: Optional[threading.Thread] = None
         self._running = False
+        self._ready = threading.Event()
+        self._startup_error = None
+        self._graph_stats = {}
+        self._batch_size_histogram = {}
         self._eos_token_id = getattr(model, '_end_token', 151643)
 
         # KV-Cache 前缀树池
@@ -239,6 +285,8 @@ class InferenceEngine:
         """启动后台 worker 线程."""
         if self._running:
             return
+        self._ready.clear()
+        self._startup_error = None
         self._running = True
         self._worker_thread = threading.Thread(
             target=self._worker_loop,
@@ -246,13 +294,17 @@ class InferenceEngine:
             daemon=True,
         )
         self._worker_thread.start()
+        self._ready.wait()
+        if self._startup_error is not None:
+            self._worker_thread.join()
+            raise RuntimeError("Inference engine initialization failed") from self._startup_error
         logger.info(f"Inference engine started (max_batch_size={self.max_batch_size})")
 
     def stop(self):
         """停止后台 worker."""
         self._running = False
         if self._worker_thread:
-            self._worker_thread.join(timeout=5.0)
+            self._worker_thread.join()
             self._worker_thread = None
         logger.info("Inference engine stopped")
 
@@ -278,7 +330,7 @@ class InferenceEngine:
 
         request = InferenceRequest(
             request_id=f"req-{uuid.uuid4().hex[:12]}",
-            input_ids=input_ids,
+            input_ids=list(input_ids),
             params=params,
             session_id=session_id,
             stream=stream,
@@ -287,13 +339,17 @@ class InferenceEngine:
             loop=loop,
         )
 
+        if (not input_ids or params.max_tokens < 1 or
+                len(input_ids) + params.max_tokens - 1 > self.max_seq_per_slot):
+            self._finish_request(request, ValueError("empty prompt or request exceeds slot sequence capacity"))
+            return request
+        if not self._running:
+            self._finish_request(request, RuntimeError("inference engine is not running"))
+            return request
+        request.future.add_done_callback(
+            lambda future: self.queue.cancel(request.request_id) if future.cancelled() else None)
         if not self.queue.submit(request):
-            request.status = RequestStatus.ERROR
-            request.error_message = "Request queue is full"
-            loop.call_soon_threadsafe(
-                request.future.set_exception,
-                RuntimeError("Request queue is full"),
-            )
+            self._finish_request(request, RuntimeError("Request queue is full"))
         else:
             logger.debug(f"Request {request.request_id} submitted (queue={self.queue.waiting_count})")
 
@@ -318,234 +374,257 @@ class InferenceEngine:
         return free >= needed + watermark
 
     def _try_preempt(self, batch_ctx, running: Dict[int, InferenceRequest],
-                     free_slots: List[int], needed_blocks: int) -> bool:
-        """Evict the request with most generated tokens to free blocks.
-        
-        Returns True if a request was successfully preempted.
-        """
-        if not running:
+                     free_slots: List[int], needed_blocks: int, exclude_slot=None) -> bool:
+        candidates = [sid for sid in running if sid != exclude_slot
+                      and running[sid].status != RequestStatus.CANCELLED
+                      and (running[sid].num_computed_tokens or running[sid].generated_tokens)]
+        if not candidates:
             return False
-
-        # Evict the request with most generated tokens (least priority)
-        victim_slot = max(running.keys(),
-                          key=lambda s: len(running[s].generated_tokens))
-        victim_req = running[victim_slot]
-
-        logger.info(
-            f"Preempting request {victim_req.request_id} "
-            f"(slot={victim_slot}, {len(victim_req.generated_tokens)} tokens generated)"
-        )
-
-        # Save KV-Cache snapshot before eviction
+        victim_slot = max(candidates, key=lambda sid: len(running[sid].generated_tokens))
+        req = running[victim_slot]
         try:
             snapshot = batch_ctx.slot_save(victim_slot)
-            victim_req.kv_cache_snapshot = snapshot
-        except Exception as e:
-            logger.error(f"Failed to save snapshot for preemption: {e}")
-            victim_req.kv_cache_snapshot = None
-
-        # Release the slot
+            if not snapshot:
+                return False
+        except Exception:
+            logger.exception("Could not snapshot request for preemption")
+            return False
+        req.kv_cache_snapshot = snapshot
         batch_ctx.slot_reset(victim_slot)
-        running.pop(victim_slot)
+        del running[victim_slot]
         free_slots.append(victim_slot)
-
-        # Re-queue the preempted request
-        victim_req.status = RequestStatus.WAITING
-        self.queue.submit(victim_req)
+        self.queue.transition(req, RequestStatus.WAITING)
+        self.queue.requeue(req)
         self._total_preemptions += 1
-
+        self._trace("preempt", request=req.request_id)
         return True
 
+    def _trace(self, kind, **fields):
+        if getattr(self, "_trace_enabled", False):
+            self._scheduler_trace.append(dict(iteration=self._iteration, kind=kind,
+                                              time=time.perf_counter(), **fields))
+
+    def _destroy_snapshot(self, req):
+        if req.kv_cache_snapshot is not None:
+            self.model.destroy_snapshot(req.kv_cache_snapshot)
+            req.kv_cache_snapshot = None
+
     def _worker_loop(self):
-        """后台 worker 主循环 — 连续批处理 with dynamic admission + preemption."""
-        logger.info("Continuous batching worker loop started (paged mode)")
+        """Decode first; spend the remaining per-iteration token budget on prompt chunks.
 
-        batch_ctx = self.model.create_batch_context(
-            self.max_batch_size, self.max_seq_per_slot
-        )
-
+        Prefill runs eagerly between decode graph replays. A PREFILLING slot is
+        never submitted to the decode graph and publishes no intermediate tokens.
+        """
+        batch_ctx = None
         running: Dict[int, InferenceRequest] = {}
-        free_slots: List[int] = list(range(self.max_batch_size))
+        free_slots = list(range(self.max_batch_size))
+        cursor = 0
 
-        while self._running:
-            # ── 1. Admit: dynamic admission based on block availability ──
-            while free_slots and self.queue.waiting_count > 0:
-                # Peek at next request to check block budget
-                new_requests = self.queue.get_pending(max_count=1)
-                if not new_requests:
-                    break
-                req = new_requests[0]
-
-                if req.status == RequestStatus.CANCELLED:
-                    self.queue.mark_done(req.request_id)
-                    continue
-
-                # Dynamic admission: check block capacity
-                if not self._can_admit(batch_ctx, len(req.input_ids), req.params.max_tokens):
-                    # Try preemption to free blocks
-                    needed = self._estimate_blocks_needed(
-                        len(req.input_ids), req.params.max_tokens,
-                        batch_ctx.get_block_size()
-                    )
-                    if not self._try_preempt(batch_ctx, running, free_slots, needed):
-                        # Cannot admit even after preemption — put back
-                        req.status = RequestStatus.WAITING
-                        self.queue.submit(req)
-                        break
-
-                    # Re-check after preemption
-                    if not self._can_admit(batch_ctx, len(req.input_ids), req.params.max_tokens):
-                        req.status = RequestStatus.WAITING
-                        self.queue.submit(req)
-                        break
-
-                slot_id = free_slots.pop(0)
-                req.started_at = time.time()
-                req.status = RequestStatus.PREFILLING
-
+        def retire(sid, error=None):
+            req = running.pop(sid)
+            if error is None and req.status != RequestStatus.CANCELLED and self._cache_pool:
+                # The last sampled output has not been fed through the model yet.
+                tokens = req.input_ids + req.generated_tokens[:-1]
+                snapshot = None
                 try:
-                    # Check if this request was preempted and has a snapshot
-                    if req.kv_cache_snapshot is not None:
-                        batch_ctx.slot_restore(slot_id, req.kv_cache_snapshot)
-                        req.kv_cache_snapshot = None
-                        # Already prefilled, just resume decoding
-                        req.status = RequestStatus.DECODING
-                        running[slot_id] = req
-                        logger.debug(
-                            f"Request {req.request_id}: resumed from preemption snapshot"
-                        )
-                        continue
+                    if tokens and batch_ctx.slot_get_pos(sid) == len(tokens):
+                        snapshot = batch_ctx.slot_save(sid)
+                        if snapshot:
+                            self.model.cache_pool_insert(self._cache_pool, tokens, snapshot)
+                            snapshot = None  # ownership transferred to the pool
+                except Exception:
+                    logger.exception("Prefix cache insertion failed")
+                finally:
+                    if snapshot:
+                        self.model.destroy_snapshot(snapshot)
+            batch_ctx.slot_reset(sid)
+            free_slots.append(sid)
+            self._finish_request(req, error)
+            self.queue.mark_done(req.request_id)
 
-                    # 前缀匹配
-                    prefix_snapshot = None
-                    match_len = 0
-                    if self._cache_pool:
-                        try:
-                            prefix_snapshot, match_len = self.model.cache_pool_lookup(
-                                self._cache_pool, req.input_ids
-                            )
-                        except Exception:
-                            pass
+        def publish(sid, token):
+            req = running[sid]
+            if not self.queue.transition(req, RequestStatus.DECODING):
+                retire(sid)
+                return
+            req.generated_tokens.append(int(token))
+            req.last_token = int(token)
+            self._send_token_async(req, int(token))
+            if token == self._eos_token_id or len(req.generated_tokens) >= req.params.max_tokens:
+                retire(sid)
 
-                    if prefix_snapshot and match_len > 0:
-                        batch_ctx.slot_restore(slot_id, prefix_snapshot)
-                        remaining_ids = req.input_ids[match_len:]
-                        logger.debug(
-                            f"Request {req.request_id}: prefix match "
-                            f"{match_len}/{len(req.input_ids)} tokens"
-                        )
-                    else:
-                        batch_ctx.slot_reset(slot_id)
-                        remaining_ids = req.input_ids
-
-                    if remaining_ids:
-                        first_token = batch_ctx.prefill(
-                            slot_id=slot_id,
-                            token_ids=remaining_ids,
-                            temperature=req.params.temperature,
-                            top_k=req.params.top_k,
-                            top_p=req.params.top_p,
-                        )
-                    else:
-                        first_token = batch_ctx.prefill(
-                            slot_id=slot_id,
-                            token_ids=[req.input_ids[-1]],
-                            temperature=req.params.temperature,
-                            top_k=req.params.top_k,
-                            top_p=req.params.top_p,
-                        )
-
-                    first_token = int(first_token)
-
-                except Exception as e:
-                    logger.error(f"Prefill error for {req.request_id}: {e}", exc_info=True)
-                    free_slots.append(slot_id)
-                    self._finish_request(req, error=e)
-                    self.queue.mark_done(req.request_id)
-                    continue
-
-                req.generated_tokens.append(first_token)
-                req.last_token = first_token
-                req.status = RequestStatus.DECODING
-
-                if req.stream and req.output_queue:
-                    self._send_token_async(req, first_token)
-
-                if (first_token == self._eos_token_id or
-                        len(req.generated_tokens) >= req.params.max_tokens):
-                    free_slots.append(slot_id)
-                    batch_ctx.slot_reset(slot_id)
+        try:
+            batch_ctx = self.model.create_batch_context(self.max_batch_size, self.max_seq_per_slot)
+            if self.capture_sizes is not None:
+                batch_ctx.set_capture_sizes(self.capture_sizes)
+            if hasattr(batch_ctx, "prepare_graphs"):
+                batch_ctx.prepare_graphs()
+                self._graph_stats = batch_ctx.graph_stats()
+            self._ready.set()
+            while self._running:
+                self._iteration += 1
+                budget = self.max_num_batched_tokens
+                for req in self.queue.pop_cancelled():
+                    self._destroy_snapshot(req)
                     self._finish_request(req)
                     self.queue.mark_done(req.request_id)
-                else:
-                    running[slot_id] = req
+                for sid in list(running):
+                    if running[sid].status == RequestStatus.CANCELLED:
+                        retire(sid)
 
-            # ── 2. Decode with per-request sampling parameters ──
-            if running:
-                active_slots = list(running.keys())
-                current_tokens = [running[s].last_token for s in active_slots]
-                temperatures = [running[s].params.temperature for s in active_slots]
-                top_ks = [running[s].params.top_k for s in active_slots]
-                top_ps = [running[s].params.top_p for s in active_slots]
+                # Existing decoders get a step before any new prompt computation.
+                decoding = [sid for sid, req in running.items() if req.status == RequestStatus.DECODING]
+                if decoding:
+                    try:
+                        bs = batch_ctx.get_block_size()
+                        needed = sum(batch_ctx.slot_get_pos(sid) % bs == 0 for sid in decoding)
+                        while needed > batch_ctx.get_free_blocks():
+                            if not self._try_preempt(batch_ctx, running, free_slots, needed):
+                                raise RuntimeError("insufficient KV blocks for decode")
+                            decoding = [sid for sid in decoding if sid in running]
+                            needed = sum(batch_ctx.slot_get_pos(sid) % bs == 0 for sid in decoding)
+                        if decoding:
+                            values = batch_ctx.decode_per_request(
+                                decoding, [running[s].last_token for s in decoding],
+                                [running[s].params.temperature for s in decoding],
+                                [running[s].params.top_k for s in decoding],
+                                [running[s].params.top_p for s in decoding])
+                            budget -= len(decoding)
+                            self._batch_size_histogram[len(decoding)] = self._batch_size_histogram.get(len(decoding), 0) + 1
+                            self._trace("decode", requests=[running[s].request_id for s in decoding], tokens=len(decoding))
+                            for sid, token in zip(decoding, values):
+                                running[sid].num_computed_tokens += 1
+                                publish(sid, int(token))
+                    except Exception as exc:
+                        logger.exception("Batch decode failed")
+                        for sid in decoding:
+                            if sid in running:
+                                retire(sid, exc)
 
-                try:
-                    next_tokens = batch_ctx.decode_per_request(
-                        active_slots=active_slots,
-                        current_tokens=current_tokens,
-                        temperatures=temperatures,
-                        top_ks=top_ks,
-                        top_ps=top_ps,
-                    )
-                except Exception as e:
-                    logger.error(f"Batch decode error: {e}", exc_info=True)
-                    for sid in list(running.keys()):
-                        req = running.pop(sid)
-                        free_slots.append(sid)
-                        batch_ctx.slot_reset(sid)
-                        self._finish_request(req, error=e)
+                # Admission assigns a slot, but does not run an unbounded prompt.
+                # Snapshot restoration is exceptional and never consumes a sampled token.
+                pending = self.queue.waiting_count
+                while free_slots and pending > 0:
+                    pending -= 1
+                    items = self.queue.get_pending(1)
+                    if not items:
+                        break
+                    req = items[0]
+                    if req.status == RequestStatus.CANCELLED:
+                        self._destroy_snapshot(req)
+                        self._finish_request(req)
                         self.queue.mark_done(req.request_id)
-                    continue
+                        continue
+                    bs = batch_ctx.get_block_size()
+                    restore_blocks = ((req.num_computed_tokens + bs - 1) // bs
+                                      if req.kv_cache_snapshot is not None else 1)
+                    watermark = int(batch_ctx.get_total_blocks() * self.block_watermark) if running else 0
+                    if restore_blocks + watermark > batch_ctx.get_free_blocks():
+                        self.queue.requeue(req)
+                        break
+                    sid = free_slots.pop(0)
+                    running[sid] = req
+                    req.started_at = req.started_at or time.time()
+                    try:
+                        if req.kv_cache_snapshot is not None:
+                            batch_ctx.slot_restore(sid, req.kv_cache_snapshot)
+                            self._destroy_snapshot(req)
+                            if batch_ctx.slot_get_pos(sid) != req.num_computed_tokens:
+                                raise RuntimeError("preemption snapshot position mismatch")
+                        else:
+                            batch_ctx.slot_reset(sid)
+                            if self._cache_pool:
+                                snapshot, matched = self.model.cache_pool_lookup(self._cache_pool, req.input_ids)
+                                if (snapshot and matched > 0 and
+                                        (matched + bs - 1) // bs <= batch_ctx.get_free_blocks()):
+                                    batch_ctx.slot_restore(sid, snapshot)
+                                    # Full prefix hit still needs logits: recompute the last prompt token.
+                                    matched = min(matched, len(req.input_ids) - 1)
+                                    batch_ctx.slot_truncate(sid, matched)
+                                    req.num_computed_tokens = matched
+                                    self._prefix_hits += 1
+                                    self._prefix_tokens += matched
+                                    self._trace("prefix", request=req.request_id, tokens=matched)
+                        status = RequestStatus.DECODING if req.generated_tokens else RequestStatus.PREFILLING
+                        if not self.queue.transition(req, status):
+                            retire(sid)
+                            continue
+                        self._trace("admit", request=req.request_id, position=req.num_computed_tokens)
+                    except Exception as exc:
+                        self._destroy_snapshot(req)
+                        retire(sid, exc)
 
-                # ── 3. 处理结果, 移除已完成的请求 ──
-                finished_slots: List[int] = []
-                for slot_id, next_tok in zip(active_slots, next_tokens):
-                    req = running[slot_id]
-                    next_tok = int(next_tok)
-                    req.generated_tokens.append(next_tok)
-                    req.last_token = next_tok
-
-                    if req.stream and req.output_queue:
-                        self._send_token_async(req, next_tok)
-
-                    if (next_tok == self._eos_token_id or
-                            len(req.generated_tokens) >= req.params.max_tokens or
-                            req.status == RequestStatus.CANCELLED):
-                        finished_slots.append(slot_id)
-
-                for slot_id in finished_slots:
-                    req = running.pop(slot_id)
-
-                    if self._cache_pool:
-                        try:
-                            snapshot = batch_ctx.slot_save(slot_id)
-                            if snapshot:
-                                all_tokens = req.input_ids + req.generated_tokens
-                                self.model.cache_pool_insert(
-                                    self._cache_pool, all_tokens, snapshot
-                                )
-                        except Exception:
-                            pass
-
-                    batch_ctx.slot_reset(slot_id)
-                    free_slots.append(slot_id)
+                # Rotate the starting slot so several long prompts share the budget fairly.
+                prefilling = [sid for sid, req in running.items() if req.status == RequestStatus.PREFILLING]
+                if prefilling:
+                    offset = cursor % len(prefilling)
+                    prefilling = prefilling[offset:] + prefilling[:offset]
+                    cursor += 1
+                for sid in prefilling:
+                    if budget <= 0 or not self._running:
+                        break
+                    if sid not in running:
+                        continue
+                    req = running[sid]
+                    if req.status == RequestStatus.CANCELLED:
+                        retire(sid)
+                        continue
+                    start = req.num_computed_tokens
+                    count = min(self.prefill_chunk_size, budget, len(req.input_ids) - start)
+                    final = start + count == len(req.input_ids)
+                    try:
+                        bs = batch_ctx.get_block_size()
+                        needed = (start + count + bs - 1) // bs - (start + bs - 1) // bs
+                        while needed > batch_ctx.get_free_blocks():
+                            if not self._try_preempt(batch_ctx, running, free_slots, needed, exclude_slot=sid):
+                                raise RuntimeError("insufficient KV blocks for prefill chunk")
+                        value = batch_ctx.prefill_chunk(sid, req.input_ids[start:start + count], final=final,
+                            temperature=req.params.temperature, top_k=req.params.top_k, top_p=req.params.top_p)
+                        req.num_computed_tokens += count
+                        budget -= count
+                        self._prefill_chunks += 1
+                        self._prefill_tokens += count
+                        self._trace("prefill", request=req.request_id, start=start, tokens=count, final=final)
+                        if req.status == RequestStatus.CANCELLED:
+                            retire(sid)
+                        elif final:
+                            if value is None:
+                                raise RuntimeError("final prefill chunk did not return a token")
+                            publish(sid, int(value))
+                        elif value is not None:
+                            raise RuntimeError("intermediate prefill chunk unexpectedly sampled")
+                    except Exception as exc:
+                        logger.exception("Prefill chunk failed")
+                        retire(sid, exc)
+                self._max_scheduled_tokens = max(self._max_scheduled_tokens,
+                                                  self.max_num_batched_tokens - budget)
+                if hasattr(batch_ctx, "graph_stats") and self._iteration % 32 == 0:
+                    self._graph_stats = batch_ctx.graph_stats()
+                if not running and not self.queue.waiting_count:
+                    self.queue.wait_for_requests(timeout=0.05)
+        except Exception as exc:
+            if not self._ready.is_set():
+                self._startup_error = exc
+            logger.exception("Inference worker failed")
+            for sid in list(running):
+                retire(sid, exc)
+        finally:
+            self._running = False
+            self._ready.set()
+            for sid in list(running):
+                running[sid].status = RequestStatus.CANCELLED
+                retire(sid)
+            while self.queue.waiting_count:
+                for req in self.queue.get_pending(1):
+                    req.status = RequestStatus.CANCELLED
+                    self._destroy_snapshot(req)
                     self._finish_request(req)
                     self.queue.mark_done(req.request_id)
-
-            # ── 4. 空闲等待 ──
-            if not running and self.queue.waiting_count == 0:
-                self.queue.wait_for_requests(timeout=0.05)
-
-        logger.info("Worker loop exited")
+            if batch_ctx is not None:
+                if hasattr(batch_ctx, "graph_stats"):
+                    self._graph_stats = batch_ctx.graph_stats()
+                del batch_ctx
+            logger.info("Worker loop exited")
 
     def _send_token_async(self, req: InferenceRequest, token_id: int):
         """线程安全地向 asyncio 队列发送 token."""
@@ -559,18 +638,22 @@ class InferenceEngine:
         if error:
             req.status = RequestStatus.ERROR
             req.error_message = str(error)
-            if req.loop and req.future and not req.future.done():
-                req.loop.call_soon_threadsafe(req.future.set_exception, error)
-        else:
+        elif req.status != RequestStatus.CANCELLED:
             req.status = RequestStatus.DONE
-            if req.loop and req.future and not req.future.done():
-                req.loop.call_soon_threadsafe(
-                    req.future.set_result, req.generated_tokens
-                )
 
-        # 流式结束信号
-        if req.stream and req.output_queue and req.loop:
-            req.loop.call_soon_threadsafe(req.output_queue.put_nowait, None)
+        # Check future state on its owning loop, not before enqueueing the callback.
+        def settle():
+            if req.future is not None and not req.future.done():
+                if error:
+                    req.future.set_exception(error)
+                elif req.status == RequestStatus.CANCELLED:
+                    req.future.cancel()
+                else:
+                    req.future.set_result(req.generated_tokens)
+            if req.output_queue is not None:
+                req.output_queue.put_nowait(None)
+        if req.loop:
+            req.loop.call_soon_threadsafe(settle)
 
         elapsed = req.finished_at - req.started_at if req.started_at > 0 else 0
         n_tokens = len(req.generated_tokens)
@@ -595,5 +678,15 @@ class InferenceEngine:
             "max_batch_size": self.max_batch_size,
             "total_requests_served": self._total_requests,
             "total_tokens_generated": self._total_tokens,
+            "decode_batch_size_histogram": dict(self._batch_size_histogram),
+            "batch_graph": self._graph_stats,
+            "prefill_chunk_size": self.prefill_chunk_size,
+            "max_num_batched_tokens": self.max_num_batched_tokens,
+            "prefill_chunks": self._prefill_chunks,
+            "prefill_tokens": self._prefill_tokens,
+            "prefix_hits": self._prefix_hits,
+            "prefix_tokens_reused": self._prefix_tokens,
+            "max_scheduled_tokens": self._max_scheduled_tokens,
+            "scheduler_trace": list(self._scheduler_trace),
             "total_preemptions": self._total_preemptions,
         }

@@ -52,13 +52,14 @@ target("llaisys-ops-metax")
             local mc_files = os.files(path.join(os.projectdir(), "src/ops/*/metax/*.mc"))
             local inc_dirs = {
                 path.join(os.projectdir(), "include"),
+                path.join(get_config("llmops-root") or "../llmops", "include"),
                 path.join(maca_sdk, "include"),
                 path.join(maca_sdk, "include/mcr"),
                 path.join(maca_sdk, "include/common"),
                 path.join(maca_sdk, "include/mcblas"),
                 path.join(maca_sdk, "include/mcrand"),
             }
-            local obj_dir = path.join(os.projectdir(), "build/.objs/llaisys-ops-metax/linux/x86_64/release")
+            local obj_dir = path.join(os.projectdir(), ".build/metax/objects")
             local obj_files = {}
 
             for _, src in ipairs(mc_files) do
@@ -88,7 +89,7 @@ target("llaisys-ops-metax")
             end
 
             -- 打包为静态库
-            local lib_path = path.join(os.projectdir(), "build/linux/x86_64/release/libllaisys-ops-metax.a")
+            local lib_path = path.join(os.projectdir(), ".build/metax/libllaisys-ops-metax.a")
             os.mkdir(path.directory(lib_path))
             os.execv("ar", table.join({"cr", lib_path}, obj_files))
             cprint("${green}archiving.release libllaisys-ops-metax.a")

@@ -1,7 +1,8 @@
 #include "cache_ops.hpp"
 
 #ifdef ENABLE_NVIDIA_API
-#include "nvidia/cache_kernels.cuh"
+#include "../llmops.hpp"
+#include <llmops/ops/paged.hpp>
 #endif
 
 #include <stdexcept>
@@ -21,12 +22,13 @@ void reshape_and_cache(
 {
 #ifdef ENABLE_NVIDIA_API
     if (device_type == LLAISYS_DEVICE_NVIDIA) {
-        nvidia::reshape_and_cache(k_src, v_src, k_pool, v_pool,
+        llmops::cuda::reshape_and_cache(k_src, v_src, k_pool, v_pool,
                                   block_tables_dev, positions_dev,
                                   batch_size, num_kv_heads, head_dim,
                                   block_size, max_blocks_per_seq,
                                   pool_block_stride, pool_layer_stride,
-                                  layer_idx, dtype);
+                                  layer_idx, kernel_dtype(dtype), operator_stream());
+        record_dispatch("cache_write", "llmops.cuda");
         return;
     }
 #endif

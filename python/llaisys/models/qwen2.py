@@ -15,6 +15,7 @@ models/qwen2.py — Qwen2 模型高层 Python 封装
   Python Qwen2 → ctypes → C API (distributed.cc / qwen2.cc) → C++ Model
 """
 import ctypes
+import json
 import numpy as np
 import torch
 from typing import Sequence, Optional
@@ -42,10 +43,11 @@ from ..libllaisys.qwen2 import (
     pool_lookup,
     pool_clear,
     # Phase 5 (项目#4): 批量推理 API
+    batch_prepare_graphs, batch_set_capture_sizes, batch_graph_stats, batch_last_error,
     batch_context_create,
     batch_context_destroy,
     batch_slot_reset,
-    batch_prefill,
+    batch_prefill, batch_prefill_chunk, batch_slot_truncate,
     batch_decode,
     batch_slot_get_pos,
     batch_slot_save,
@@ -169,6 +171,8 @@ class Qwen2:
 
         # ─── 从 config.json 读取架构参数 ───
         cfg = self._load_model_config(model_path)
+        self._model_type = cfg.get("model_type", "qwen2")
+        self._loaded_norms = set()
 
         num_hidden_layers   = cfg.get("num_hidden_layers",   self._DEFAULT_CONFIG["num_hidden_layers"])
         hidden_size         = cfg.get("hidden_size",         self._DEFAULT_CONFIG["hidden_size"])
@@ -198,7 +202,7 @@ class Qwen2:
                                      self._DEFAULT_CONFIG["max_position_embeddings"]),
                              32768)
 
-        head_dim = hidden_size // num_attention_heads
+        head_dim = cfg.get("head_dim", hidden_size // num_attention_heads)
 
         print(f"[Qwen2] Architecture from config.json:")
         print(f"  layers={num_hidden_layers}, hidden={hidden_size}, heads={num_attention_heads}, "
@@ -269,11 +273,20 @@ class Qwen2:
         # 保存配置供后续使用
         self._config = cfg
         self._end_token = end_token
+        generation_path = model_path / "generation_config.json"
+        gen_cfg = _json.loads(generation_path.read_text()) if generation_path.exists() else {}
+        stops = gen_cfg.get("eos_token_id", eos_raw)
+        self._stop_tokens = set(stops if isinstance(stops, list) else [stops])
         self._device_type = device
 
         # 加载权重
         print(f"Loading weights from {model_path}...")
         self._load_weights(model_path)
+        if self._model_type == "qwen3":
+            expected = {f"model.layers.{i}.self_attn.{qk}_norm.weight"
+                        for i in range(num_hidden_layers) for qk in ("q", "k")}
+            if self._loaded_norms != expected:
+                raise ValueError(f"Qwen3 Q/K norm weights missing: {sorted(expected-self._loaded_norms)}")
         print("Model loaded successfully.")
 
     @staticmethod
@@ -606,6 +619,8 @@ class Qwen2:
             with safetensors.safe_open(file, framework="pt", device="cpu") as data_:
                 for name_ in data_.keys():
                     tensor = data_.get_tensor(name_)
+                    if name_.endswith(("self_attn.q_norm.weight", "self_attn.k_norm.weight")):
+                        self._loaded_norms.add(name_)
                     
                     c_name = name_.encode('utf-8')
                     
@@ -627,12 +642,14 @@ class Qwen2:
                         dtype_enum = 13  # LLAISYS_DTYPE_F32
                     else:
                         # 普通权重 — GPU 用 FP16, CPU 用 FP32
-                        # BF16 原始权重直接转 FP16 (精度损失可忽略, 值域安全)
+                        # Explicit FP16 storage policy; reject overflow and validate logits against reference.
                         import os
                         use_fp16_weights = (self._device_type != DeviceType.CPU
                                            and os.environ.get("LLAISYS_FORCE_FP32", "0") != "1")
                         if use_fp16_weights:
                             tensor = tensor.to(torch.float16)
+                            if not torch.isfinite(tensor).all():
+                                raise ValueError(f"FP16 conversion produced non-finite weights: {name_}")
                             dtype_enum = 12  # LLAISYS_DTYPE_F16
                         else:
                             if tensor.dtype != torch.float32:
@@ -819,6 +836,8 @@ class Qwen2:
 
         output_ids = list(inputs)
         max_tokens = max_new_tokens if max_new_tokens is not None else 20
+        if max_tokens <= 0:
+            return output_ids
         
         use_sampling = (top_k != 1) and (temperature > 0.0)
         
@@ -837,6 +856,8 @@ class Qwen2:
             next_token = model_infer(self.model_handle, input_ptr, ctypes.c_size_t(input_len))
 
         output_ids.append(int(next_token))
+        if next_token in self._stop_tokens:
+            return output_ids
         current_token = next_token
         
         # --- 2. Decoding ---
@@ -854,7 +875,7 @@ class Qwen2:
             output_ids.append(int(next_token))
             current_token = next_token
             
-            if next_token == self._end_token:  # EOS
+            if next_token in self._stop_tokens:  # EOS
                 break
 
         return output_ids
@@ -872,6 +893,8 @@ class Qwen2:
             return
 
         max_tokens = max_new_tokens if max_new_tokens is not None else 512
+        if max_tokens <= 0:
+            return
         use_sampling = (top_k != 1) and (temperature > 0.0)
         
         # Prefill
@@ -894,7 +917,7 @@ class Qwen2:
         
         # Decode
         for _ in range(max_tokens - 1):
-            if current_token == self._end_token:  # EOS
+            if current_token in self._stop_tokens:  # EOS
                 break
             token_np = np.array([current_token], dtype=np.int64)
             token_ptr = token_np.ctypes.data_as(ctypes.POINTER(ctypes.c_int64))
@@ -1104,9 +1127,63 @@ class BatchContext:
             batch_context_destroy(self._handle)
             self._handle = None
 
+    def _check_error(self):
+        message = batch_last_error(self._handle)
+        if message:
+            raise RuntimeError(message.decode())
+
+    def set_capture_sizes(self, sizes):
+        """Select padded batch buckets before first graph use; [] disables graphs."""
+        sizes = list(sizes)
+        if any(not isinstance(n, int) or n < 1 or n > self.max_batch_size for n in sizes):
+            raise ValueError("capture size outside batch capacity")
+        values = (ctypes.c_size_t * len(sizes))(*sizes)
+        if batch_set_capture_sizes(self._handle, values, len(sizes)):
+            self._check_error()
+
+    def prepare_graphs(self):
+        """Warm/capture all buckets without changing slots or live KV cache."""
+        if batch_prepare_graphs(self._handle):
+            self._check_error()
+
+    def graph_stats(self):
+        return json.loads(batch_graph_stats(self._handle))
+
+    def _validate_decode(self, slots, tokens):
+        if len(slots) != len(tokens) or len(slots) > self.max_batch_size:
+            raise ValueError("invalid batch size")
+        if len(set(slots)) != len(slots) or any(s < 0 or s >= self.max_batch_size for s in slots):
+            raise ValueError("invalid or duplicate slot")
+
     def slot_reset(self, slot_id: int):
         """重置指定 slot 的 KV-Cache."""
         batch_slot_reset(self._handle, ctypes.c_size_t(slot_id))
+
+    def slot_truncate(self, slot_id: int, position: int):
+        if slot_id < 0 or slot_id >= self.max_batch_size or position < 0:
+            raise ValueError("invalid slot/position")
+        batch_slot_truncate(self._handle, slot_id, position)
+        self._check_error()
+
+    def prefill_chunk(self, slot_id: int, token_ids: Sequence[int], *, final: bool = False,
+                      temperature: float = 0.8, top_k: int = 50, top_p: float = 0.9):
+        """Append prompt tokens to this slot; only final=True samples a next token.
+
+        Returns None for intermediate chunks. Caller resets a new slot explicitly.
+        Existing prefix KV and its absolute RoPE positions are retained.
+        """
+        if slot_id < 0 or slot_id >= self.max_batch_size or not len(token_ids):
+            raise ValueError("invalid slot or empty chunk")
+        tokens = np.ascontiguousarray(token_ids, dtype=np.int64)
+        if tokens.ndim != 1:
+            raise ValueError("chunk tokens must be one-dimensional")
+        value = batch_prefill_chunk(self._handle, slot_id,
+            tokens.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)), len(tokens), int(final),
+            temperature, top_k, top_p)
+        self._check_error()
+        if value == -1:
+            raise RuntimeError("prefill chunk failed")
+        return None if value == -2 else int(value)
 
     def prefill(
         self,
@@ -1142,6 +1219,8 @@ class BatchContext:
             ctypes.c_int(top_k),
             ctypes.c_float(top_p),
         )
+        if result < 0:
+            raise ValueError("batch prefill failed: invalid slot, prompt or KV capacity")
         return int(result)
 
     def decode(
@@ -1164,7 +1243,10 @@ class BatchContext:
         Returns:
             list[int]: 各 slot 的 next token 列表.
         """
+        self._validate_decode(active_slots, current_tokens)
         num_active = len(active_slots)
+        if num_active == 0:
+            return []
         assert len(current_tokens) == num_active, "active_slots and current_tokens must have same length"
         
         slots_arr = (ctypes.c_size_t * num_active)(*active_slots)
@@ -1182,6 +1264,7 @@ class BatchContext:
             output_arr,
         )
         
+        self._check_error()
         return [int(output_arr[i]) for i in range(num_active)]
 
     def decode_per_request(
@@ -1204,7 +1287,10 @@ class BatchContext:
         Returns:
             list[int]: Next token per slot.
         """
+        self._validate_decode(active_slots, current_tokens)
         num_active = len(active_slots)
+        if num_active == 0:
+            return []
         assert len(current_tokens) == num_active
         assert len(temperatures) == num_active
         assert len(top_ks) == num_active
@@ -1228,6 +1314,7 @@ class BatchContext:
             output_arr,
         )
 
+        self._check_error()
         return [int(output_arr[i]) for i in range(num_active)]
 
     def slot_get_pos(self, slot_id: int) -> int:
@@ -1253,6 +1340,7 @@ class BatchContext:
                 ctypes.c_size_t(slot_id),
                 snapshot_handle,
             )
+            self._check_error()
 
     def get_free_blocks(self) -> int:
         """获取当前可用的 KV-Cache block 数量."""

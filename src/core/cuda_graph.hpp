@@ -13,7 +13,7 @@ namespace llaisys::core {
  *
  * Workflow:
  *   1. Create runner: CUDAGraphRunner runner;
- *   2. First call: runner.launch(fn) → captures the graph by executing fn
+ *   2. First call executes once eagerly; next call captures and launches
  *   3. Subsequent calls: runner.launch(fn) → replays the captured graph
  *      (fn is NOT re-invoked; the graph instance is replayed)
  *
@@ -39,7 +39,7 @@ public:
     // Launch: captures on first call, replays thereafter.
     // fn: a callable that enqueues CUDA kernels on the current stream.
     // Returns true if the graph was replayed (false if captured fresh).
-    bool launch(std::function<void()> fn);
+    bool launch(std::function<void()> fn, bool strict = false);
 
     // Mark graph as invalid; next launch() will re-capture.
     void invalidate();
@@ -55,6 +55,7 @@ private:
     void *_graph = nullptr;        // cudaGraph_t
     void *_graph_exec = nullptr;   // cudaGraphExec_t
     bool _captured = false;
+    bool _warmup_done = false;
     size_t _capture_count = 0;
     size_t _replay_count = 0;
 };

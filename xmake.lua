@@ -1,14 +1,26 @@
-option("llmops-root")
+option("cuda-arch")
+        set_default("sm_89")
+        set_showmenu(true)
+        set_description("CUDA target architecture (sm_89 for RTX 4060)")
+    option_end()
+    option("llmops-root")
+    set_default("../llmops")
+    set_showmenu(true)
+    set_description("Required external llmops source root (.build/llmops/libllmops.so required)")
+option_end()
+option("llmops-libdir")
     set_default("")
     set_showmenu(true)
-    set_description("Optional external llmops source root (build/libllmops.so required)")
+    set_description("Optional llmops library directory, e.g. .build/cpu")
 option_end()
 local llmops_root = get_config("llmops-root")
+local llmops_libdir = get_config("llmops-libdir")
+if not llmops_libdir or llmops_libdir == "" then llmops_libdir = path.join(llmops_root or "../llmops", ".build/llmops") end
 if llmops_root and llmops_root ~= "" then
     add_defines("LLAISYS_USE_LLMOPS")
-    add_includedirs(path.join(llmops_root, "include"), path.join(llmops_root, "integrations/llaisys"))
-    add_linkdirs(path.join(llmops_root, "build"))
-    add_rpathdirs(path.join(llmops_root, "build"))
+    add_includedirs(path.join(llmops_root, "include"), path.join(os.projectdir(), "src/ops/nvidia"))
+    add_linkdirs(llmops_libdir)
+    add_rpathdirs(llmops_libdir)
     add_links("llmops")
 end
 
@@ -153,7 +165,6 @@ target_end()
 
 target("llaisys-ops")
     set_kind("static")
-    add_deps("llaisys-ops-cpu")
 
     set_languages("cxx17")
     set_warnings("all", "error")
@@ -172,7 +183,9 @@ target_end()
 
 target("llaisys")
     if llmops_root and llmops_root ~= "" then
-        add_files(path.join(llmops_root, "integrations/llaisys/dispatch_stats.cpp"))
+        if has_config("nv-gpu") then
+            add_files("src/ops/nvidia/dispatch_stats.cpp")
+        end
         add_includedirs("src")
     end
     set_kind("shared")
@@ -190,7 +203,7 @@ target("llaisys")
         add_links("cublas", "cudart")
         add_linkdirs("/usr/local/cuda/lib64")
         set_toolset("cu", "nvcc")
-        add_cuflags("-Xcompiler=-fPIC", "--default-stream=per-thread")
+        add_cuflags("-Xcompiler=-fPIC", "-arch=" .. (get_config("cuda-arch") or "sm_89"), "--default-stream=per-thread")
         add_files("src/device/nvidia/*.cu")
         add_files("src/ops/self_attention/paged_attention.cpp")
         add_files("src/ops/cache/cache_ops.cpp")
@@ -222,7 +235,7 @@ target("llaisys")
         end
         -- 显式链接 MetaX 算子库（on_build 不会自动注册到 xmake 依赖链接）
         -- 使用 --whole-archive 避免因链接顺序导致符号被丢弃
-        add_shflags("-Wl,--whole-archive", "build/linux/x86_64/release/libllaisys-ops-metax.a", "-Wl,--no-whole-archive", "-lmcblas", "-lmcruntime", {force = true})
+        add_shflags("-Wl,--whole-archive", ".build/metax/libllaisys-ops-metax.a", "-Wl,--no-whole-archive", "-lmcblas", "-lmcruntime", {force = true})
     end
 
     set_languages("cxx17")
@@ -377,3 +390,6 @@ target("llaisys-bench-paged-attention")
     add_files("test/bench_paged_attention.cpp")
     add_includedirs("$(projectdir)")
 target_end()
+
+-- Match device linking to the CUDA compile target.
+add_culdflags("-arch=" .. (get_config("cuda-arch") or "sm_89"))

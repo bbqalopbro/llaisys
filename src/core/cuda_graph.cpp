@@ -28,6 +28,9 @@ namespace llaisys::core {
 
 CUDAGraphRunner::~CUDAGraphRunner() {
 #ifdef ENABLE_NVIDIA_API
+    const char *stats = std::getenv("LLAISYS_CUDAGRAPH_STATS");
+    if (stats && stats[0] == '1')
+        fprintf(stderr, "[CUDAGraph] captures=%zu replays=%zu\n", _capture_count, _replay_count);
     // CUDAGraphRunner 持有两个 CUDA 资源：
     //   _graph      = cudaGraph_t，捕获到的图描述
     //   _graph_exec = cudaGraphExec_t，实例化后可直接 launch 的执行体
@@ -39,7 +42,7 @@ CUDAGraphRunner::~CUDAGraphRunner() {
     _graph_exec = nullptr;
 }
 
-bool CUDAGraphRunner::launch(std::function<void()> fn) {
+bool CUDAGraphRunner::launch(std::function<void()> fn, bool strict) {
 #ifdef ENABLE_NVIDIA_API
     // 调试开关：强制不使用 CUDA Graph，直接执行传入的函数。
     // 这样可以快速判断问题来自 graph capture/replay，还是来自算子本身。
@@ -52,11 +55,18 @@ bool CUDAGraphRunner::launch(std::function<void()> fn) {
     // 如果已经捕获并实例化过 graph，后续 decode 直接 replay。
     // 注意：这里不会再次调用 fn()；graph 中保存的是第一次 fn() 执行时
     // 提交到 stream 上的 CUDA kernel 序列。
+    // Prepare lazy operator state before capture. Execute each token exactly once.
+    if (!_warmup_done) {
+        fn();
+        _warmup_done = true;
+        return false;
+    }
     if (_captured && _graph_exec) {
         int err = cudaGraphLaunch(_graph_exec, kPerThreadStream);
         if (err != 0) {
             fprintf(stderr, "[CUDAGraph] replay failed: %s\n",
                     cudaGetErrorString(err));
+            if (strict) throw std::runtime_error("CUDA Graph replay failed: " + std::string(cudaGetErrorString(err)));
             // replay 失败时丢弃旧 graph，递归调用 launch(fn) 重新捕获一次。
             invalidate();
             return launch(fn);
@@ -83,19 +93,30 @@ bool CUDAGraphRunner::launch(std::function<void()> fn) {
     if (err != 0) {
         fprintf(stderr, "[CUDAGraph] beginCapture failed: %s, falling back to eager\n",
                 cudaGetErrorString(err));
+        if (strict) throw std::runtime_error("CUDA Graph begin capture failed: " + std::string(cudaGetErrorString(err)));
         fn();
         return false;
     }
 
     // 执行用户传入的计算逻辑。这里不会立即保存 C++ 函数本身，
     // 保存的是函数执行过程中入队到 CUDA stream 的操作序列。
-    fn();
+    try {
+        fn();
+    } catch (...) {
+        void *aborted = nullptr;
+        cudaStreamEndCapture(kPerThreadStream, &aborted);
+        if (aborted) cudaGraphDestroy(aborted);
+        invalidate();
+        throw;
+    }
 
     // 结束 capture，得到 cudaGraph_t。
     err = cudaStreamEndCapture(kPerThreadStream, &graph);
     if (err != 0) {
         fprintf(stderr, "[CUDAGraph] endCapture failed: %s\n",
                 cudaGetErrorString(err));
+        if (graph) cudaGraphDestroy(graph);
+        if (strict) throw std::runtime_error("CUDA Graph end capture failed: " + std::string(cudaGetErrorString(err)));
         // capture 失败时回退到 eager 执行，保证功能仍然可用。
         fn();
         return false;
@@ -109,6 +130,7 @@ bool CUDAGraphRunner::launch(std::function<void()> fn) {
         fprintf(stderr, "[CUDAGraph] instantiate failed: %s\n",
                 cudaGetErrorString(err));
         cudaGraphDestroy(graph);
+        if (strict) throw std::runtime_error("CUDA Graph instantiate failed: " + std::string(cudaGetErrorString(err)));
         fn();
         return false;
     }
@@ -127,6 +149,7 @@ bool CUDAGraphRunner::launch(std::function<void()> fn) {
                 cudaGetErrorString(err));
         // 首次 graph launch 失败则清掉 graph，回退到 eager。
         invalidate();
+        if (strict) throw std::runtime_error("CUDA Graph initial launch failed: " + std::string(cudaGetErrorString(err)));
         fn();
         return false;
     }
@@ -134,6 +157,7 @@ bool CUDAGraphRunner::launch(std::function<void()> fn) {
     return false;
 
 #else
+    (void)strict;
     // 非 NVIDIA 构建没有 CUDA Graph，直接执行原函数。
     fn();
     return false;
@@ -154,6 +178,7 @@ void CUDAGraphRunner::invalidate() {
     }
 #endif
     _captured = false;
+    _warmup_done = false;
 }
 
 } // namespace llaisys::core

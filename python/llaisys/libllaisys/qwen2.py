@@ -173,6 +173,12 @@ def _setup_functions():
         ]
         lib.llaisysQwen2BatchPrefill.restype = ctypes.c_int64
 
+    lib.llaisysQwen2BatchPrefillChunk.argtypes = [ctypes.c_void_p,ctypes.c_size_t,
+        ctypes.POINTER(ctypes.c_int64),ctypes.c_size_t,ctypes.c_int,ctypes.c_float,ctypes.c_int,ctypes.c_float]
+    lib.llaisysQwen2BatchPrefillChunk.restype = ctypes.c_int64
+    lib.llaisysQwen2BatchSlotTruncate.argtypes = [ctypes.c_void_p,ctypes.c_size_t,ctypes.c_size_t]
+    lib.llaisysQwen2BatchSlotTruncate.restype = None
+
     # BatchDecode
     if hasattr(lib, 'llaisysQwen2BatchDecode'):
         lib.llaisysQwen2BatchDecode.argtypes = [
@@ -291,6 +297,8 @@ pool_clear = LIB_LLAISYS.llaisysKVCachePoolClear
 batch_context_create = LIB_LLAISYS.llaisysQwen2BatchContextCreate
 batch_context_destroy = LIB_LLAISYS.llaisysQwen2BatchContextDestroy
 batch_slot_reset = LIB_LLAISYS.llaisysQwen2BatchSlotReset
+batch_prefill_chunk = LIB_LLAISYS.llaisysQwen2BatchPrefillChunk
+batch_slot_truncate = LIB_LLAISYS.llaisysQwen2BatchSlotTruncate
 batch_prefill = LIB_LLAISYS.llaisysQwen2BatchPrefill
 batch_decode = LIB_LLAISYS.llaisysQwen2BatchDecode
 batch_slot_get_pos = LIB_LLAISYS.llaisysQwen2BatchSlotGetPos
@@ -309,3 +317,16 @@ model_create_tp = LIB_LLAISYS.llaisysQwen2ModelCreateTP
 model_get_tp_size = LIB_LLAISYS.llaisysQwen2GetTpSize
 model_get_tp_rank = LIB_LLAISYS.llaisysQwen2GetTpRank
 model_set_comm = LIB_LLAISYS.llaisysQwen2SetComm
+
+batch_prepare_graphs = LIB_LLAISYS.llaisysQwen2BatchPrepareGraphs
+batch_prepare_graphs.argtypes = [ctypes.c_void_p]
+batch_prepare_graphs.restype = ctypes.c_int
+batch_set_capture_sizes = LIB_LLAISYS.llaisysQwen2BatchSetCaptureSizes
+batch_set_capture_sizes.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_size_t), ctypes.c_size_t]
+batch_set_capture_sizes.restype = ctypes.c_int
+batch_graph_stats = LIB_LLAISYS.llaisysQwen2BatchGraphStats
+batch_graph_stats.argtypes = [ctypes.c_void_p]
+batch_graph_stats.restype = ctypes.c_char_p
+batch_last_error = LIB_LLAISYS.llaisysQwen2BatchLastError
+batch_last_error.argtypes = [ctypes.c_void_p]
+batch_last_error.restype = ctypes.c_char_p

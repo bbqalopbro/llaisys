@@ -1,3 +1,6 @@
+#include <llmops/ops/blas_support.hpp>
+#include <cstdlib>
+#include <string>
 // =============================================================
 // MetaX (沐曦) C500 — Linear kernel (Y = X * W^T + bias)
 // 使用 mxBLAS (沐曦 BLAS 库) 进行矩阵乘法
@@ -39,44 +42,6 @@
         }                                                                         \
     } while (0)
 
-template<typename T> __device__ inline float to_float(T v);
-template<> __device__ inline float to_float<float>(float v) { return v; }
-template<> __device__ inline float to_float<__half>(__half v) { return __half2float(v); }
-template<> __device__ inline float to_float<__maca_bfloat16>(__maca_bfloat16 v) { return __bfloat162float(v); }
-
-template<typename T> __device__ inline T from_float(float v);
-template<> __device__ inline float from_float<float>(float v) { return v; }
-template<> __device__ inline __half from_float<__half>(float v) { return __float2half(v); }
-template<> __device__ inline __maca_bfloat16 from_float<__maca_bfloat16>(float v) { return __float2bfloat16(v); }
-
-// ---- Bias add kernel ----
-template<typename T>
-__global__ void add_bias_kernel(T *Y, const T *bias, int64_t M, int64_t N) {
-    int64_t tid = blockIdx.x * blockDim.x + threadIdx.x;
-    int64_t total = M * N;
-    if (tid >= total) return;
-    int64_t j = tid % N;
-    float y_val = to_float(Y[tid]);
-    float b_val = to_float(bias[j]);
-    Y[tid] = from_float<T>(y_val + b_val);
-}
-
-// ---- FP32→FP16 conversion kernel ----
-__global__ void convert_f32_to_f16_kernel(__half *out, const float *in, int64_t n) {
-    int64_t tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid >= n) return;
-    out[tid] = __float2half(in[tid]);
-}
-
-// ---- FP16 bias add to FP32 output ----
-__global__ void add_bias_f16_to_f32_kernel(float *Y, const __half *bias, int64_t M, int64_t N) {
-    int64_t tid = blockIdx.x * blockDim.x + threadIdx.x;
-    int64_t total = M * N;
-    if (tid >= total) return;
-    int64_t j = tid % N;
-    Y[tid] += __half2float(bias[j]);
-}
-
 // Lazy-initialized thread-local BLAS handle
 // 注：在沐曦平台上 mcblasHandle_t → mxblasHandle_t, mcblasCreate → mxblasCreate
 static mcblasHandle_t get_blas_handle() {
@@ -98,6 +63,8 @@ void linear(tensor_t out, tensor_t in, tensor_t weight, tensor_t bias) {
     int64_t K = in->shape()[1];
     int64_t N = weight->shape()[0];
 
+    const char *mode=std::getenv("LLAISYS_METAX_BLAS");
+    if (!mode || std::string(mode)!="mcblas") throw std::runtime_error("MetaX native linear unavailable; explicitly select LLAISYS_METAX_BLAS=mcblas");
     mcblasHandle_t handle = get_blas_handle();
 
     float alpha = 1.0f;
@@ -115,8 +82,7 @@ void linear(tensor_t out, tensor_t in, tensor_t weight, tensor_t bias) {
             in_f16_cap = in_elems;
         }
 
-        int thr = 256, blk = ((int)in_elems + thr - 1) / thr;
-        convert_f32_to_f16_kernel<<<blk, thr>>>(in_f16_buf, (const float*)in->data(), in_elems);
+        llmops::metax::support::convert_f32_to_f16_kernel(in_f16_buf, (const float*)in->data(), in_elems, nullptr);
 
         BLAS_CHECK(mcblasGemmEx(handle,
                                 MCBLAS_OP_T, MCBLAS_OP_N,
@@ -130,14 +96,14 @@ void linear(tensor_t out, tensor_t in, tensor_t weight, tensor_t bias) {
                                 MCBLAS_GEMM_DEFAULT));
 
         if (bias && bias->data()) {
-            int64_t total = M * N;
-            thr = 256; blk = ((int)total + thr - 1) / thr;
+
+
             if (bias->dtype() == LLAISYS_DTYPE_F16) {
-                add_bias_f16_to_f32_kernel<<<blk, thr>>>(
-                    (float*)out->data(), (const __half*)bias->data(), M, N);
+                llmops::metax::support::add_bias_f16_to_f32_kernel(
+                    (float*)out->data(), (const __half*)bias->data(), M, N, nullptr);
             } else {
-                add_bias_kernel<float><<<blk, thr>>>(
-                    (float*)out->data(), (const float*)bias->data(), M, N);
+                llmops::metax::support::add_bias_kernel<float>(
+                    (float*)out->data(), (const float*)bias->data(), M, N, nullptr);
             }
             GPU_CHECK(mcGetLastError());
         }
@@ -166,20 +132,20 @@ void linear(tensor_t out, tensor_t in, tensor_t weight, tensor_t bias) {
                             MCBLAS_GEMM_DEFAULT));
 
     if (bias && bias->data()) {
-        int64_t total = M * N;
-        int thr = 256, blk = ((int)total + thr - 1) / thr;
+
+
         switch (w_dtype) {
         case LLAISYS_DTYPE_F32:
-            add_bias_kernel<float><<<blk, thr>>>(
-                (float*)out->data(), (const float*)bias->data(), M, N);
+            llmops::metax::support::add_bias_kernel<float>(
+                (float*)out->data(), (const float*)bias->data(), M, N, nullptr);
             break;
         case LLAISYS_DTYPE_F16:
-            add_bias_kernel<__half><<<blk, thr>>>(
-                (__half*)out->data(), (const __half*)bias->data(), M, N);
+            llmops::metax::support::add_bias_kernel<__half>(
+                (__half*)out->data(), (const __half*)bias->data(), M, N, nullptr);
             break;
         case LLAISYS_DTYPE_BF16:
-            add_bias_kernel<__maca_bfloat16><<<blk, thr>>>(
-                (__maca_bfloat16*)out->data(), (const __maca_bfloat16*)bias->data(), M, N);
+            llmops::metax::support::add_bias_kernel<__maca_bfloat16>(
+                (__maca_bfloat16*)out->data(), (const __maca_bfloat16*)bias->data(), M, N, nullptr);
             break;
         default: break;
         }

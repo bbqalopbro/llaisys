@@ -19,7 +19,7 @@ void reshape_and_cache(
     int num_kv_heads,
     int head_dim,
     int block_size,
-    int max_blocks_per_seq,
+    int max_blocks_per_seq,  // Table row stride; 0 broadcasts one table to all rows.
     size_t pool_block_stride,
     size_t pool_layer_stride,
     int layer_idx,

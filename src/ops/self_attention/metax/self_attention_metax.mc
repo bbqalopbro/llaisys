@@ -1,3 +1,6 @@
+#include <llmops/ops/blas_support.hpp>
+#include <cstdlib>
+#include <string>
 // =============================================================
 // MetaX (沐曦) C500 — Self-Attention kernel
 // =============================================================
@@ -35,161 +38,6 @@
     } while (0)
 
 // ---- FP32/FP16/BF16 conversion helpers ----
-template<typename T> __device__ inline float to_float(T v);
-template<> __device__ inline float to_float<float>(float v) { return v; }
-template<> __device__ inline float to_float<__half>(__half v) { return __half2float(v); }
-template<> __device__ inline float to_float<__maca_bfloat16>(__maca_bfloat16 v) { return __bfloat162float(v); }
-
-template<typename T> __device__ inline T from_float(float v);
-template<> __device__ inline float from_float<float>(float v) { return v; }
-template<> __device__ inline __half from_float<__half>(float v) { return __float2half(v); }
-template<> __device__ inline __maca_bfloat16 from_float<__maca_bfloat16>(float v) { return __float2bfloat16(v); }
-
-// ----------------------------------------------------------------
-// Gather ALL Q heads into contiguous float buffer
-// src: [seq_len, n_head, head_dim] with strides, type T
-// dst: [n_head, seq_len, head_dim] contiguous float
-// ----------------------------------------------------------------
-template<typename T>
-__global__ void gather_all_q_kernel(
-    float *dst, const T *src,
-    int64_t seq_len, int64_t n_head, int64_t head_dim,
-    int64_t s0, int64_t s1, int64_t s2
-) {
-    int64_t total = n_head * seq_len * head_dim;
-    int64_t tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid >= total) return;
-
-    int64_t d = tid % head_dim;
-    int64_t s = (tid / head_dim) % seq_len;
-    int64_t h = tid / (head_dim * seq_len);
-
-    dst[h * seq_len * head_dim + s * head_dim + d] =
-        to_float(src[s * s0 + h * s1 + d * s2]);
-}
-
-// ----------------------------------------------------------------
-// Gather KV heads and expand for GQA
-// src: [total_len, n_kv_head, dim] with strides, type T
-// dst: [n_head, total_len, dim] contiguous float
-//      Each KV head is repeated group_size times.
-// ----------------------------------------------------------------
-template<typename T>
-__global__ void gather_expand_kv_kernel(
-    float *dst, const T *src,
-    int64_t total_len, int64_t n_head, int64_t n_kv_head, int64_t dim,
-    int64_t group_size,
-    int64_t s0, int64_t s1, int64_t s2
-) {
-    int64_t total = n_head * total_len * dim;
-    int64_t tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid >= total) return;
-
-    int64_t d = tid % dim;
-    int64_t t = (tid / dim) % total_len;
-    int64_t h = tid / (dim * total_len);
-    int64_t kv_h = h / group_size;
-
-    dst[h * total_len * dim + t * dim + d] =
-        to_float(src[t * s0 + kv_h * s1 + d * s2]);
-}
-
-// ----------------------------------------------------------------
-// Scatter ALL head outputs back
-// src: [n_head, seq_len, v_dim] contiguous float
-// dst: [seq_len, n_head, v_dim] with strides, type T
-// ----------------------------------------------------------------
-template<typename T>
-__global__ void scatter_all_heads_kernel(
-    T *dst, const float *src,
-    int64_t seq_len, int64_t n_head, int64_t v_dim,
-    int64_t s0, int64_t s1, int64_t s2
-) {
-    int64_t total = n_head * seq_len * v_dim;
-    int64_t tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid >= total) return;
-
-    int64_t d = tid % v_dim;
-    int64_t s = (tid / v_dim) % seq_len;
-    int64_t h = tid / (v_dim * seq_len);
-
-    dst[s * s0 + h * s1 + d * s2] =
-        from_float<T>(src[h * seq_len * v_dim + s * v_dim + d]);
-}
-
-// ---- Scale kernel (float, operates on all heads) ----
-__global__ void scale_kernel(float *data, float scale, int64_t n) {
-    int64_t tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid < n) data[tid] *= scale;
-}
-
-// ---- Causal mask for batched scores ----
-// scores: [n_head, seq_len, total_len] contiguous
-// Each head has the same mask: j > (total_len - seq_len + i) => -inf
-__global__ void causal_mask_batched_kernel(
-    float *scores,
-    int64_t n_head, int64_t seq_len, int64_t total_len
-) {
-    int64_t per_head = seq_len * total_len;
-    int64_t total = n_head * per_head;
-    int64_t tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid >= total) return;
-
-    int64_t pos_in_head = tid % per_head;
-    int64_t i = pos_in_head / total_len;
-    int64_t j = pos_in_head % total_len;
-    int64_t current_pos = total_len - seq_len + i;
-
-    if (j > current_pos) scores[tid] = -1e30f;
-}
-
-// ---- Per-row softmax (float) ----
-// data: [num_rows, row_len] — num_rows = n_head * seq_len
-__global__ void softmax_row_kernel(float *data, int64_t num_rows, int64_t row_len) {
-    int64_t row = blockIdx.x;
-    if (row >= num_rows) return;
-
-    extern __shared__ float sdata[];
-    float *row_data = data + row * row_len;
-
-    float local_max = -1e30f;
-    for (int64_t j = threadIdx.x; j < row_len; j += blockDim.x) {
-        float val = row_data[j];
-        if (val > local_max) local_max = val;
-    }
-    sdata[threadIdx.x] = local_max;
-    __syncthreads();
-    for (int s = blockDim.x / 2; s > 0; s >>= 1) {
-        if (threadIdx.x < s && sdata[threadIdx.x + s] > sdata[threadIdx.x])
-            sdata[threadIdx.x] = sdata[threadIdx.x + s];
-        __syncthreads();
-    }
-    float max_val = sdata[0];
-    __syncthreads();
-
-    float local_sum = 0.0f;
-    for (int64_t j = threadIdx.x; j < row_len; j += blockDim.x) {
-        float val = expf(row_data[j] - max_val);
-        row_data[j] = val;
-        local_sum += val;
-    }
-    sdata[threadIdx.x] = local_sum;
-    __syncthreads();
-    for (int s = blockDim.x / 2; s > 0; s >>= 1) {
-        if (threadIdx.x < s) sdata[threadIdx.x] += sdata[threadIdx.x + s];
-        __syncthreads();
-    }
-    float inv_sum = 1.0f / (sdata[0] + 1e-6f);
-    __syncthreads();
-
-    for (int64_t j = threadIdx.x; j < row_len; j += blockDim.x) {
-        row_data[j] *= inv_sum;
-    }
-}
-
-// ----------------------------------------------------------------
-// Lazy-initialized thread-local cuBLAS / mxBLAS handle
-// ----------------------------------------------------------------
 static mcblasHandle_t get_blas_handle() {
     static thread_local mcblasHandle_t handle = nullptr;
     if (!handle) {
@@ -245,6 +93,8 @@ static void self_attention_impl(tensor_t attn_val, tensor_t q, tensor_t k, tenso
     ptrdiff_t v_s0 = v->strides()[0], v_s1 = v->strides()[1], v_s2 = v->strides()[2];
     ptrdiff_t o_s0 = attn_val->strides()[0], o_s1 = attn_val->strides()[1], o_s2 = attn_val->strides()[2];
 
+    const char *mode=std::getenv("LLAISYS_METAX_BLAS");
+    if (!mode || std::string(mode)!="mcblas") throw std::runtime_error("MetaX native self_attention unavailable; explicitly select LLAISYS_METAX_BLAS=mcblas");
     mcblasHandle_t handle = get_blas_handle();
 
     // Ensure cached temp buffers
@@ -260,32 +110,31 @@ static void self_attention_impl(tensor_t attn_val, tensor_t q, tensor_t k, tenso
     ensure_buf(s_scores, s_scores_sz, s_need);
     ensure_buf(s_o_all, s_o_all_sz, o_need);
 
-    int thr = 256;
 
     // 1. Gather ALL Q heads: T -> float [n_head, seq_len, head_dim]
     {
-        int64_t n = n_head * seq_len * head_dim;
-        int blk = ((int)n + thr - 1) / thr;
-        gather_all_q_kernel<T><<<blk, thr>>>(
-            s_q_all, q_ptr, seq_len, n_head, head_dim, q_s0, q_s1, q_s2);
+
+
+        llmops::metax::support::gather_all_q_kernel<T>(
+            s_q_all, q_ptr, seq_len, n_head, head_dim, q_s0, q_s1, q_s2, nullptr);
         GPU_CHECK(mcGetLastError());
     }
 
     // 2. Gather + expand KV: T -> float [n_head, total_len, dim]
     {
-        int64_t n = n_head * total_len * head_dim;
-        int blk = ((int)n + thr - 1) / thr;
-        gather_expand_kv_kernel<T><<<blk, thr>>>(
+
+
+        llmops::metax::support::gather_expand_kv_kernel<T>(
             s_k_all, k_ptr, total_len, n_head, n_kv_head, head_dim, group_size,
-            k_s0, k_s1, k_s2);
+            k_s0, k_s1, k_s2, nullptr);
         GPU_CHECK(mcGetLastError());
     }
     {
-        int64_t n = n_head * total_len * v_dim;
-        int blk = ((int)n + thr - 1) / thr;
-        gather_expand_kv_kernel<T><<<blk, thr>>>(
+
+
+        llmops::metax::support::gather_expand_kv_kernel<T>(
             s_v_all, v_ptr, total_len, n_head, n_kv_head, v_dim, group_size,
-            v_s0, v_s1, v_s2);
+            v_s0, v_s1, v_s2, nullptr);
         GPU_CHECK(mcGetLastError());
     }
 
@@ -308,21 +157,21 @@ static void self_attention_impl(tensor_t attn_val, tensor_t q, tensor_t k, tenso
 
     // 4. Scale + causal mask
     {
-        int64_t ns = n_head * seq_len * total_len;
-        int blk = ((int)ns + thr - 1) / thr;
-        scale_kernel<<<blk, thr>>>(s_scores, scale, ns);
+
+
+        llmops::metax::support::scale_kernel(s_scores, scale, n_head * seq_len * total_len, nullptr);
         GPU_CHECK(mcGetLastError());
-        causal_mask_batched_kernel<<<blk, thr>>>(s_scores, n_head, seq_len, total_len);
+        llmops::metax::support::causal_mask_batched_kernel(s_scores, n_head, seq_len, total_len, nullptr);
         GPU_CHECK(mcGetLastError());
     }
 
     // 5. Softmax per row (n_head * seq_len rows)
     {
         int64_t num_rows = n_head * seq_len;
-        int sthr = 1;
-        while (sthr < total_len && sthr < 1024) sthr <<= 1;
-        size_t smem = sthr * sizeof(float);
-        softmax_row_kernel<<<(int)num_rows, sthr, smem>>>(s_scores, num_rows, total_len);
+
+
+
+        llmops::metax::support::softmax_row_kernel(s_scores, num_rows, total_len, nullptr);
         GPU_CHECK(mcGetLastError());
     }
 
@@ -345,10 +194,10 @@ static void self_attention_impl(tensor_t attn_val, tensor_t q, tensor_t k, tenso
 
     // 7. Scatter ALL heads: float -> T [seq_len, n_head, v_dim]
     {
-        int64_t n = n_head * seq_len * v_dim;
-        int blk = ((int)n + thr - 1) / thr;
-        scatter_all_heads_kernel<T><<<blk, thr>>>(
-            o_ptr, s_o_all, seq_len, n_head, v_dim, o_s0, o_s1, o_s2);
+
+
+        llmops::metax::support::scatter_all_heads_kernel<T>(
+            o_ptr, s_o_all, seq_len, n_head, v_dim, o_s0, o_s1, o_s2, nullptr);
         GPU_CHECK(mcGetLastError());
     }
 }

@@ -55,6 +55,12 @@ public:
         return (_num_tokens % _block_size == 0);
     }
 
+    void truncate(size_t tokens, BlockAllocator &allocator) {
+        size_t keep=(tokens+_block_size-1)/_block_size;
+        while(_block_ids.size()>keep) {allocator.free(_block_ids.back());_block_ids.pop_back();}
+        _num_tokens=static_cast<int>(tokens);
+    }
+
     void clear() {
         _block_ids.clear();
         _num_tokens = 0;

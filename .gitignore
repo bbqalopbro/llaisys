@@ -109,3 +109,8 @@ test_awq_native.py
 项目文档/*.nsys-rep
 项目文档/*.sqlite
 
+
+# Unified generated artifacts
+.build/
+core
+core.*
