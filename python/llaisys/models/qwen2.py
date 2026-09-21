@@ -155,7 +155,7 @@ class Qwen2:
                  max_seq_len: int | None = None,
                  tp_size: int = 1, tp_rank: int = 0,
                  dist_backend: DistBackend | None = None,
-                 comm_handle=None):
+                 comm_handle=None, quantization: str | None = None):
         """创建 Qwen2 模型实例.
 
         Args:
@@ -166,11 +166,31 @@ class Qwen2:
             tp_rank: 当前进程的 TP rank (0-based).
             dist_backend: 分布式后端 (None 则在 tp_size>1 时自动选 NCCL, 否则不创建).
             comm_handle: 外部已创建的 comm 句柄 (覆盖自动创建).
+            quantization: "fp8" enables SM120 E4M3 W8A8 for transformer projections;
+                "none" keeps floating weights. Defaults to LLAISYS_QUANTIZATION or "none".
+                FP8 requires an unquantized checkpoint and TP=1; LM head/embedding/KV stay FP16.
         """
         model_path = Path(model_path)
 
         # ─── 从 config.json 读取架构参数 ───
         cfg = self._load_model_config(model_path)
+        import os
+        self.quantization = quantization or os.environ.get("LLAISYS_QUANTIZATION", "none")
+        if self.quantization not in ("none", "fp8"):
+            raise ValueError("quantization must be none or fp8 (E4M3 W8A8)")
+        self.fp8_weight_count = 0
+        self.fp8_weight_bytes = 0
+        self.fp8_replaced_fp16_bytes = 0
+        if self.quantization == "fp8":
+            if device != DeviceType.NVIDIA or tp_size != 1:
+                raise ValueError("FP8 W8A8 currently requires NVIDIA SM120 and TP=1")
+            if os.environ.get("LLAISYS_FORCE_FP32") == "1" or os.environ.get("LLAISYS_LLMOPS") == "cublas":
+                raise ValueError("FP8 W8A8 requires FP16 activations and the native backend")
+            if (cfg.get("quantization_config") or (model_path / "quant_config.json").exists()
+                    or (model_path / "quantize_config.json").exists()):
+                raise ValueError("FP8 conversion requires an unquantized floating-point checkpoint")
+            if torch.cuda.get_device_capability() != (12, 0):
+                raise ValueError("This FP8 implementation requires SM120")
         self._model_type = cfg.get("model_type", "qwen2")
         self._loaded_norms = set()
 
@@ -622,6 +642,29 @@ class Qwen2:
                     if name_.endswith(("self_attn.q_norm.weight", "self_attn.k_norm.weight")):
                         self._loaded_norms.add(name_)
                     
+                    if self.quantization == "fp8" and name_.startswith("model.layers.") and name_.endswith((
+                            "self_attn.q_proj.weight", "self_attn.k_proj.weight", "self_attn.v_proj.weight",
+                            "self_attn.o_proj.weight", "mlp.gate_proj.weight", "mlp.up_proj.weight", "mlp.down_proj.weight")):
+                        if tensor.ndim != 2 or tensor.shape[1] % 128 or not tensor.is_floating_point():
+                            raise ValueError(f"Unsupported FP8 projection: {name_} {tensor.shape} {tensor.dtype}")
+                        # Quantize one projection at a time on the GPU. This avoids
+                        # retaining a second full checkpoint or slow CPU FP8 casts.
+                        weight = tensor.to(device="cuda").float()
+                        if not torch.isfinite(weight).all():
+                            raise ValueError(f"Non-finite FP8 source weight: {name_}")
+                        amax = weight.abs().amax(dim=1)
+                        scale = torch.where(amax > 0, (amax / 448.0).clamp_min(1e-30), torch.ones_like(amax))
+                        quantized = (weight / scale[:, None]).clamp(-448, 448).to(torch.float8_e4m3fn)
+                        host_quantized = quantized.view(torch.uint8).cpu()
+                        host_scale = scale.cpu()
+                        self._call_load_weight(name_, host_quantized, dtype_enum=11)
+                        self._call_load_weight(name_ + ".scale", host_scale, dtype_enum=13)
+                        self.fp8_weight_count += 1
+                        self.fp8_weight_bytes += quantized.numel() + scale.numel() * 4
+                        self.fp8_replaced_fp16_bytes += tensor.numel() * 2
+                        del weight, quantized, scale, amax, host_quantized, host_scale
+                        continue
+
                     c_name = name_.encode('utf-8')
                     
                     # 确保内存连续
@@ -661,6 +704,13 @@ class Qwen2:
                     shape_array = (ctypes.c_int64 * ndim)(*tensor.shape)
                     
                     load_weight(self.model_handle, c_name, ctypes.c_void_p(data_ptr), ndim, shape_array, dtype_enum)
+
+        if self.quantization == "fp8":
+            expected = self._load_model_config(model_path)["num_hidden_layers"] * 7
+            if self.fp8_weight_count != expected:
+                raise ValueError(f"Incomplete FP8 checkpoint: loaded {self.fp8_weight_count}/{expected} projections")
+            torch.cuda.empty_cache()  # Release temporary conversion storage before inference.
+            print(f"[FP8 W8A8] {self.fp8_weight_count} projections, E4M3 per-channel weights, per-token activations; embedding/LM head/KV remain FP16")
 
     def _load_weights_gptq(self, model_path, bits=4, group_size=128, quant_method="gptq"):
         """Load GPTQ/AWQ format model, converting to our symmetric INT4 at load time.

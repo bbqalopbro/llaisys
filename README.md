@@ -6,9 +6,22 @@
 - 连续 Attention 默认 `LLAISYS_ATTENTION=native`，可显式选择 `cublas`；分页/Graph 默认自研。CPU/NVIDIA 以 device_type 分发，不支持或未编译的设备明确报错。
 - Qwen3-8B 通过现有 `Qwen2` Python 类复用主体，按 config 的 model_type 加载/检查每层 Q/K Norm，在所有执行路径的 RoPE 前逐头归一化。执行为 FP16 存储、FP32 累加，拒绝权重转换溢出。
 - Python 加载器支持 `LLAISYS_LIBRARY` 指定当前共享库，避免误用安装目录中的旧版本。
-- `llaisysOperatorStats()` 查询实际宿主算子提交，Graph capture/replay 另由 `llaisysQwen2GraphCounts()` 查询。batch 目前验证 eager，不把单请求 Graph 结果当作 batch Graph 结果。
+- `llaisysOperatorStats()` 查询实际宿主算子提交，Graph capture/replay 另由 `llaisysQwen2GraphCounts()` 查询。batch Graph 有独立的动态批次、KV/prefix 状态、连续调度和 chunked prefill 验证。
 
 服务器入口：`bash /root/projects/rebuild-5090.sh`；`bash /root/projects/verify-5090.sh`。算子测试使用已有 `python test/run_gpu_f32_tests.py --device cpu|nvidia`（文件名保留兼容，但现在覆盖 F32/F16/BF16）。完整数值/模型测试和 Qwen3 尺寸基准见 llmops README。
+
+## FP8 W8A8（SM120，显式启用）
+
+```python
+model = llaisys.models.Qwen2(model_path, llaisys.DeviceType.NVIDIA,
+                            quantization="fp8")
+```
+
+也可设置 `LLAISYS_QUANTIZATION=fp8` 和 `LLAISYS_LLMOPS=sm120`。加载原始浮点 checkpoint 后，每层 Q/K/V/O/gate/up/down 的权重按输出通道转换为 E4M3；激活在 GPU 上按 token 动态量化。llmops 使用 FP8 Tensor Core 与 TMA，FP32 累加，输出 FP16，不经过整矩阵 FP16 反量化。RMSNorm/SwiGLU 量化融合、QKV/gate-up 激活复用和 residual 融合均接入实际执行路径。
+
+单请求、batch Graph、连续批处理和 chunked prefill 共用模型分发；量化缓冲和工作区保留稳定地址供 Graph 使用。Embedding、LM head、attention、KV cache 和残差仍为 FP16。当前只支持单卡 SM120、原始浮点 checkpoint；拒绝 TP>1、CPU、非 SM120、AWQ/GPTQ 混合加载、强制 FP32 激活以及显式 cuBLAS 后端。默认 `none` 保持原有路径。
+
+Qwen3-8B 应加载 252 个 FP8 投影。`model.fp8_weight_count`、`model.fp8_weight_bytes`、`model.fp8_replaced_fp16_bytes` 可检查覆盖率及存储节省。量化数值不等价于原 FP16 模型；需要独立 NLL/KL 和任务质量评测，不能只看生成文本或单个 GEMM 误差。详细接口、测量方法和验证命令见外部 llmops 的 `docs/fp8-w8a8.md`。
 
 # Welcome to LLAISYS
 

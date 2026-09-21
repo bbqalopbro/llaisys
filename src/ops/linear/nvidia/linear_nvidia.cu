@@ -267,3 +267,14 @@ void linear_int4(tensor_t out, tensor_t in, tensor_t weight, tensor_t scale,
     record_dispatch("linear_int4", "llmops.cuda.w4a16");
 }
 } // namespace llaisys::ops::nvidia
+
+namespace llaisys::ops::nvidia {
+void linear_fp8(tensor_t out, tensor_t in, tensor_t sx, tensor_t w,
+                tensor_t sw, tensor_t bias, tensor_t residual) {
+    llmops_integration::fp8_linear(out,in,sx,w,sw,bias,residual);
+}
+void quantize_fp8(tensor_t q, tensor_t scales, tensor_t in, tensor_t weight,
+                  tensor_t up, tensor_t floating, float eps) {
+    llmops_integration::fp8_quantize(q,scales,in,weight,up,floating,eps);
+}
+}

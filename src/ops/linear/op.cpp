@@ -49,4 +49,22 @@ void linear_int4(tensor_t out, tensor_t in, tensor_t weight, tensor_t scale,
     if (residual) llmops::cpu::add(out->data(),out->data(),residual->data(),kernel_dtype(out->dtype()),out->numel());
 }
 
+void linear_fp8(tensor_t out, tensor_t in, tensor_t input_scale, tensor_t weight,
+                tensor_t weight_scale, tensor_t bias, tensor_t residual) {
+    check_devices({out,in,input_scale,weight,weight_scale,bias,residual});
+#ifdef ENABLE_NVIDIA_API
+    if(out->deviceType()==LLAISYS_DEVICE_NVIDIA)
+        return nvidia::linear_fp8(out,in,input_scale,weight,weight_scale,bias,residual);
+#endif
+    throw std::runtime_error("FP8 W8A8 requires NVIDIA SM120");
+}
+void quantize_fp8(tensor_t q, tensor_t scales, tensor_t in, tensor_t weight,
+                  tensor_t up, tensor_t floating, float eps) {
+    check_devices({q,scales,in,weight,up,floating});
+#ifdef ENABLE_NVIDIA_API
+    if(in->deviceType()==LLAISYS_DEVICE_NVIDIA)
+        return nvidia::quantize_fp8(q,scales,in,weight,up,floating,eps);
+#endif
+    throw std::runtime_error("FP8 W8A8 requires NVIDIA SM120");
+}
 }

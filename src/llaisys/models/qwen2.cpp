@@ -44,6 +44,9 @@
 #include <sstream>
 #include <stdexcept>
 
+#ifdef ENABLE_NVIDIA_API
+extern "C" int cudaStreamIsCapturing(void *stream, int *status);
+#endif
 using namespace llaisys;
 
 // ==========================================
@@ -121,7 +124,53 @@ struct LlaisysQwen2Model {
     std::vector<std::vector<tensor_t>> kv_caches;
 
     // INT8 量化标记
-    bool has_quantized = false;
+    bool has_quantized = false; // Legacy weight-only formats.
+    bool has_fp8 = false;
+    struct Fp8Activation { tensor_t data, scale; };
+    // Stable addresses are retained for every warmed graph bucket.
+    std::map<std::pair<size_t,size_t>, Fp8Activation> fp8_activations;
+    std::map<std::pair<size_t,size_t>, Fp8Activation> fp8_storage;
+    const void *fp8_valid_input = nullptr;
+    std::pair<size_t,size_t> fp8_valid_shape{0,0};
+
+    Fp8Activation &fp8_buffer(tensor_t in) {
+        auto key=std::make_pair(in->shape()[0],in->shape()[1]);
+        auto it=fp8_activations.find(key);
+        if(it==fp8_activations.end()) {
+#ifdef ENABLE_NVIDIA_API
+            int capturing=0;
+            if(cudaStreamIsCapturing(reinterpret_cast<void*>(2),&capturing)!=0 || capturing)
+                throw std::runtime_error("FP8: warm activation shape before Graph capture");
+#endif
+            size_t capacity=1;
+            while(capacity<key.first) {
+                if(capacity>SIZE_MAX/2) throw std::runtime_error("FP8 activation capacity overflow");
+                capacity*=2;
+            }
+            auto storage_key=std::make_pair(capacity,key.second);
+            auto base=fp8_storage.find(storage_key);
+            if(base==fp8_storage.end()) {
+                Fp8Activation value{Tensor::create({capacity,key.second},LLAISYS_DTYPE_F8,device_type,device_id),
+                                    Tensor::create({capacity},LLAISYS_DTYPE_F32,device_type,device_id)};
+                base=fp8_storage.emplace(storage_key,std::move(value)).first;
+            }
+            Fp8Activation view{base->second.data->slice(0,0,key.first),base->second.scale->slice(0,0,key.first)};
+            it=fp8_activations.emplace(key,std::move(view)).first;
+        }
+        return it->second;
+    }
+    void rms_norm_for_linear(tensor_t out,tensor_t in,tensor_t weight,float eps) {
+        if(!has_fp8) return ops::rms_norm(out,in,weight,eps);
+        auto &buf=fp8_buffer(out);
+        ops::quantize_fp8(buf.data,buf.scale,in,weight,nullptr,out,eps);
+        fp8_valid_input=out->data(); fp8_valid_shape={out->shape()[0],out->shape()[1]};
+    }
+    void swiglu_for_linear(tensor_t out,tensor_t gate,tensor_t up) {
+        if(!has_fp8) return ops::swiglu(out,gate,up);
+        auto &buf=fp8_buffer(out);
+        ops::quantize_fp8(buf.data,buf.scale,gate,nullptr,up,out,0);
+        fp8_valid_input=out->data(); fp8_valid_shape={out->shape()[0],out->shape()[1]};
+    }
 
     // AWQ 原生模式标记 (I32 packed qweight 已加载)
     bool has_awq_native = false;
@@ -430,6 +479,17 @@ struct LlaisysQwen2Model {
             return;
         }
         auto b = TO_CPP_TENSOR(bias_handle);
+        if(w->dtype()==LLAISYS_DTYPE_F8) {
+            auto &buf=fp8_buffer(in);
+            const auto shape=std::make_pair(in->shape()[0],in->shape()[1]);
+            if(fp8_valid_input!=in->data() || fp8_valid_shape!=shape) {
+                ops::quantize_fp8(buf.data,buf.scale,in,nullptr,nullptr,nullptr,0);
+                fp8_valid_input=in->data(); fp8_valid_shape=shape;
+            }
+            ops::linear_fp8(out,buf.data,buf.scale,w,TO_CPP_TENSOR(scale_handle),b,residual);
+            return;
+        }
+        fp8_valid_input=nullptr;
 
         if (w->dtype() == LLAISYS_DTYPE_I32 && scale_handle && qzeros_handle) {
             // AWQ 原生路径: int32 packed → dequantize_awq_int4 → FP32 → linear
@@ -676,7 +736,7 @@ static int64_t prefill_batch(struct LlaisysQwen2Model* model,
         std::swap(res_buf, hs_buf);
 
         // Pre-attention Norm
-        ops::rms_norm(norm_buf, res_buf, TO_CPP_TENSOR(model->weights.attn_norm_w[layer]), model->meta.epsilon);
+        model->rms_norm_for_linear(norm_buf, res_buf, TO_CPP_TENSOR(model->weights.attn_norm_w[layer]), model->meta.epsilon);
 
         // QKV Linear
         model->linear_maybe_dequant(q_buf, norm_buf, model->weights.attn_q_w[layer], model->weights.attn_q_w_scale[layer], model->weights.attn_q_b[layer], model->weights.attn_q_w_qzeros[layer]);
@@ -722,19 +782,19 @@ static int64_t prefill_batch(struct LlaisysQwen2Model* model,
 
         // O Projection
         auto attn_flat = attn_buf->reshape({S, nh_local * dh});
-        model->linear_maybe_dequant(hs_buf, attn_flat, model->weights.attn_o_w[layer], model->weights.attn_o_w_scale[layer], nullptr, model->weights.attn_o_w_qzeros[layer]);
+        model->linear_maybe_dequant(hs_buf, attn_flat, model->weights.attn_o_w[layer], model->weights.attn_o_w_scale[layer], nullptr, model->weights.attn_o_w_qzeros[layer], model->has_fp8?res_buf:nullptr);
         model->allReduceIfTP(hs_buf, hs * S);
-        ops::add(hs_buf, hs_buf, res_buf);
+        if(!model->has_fp8) ops::add(hs_buf, hs_buf, res_buf);
 
         // Pre-MLP Norm + MLP
         std::swap(res_buf, hs_buf);
-        ops::rms_norm(norm_buf, res_buf, TO_CPP_TENSOR(model->weights.mlp_norm_w[layer]), model->meta.epsilon);
+        model->rms_norm_for_linear(norm_buf, res_buf, TO_CPP_TENSOR(model->weights.mlp_norm_w[layer]), model->meta.epsilon);
         model->linear_maybe_dequant(gate_buf, norm_buf, model->weights.mlp_gate_w[layer], model->weights.mlp_gate_w_scale[layer], nullptr, model->weights.mlp_gate_w_qzeros[layer]);
         model->linear_maybe_dequant(up_buf, norm_buf, model->weights.mlp_up_w[layer], model->weights.mlp_up_w_scale[layer], nullptr, model->weights.mlp_up_w_qzeros[layer]);
-        ops::swiglu(mlp_buf, gate_buf, up_buf);
-        model->linear_maybe_dequant(hs_buf, mlp_buf, model->weights.mlp_down_w[layer], model->weights.mlp_down_w_scale[layer], nullptr, model->weights.mlp_down_w_qzeros[layer]);
+        model->swiglu_for_linear(mlp_buf, gate_buf, up_buf);
+        model->linear_maybe_dequant(hs_buf, mlp_buf, model->weights.mlp_down_w[layer], model->weights.mlp_down_w_scale[layer], nullptr, model->weights.mlp_down_w_qzeros[layer], model->has_fp8?res_buf:nullptr);
         model->allReduceIfTP(hs_buf, hs * S);
-        ops::add(hs_buf, hs_buf, res_buf);
+        if(!model->has_fp8) ops::add(hs_buf, hs_buf, res_buf);
     }
 
     // ── 3. 取最后一个 token 的 hidden state ──
@@ -798,7 +858,7 @@ __export int64_t llaisysQwen2ModelInferSample(struct LlaisysQwen2Model * model, 
                 // 2. Transformer Layers
                 for (size_t i = 0; i < model->meta.nlayer; ++i) {
                     std::swap(model->residual, model->hidden_states);
-                    ops::rms_norm(model->norm_out, model->residual,
+                    model->rms_norm_for_linear(model->norm_out, model->residual,
                                  TO_CPP_TENSOR(model->weights.attn_norm_w[i]), model->meta.epsilon);
 
                     model->linear_maybe_dequant(model->q, model->norm_out,
@@ -862,7 +922,7 @@ __export int64_t llaisysQwen2ModelInferSample(struct LlaisysQwen2Model * model, 
                     }
 
                     std::swap(model->residual, model->hidden_states);
-                    ops::rms_norm(model->norm_out, model->residual,
+                    model->rms_norm_for_linear(model->norm_out, model->residual,
                                  TO_CPP_TENSOR(model->weights.mlp_norm_w[i]), model->meta.epsilon);
                     model->linear_maybe_dequant(model->gate, model->norm_out,
                         model->weights.mlp_gate_w[i], model->weights.mlp_gate_w_scale[i],
@@ -870,7 +930,7 @@ __export int64_t llaisysQwen2ModelInferSample(struct LlaisysQwen2Model * model, 
                     model->linear_maybe_dequant(model->up, model->norm_out,
                         model->weights.mlp_up_w[i], model->weights.mlp_up_w_scale[i],
                         nullptr, model->weights.mlp_up_w_qzeros[i]);
-                    ops::swiglu(model->mlp_act, model->gate, model->up);
+                    model->swiglu_for_linear(model->mlp_act, model->gate, model->up);
                     if (model->tp_size <= 1) {
                         // Fused linear+add: GEMV+residual in one kernel
                         model->linear_maybe_dequant(model->hidden_states, model->mlp_act,
@@ -912,7 +972,7 @@ __export int64_t llaisysQwen2ModelInferSample(struct LlaisysQwen2Model * model, 
 
             for (size_t i = 0; i < model->meta.nlayer; ++i) {
                 std::swap(model->residual, model->hidden_states);
-                ops::rms_norm(model->norm_out, model->residual,
+                model->rms_norm_for_linear(model->norm_out, model->residual,
                               TO_CPP_TENSOR(model->weights.attn_norm_w[i]), model->meta.epsilon);
 
                 model->linear_maybe_dequant(model->q, model->norm_out,
@@ -954,7 +1014,7 @@ __export int64_t llaisysQwen2ModelInferSample(struct LlaisysQwen2Model * model, 
                 ops::add(model->hidden_states, model->hidden_states, model->residual);
 
                 std::swap(model->residual, model->hidden_states);
-                ops::rms_norm(model->norm_out, model->residual,
+                model->rms_norm_for_linear(model->norm_out, model->residual,
                               TO_CPP_TENSOR(model->weights.mlp_norm_w[i]), model->meta.epsilon);
                 model->linear_maybe_dequant(model->gate, model->norm_out,
                     model->weights.mlp_gate_w[i], model->weights.mlp_gate_w_scale[i],
@@ -962,7 +1022,7 @@ __export int64_t llaisysQwen2ModelInferSample(struct LlaisysQwen2Model * model, 
                 model->linear_maybe_dequant(model->up, model->norm_out,
                     model->weights.mlp_up_w[i], model->weights.mlp_up_w_scale[i],
                     nullptr, model->weights.mlp_up_w_qzeros[i]);
-                ops::swiglu(model->mlp_act, model->gate, model->up);
+                model->swiglu_for_linear(model->mlp_act, model->gate, model->up);
                 model->linear_maybe_dequant(model->hidden_states, model->mlp_act,
                     model->weights.mlp_down_w[i], model->weights.mlp_down_w_scale[i],
                     nullptr, model->weights.mlp_down_w_qzeros[i]);
@@ -1013,6 +1073,11 @@ __export void llaisysQwen2LoadWeightByName(struct LlaisysQwen2Model* model, cons
         model->has_quantized = true;
     }
     
+    if ((llaisysDataType_t)dtype==LLAISYS_DTYPE_F8) {
+        if(model->device_type!=LLAISYS_DEVICE_NVIDIA || model->tp_size!=1 || ndim!=2 || shape[1]%128)
+            throw std::runtime_error("FP8 W8A8 requires NVIDIA, TP=1 and K divisible by 128");
+        model->has_fp8=true;
+    }
     std::string key(name);
     size_t elem_size = llaisys::utils::dsize((llaisysDataType_t)dtype);
 
@@ -1304,7 +1369,7 @@ __export void llaisysKVCachePoolClear(struct LlaisysKVCachePool * pool) {
 
 __export int llaisysQwen2IsQuantized(struct LlaisysQwen2Model * model) {
     if (!model) return 0;
-    return model->has_quantized ? 1 : 0;
+    return (model->has_quantized || model->has_fp8) ? 1 : 0;
 }
 
 // ==========================================
@@ -1508,8 +1573,9 @@ struct LlaisysQwen2BatchContext {
     void linear_maybe_dequant(tensor_t out, tensor_t in,
                               llaisysTensor_t w_handle, llaisysTensor_t scale_handle,
                               llaisysTensor_t bias_handle,
-                              llaisysTensor_t qzeros_handle = nullptr) {
-        model->linear_maybe_dequant(out, in, w_handle, scale_handle, bias_handle, qzeros_handle);
+                              llaisysTensor_t qzeros_handle = nullptr,
+                              tensor_t residual = nullptr) {
+        model->linear_maybe_dequant(out, in, w_handle, scale_handle, bias_handle, qzeros_handle, residual);
     }
 };
 
@@ -1570,7 +1636,7 @@ static int64_t batch_prefill_impl(LlaisysQwen2BatchContext* ctx, size_t slot_id,
         std::swap(res_buf, hs_buf);
 
         // Pre-attention Norm
-        ops::rms_norm(norm_buf, res_buf,
+        model->rms_norm_for_linear(norm_buf, res_buf,
                      TO_CPP_TENSOR(model->weights.attn_norm_w[layer]), meta.epsilon);
 
         // QKV Linear
@@ -1625,13 +1691,13 @@ static int64_t batch_prefill_impl(LlaisysQwen2BatchContext* ctx, size_t slot_id,
         auto attn_flat = attn_buf->reshape({S, nh_local * dh});
         model->linear_maybe_dequant(hs_buf, attn_flat,
             model->weights.attn_o_w[layer], model->weights.attn_o_w_scale[layer],
-            nullptr, model->weights.attn_o_w_qzeros[layer]);
+            nullptr, model->weights.attn_o_w_qzeros[layer], model->has_fp8?res_buf:nullptr);
         model->allReduceIfTP(hs_buf, hs * S);
-        ops::add(hs_buf, hs_buf, res_buf);
+        if(!model->has_fp8) ops::add(hs_buf, hs_buf, res_buf);
 
         // Pre-MLP Norm + MLP
         std::swap(res_buf, hs_buf);
-        ops::rms_norm(norm_buf, res_buf,
+        model->rms_norm_for_linear(norm_buf, res_buf,
                      TO_CPP_TENSOR(model->weights.mlp_norm_w[layer]), meta.epsilon);
         model->linear_maybe_dequant(gate_buf, norm_buf,
             model->weights.mlp_gate_w[layer], model->weights.mlp_gate_w_scale[layer],
@@ -1639,12 +1705,12 @@ static int64_t batch_prefill_impl(LlaisysQwen2BatchContext* ctx, size_t slot_id,
         model->linear_maybe_dequant(up_buf, norm_buf,
             model->weights.mlp_up_w[layer], model->weights.mlp_up_w_scale[layer],
             nullptr, model->weights.mlp_up_w_qzeros[layer]);
-        ops::swiglu(mlp_buf, gate_buf, up_buf);
+        model->swiglu_for_linear(mlp_buf, gate_buf, up_buf);
         model->linear_maybe_dequant(hs_buf, mlp_buf,
             model->weights.mlp_down_w[layer], model->weights.mlp_down_w_scale[layer],
-            nullptr, model->weights.mlp_down_w_qzeros[layer]);
+            nullptr, model->weights.mlp_down_w_qzeros[layer], model->has_fp8?res_buf:nullptr);
         model->allReduceIfTP(hs_buf, hs * S);
-        ops::add(hs_buf, hs_buf, res_buf);
+        if(!model->has_fp8) ops::add(hs_buf, hs_buf, res_buf);
     }
 
     slot.page_table.set_num_tokens(static_cast<int>(total));
@@ -1726,7 +1792,7 @@ static void batch_forward_device(LlaisysQwen2BatchContext* ctx, size_t B) {
         std::swap(b_resid, b_hidden);
 
         // A. Pre-Norm
-        ops::rms_norm(b_norm, b_resid,
+        model->rms_norm_for_linear(b_norm, b_resid,
                       TO_CPP_TENSOR(model->weights.attn_norm_w[layer]),
                       meta.epsilon);
 
@@ -1779,15 +1845,15 @@ static void batch_forward_device(LlaisysQwen2BatchContext* ctx, size_t B) {
         // F. O Projection
         ctx->linear_maybe_dequant(b_hidden, b_attn,
             model->weights.attn_o_w[layer], model->weights.attn_o_w_scale[layer],
-            nullptr, model->weights.attn_o_w_qzeros[layer]);
+            nullptr, model->weights.attn_o_w_qzeros[layer], model->has_fp8?b_resid:nullptr);
         model->allReduceIfTP(b_hidden, B * meta.hs);
 
         // G. Residual Add 1
-        ops::add(b_hidden, b_hidden, b_resid);
+        if(!model->has_fp8) ops::add(b_hidden, b_hidden, b_resid);
 
         // H. MLP Block
         std::swap(b_resid, b_hidden);
-        ops::rms_norm(b_norm, b_resid,
+        model->rms_norm_for_linear(b_norm, b_resid,
                       TO_CPP_TENSOR(model->weights.mlp_norm_w[layer]),
                       meta.epsilon);
 
@@ -1797,14 +1863,14 @@ static void batch_forward_device(LlaisysQwen2BatchContext* ctx, size_t B) {
         ctx->linear_maybe_dequant(b_up, b_norm,
             model->weights.mlp_up_w[layer], model->weights.mlp_up_w_scale[layer],
             nullptr, model->weights.mlp_up_w_qzeros[layer]);
-        ops::swiglu(b_mlp, b_gate, b_up);
+        model->swiglu_for_linear(b_mlp, b_gate, b_up);
         ctx->linear_maybe_dequant(b_hidden, b_mlp,
             model->weights.mlp_down_w[layer], model->weights.mlp_down_w_scale[layer],
-            nullptr, model->weights.mlp_down_w_qzeros[layer]);
+            nullptr, model->weights.mlp_down_w_qzeros[layer], model->has_fp8?b_resid:nullptr);
         model->allReduceIfTP(b_hidden, B * meta.hs);
 
         // I. Residual Add 2
-        ops::add(b_hidden, b_hidden, b_resid);
+        if(!model->has_fp8) ops::add(b_hidden, b_hidden, b_resid);
     }
 
     // ── 5. Final Norm ──
@@ -1900,7 +1966,7 @@ static void batch_decode_legacy_impl(LlaisysQwen2BatchContext* ctx,
 
     for (size_t layer = 0; layer < meta.nlayer; ++layer) {
         std::swap(b_resid, b_hidden);
-        ops::rms_norm(b_norm, b_resid,
+        model->rms_norm_for_linear(b_norm, b_resid,
                       TO_CPP_TENSOR(model->weights.attn_norm_w[layer]), meta.epsilon);
         ctx->linear_maybe_dequant(b_q, b_norm,
             model->weights.attn_q_w[layer], model->weights.attn_q_w_scale[layer],
@@ -1948,12 +2014,12 @@ static void batch_decode_legacy_impl(LlaisysQwen2BatchContext* ctx,
 
         ctx->linear_maybe_dequant(b_hidden, b_attn,
             model->weights.attn_o_w[layer], model->weights.attn_o_w_scale[layer],
-            nullptr, model->weights.attn_o_w_qzeros[layer]);
+            nullptr, model->weights.attn_o_w_qzeros[layer], model->has_fp8?b_resid:nullptr);
         model->allReduceIfTP(b_hidden, B * meta.hs);
-        ops::add(b_hidden, b_hidden, b_resid);
+        if(!model->has_fp8) ops::add(b_hidden, b_hidden, b_resid);
 
         std::swap(b_resid, b_hidden);
-        ops::rms_norm(b_norm, b_resid,
+        model->rms_norm_for_linear(b_norm, b_resid,
                       TO_CPP_TENSOR(model->weights.mlp_norm_w[layer]), meta.epsilon);
         ctx->linear_maybe_dequant(b_gate, b_norm,
             model->weights.mlp_gate_w[layer], model->weights.mlp_gate_w_scale[layer],
@@ -1961,12 +2027,12 @@ static void batch_decode_legacy_impl(LlaisysQwen2BatchContext* ctx,
         ctx->linear_maybe_dequant(b_up, b_norm,
             model->weights.mlp_up_w[layer], model->weights.mlp_up_w_scale[layer],
             nullptr, model->weights.mlp_up_w_qzeros[layer]);
-        ops::swiglu(b_mlp, b_gate, b_up);
+        model->swiglu_for_linear(b_mlp, b_gate, b_up);
         ctx->linear_maybe_dequant(b_hidden, b_mlp,
             model->weights.mlp_down_w[layer], model->weights.mlp_down_w_scale[layer],
-            nullptr, model->weights.mlp_down_w_qzeros[layer]);
+            nullptr, model->weights.mlp_down_w_qzeros[layer], model->has_fp8?b_resid:nullptr);
         model->allReduceIfTP(b_hidden, B * meta.hs);
-        ops::add(b_hidden, b_hidden, b_resid);
+        if(!model->has_fp8) ops::add(b_hidden, b_hidden, b_resid);
     }
 
     ops::rms_norm(b_hidden, b_hidden,
