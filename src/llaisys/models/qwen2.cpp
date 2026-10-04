@@ -754,7 +754,7 @@ static int64_t prefill_batch(struct LlaisysQwen2Model* model,
 
         // Self-Attention: 直接用 k_3d/v_3d (causal mask 由 kernel 内部处理)
         float scale = 1.0f / std::sqrt((float)dh);
-        ops::self_attention(attn_buf, q_3d, k_3d, v_3d, scale);
+        ops::self_attention(attn_buf, q_3d, k_3d, v_3d, scale, model->has_fp8);
 
         // 写入 KV Cache: 写入 block pool 或 kv_caches (取决于后端)
         size_t kv_row_bytes = nkvh_local * dh * llaisys::utils::dsize(dt);
@@ -1004,7 +1004,7 @@ __export int64_t llaisysQwen2ModelInferSample(struct LlaisysQwen2Model * model, 
                 float scale = 1.0f / std::sqrt((float)model->meta.dh);
                 auto k_slice = model->kv_caches[i][0]->slice(0, 0, model->current_pos + 1);
                 auto v_slice = model->kv_caches[i][1]->slice(0, 0, model->current_pos + 1);
-                ops::self_attention(model->attn_out, q_3d, k_slice, v_slice, scale);
+                ops::self_attention(model->attn_out, q_3d, k_slice, v_slice, scale, model->has_fp8);
 
                 auto attn_flat = model->attn_out->reshape({1, model->local_nh * model->meta.dh});
                 model->linear_maybe_dequant(model->hidden_states, attn_flat,
@@ -1679,12 +1679,12 @@ static int64_t batch_prefill_impl(LlaisysQwen2BatchContext* ctx, size_t slot_id,
         }
         }
         if(prefix==0) {
-            ops::self_attention(attn_buf,q_3d,k_3d,v_3d,scale);
+            ops::self_attention(attn_buf,q_3d,k_3d,v_3d,scale,model->has_fp8);
         } else {
             // Read old and new KV directly from the pool: no repeated prefix gather.
             ops::paged_prefill(attn_buf->data(),q_3d->data(),alloc.pool_k_raw(),alloc.pool_v_raw(),
                 (const int*)ctx->prefill_table->data(),S,total,nh_local,nkvh_local,dh,bs,
-                ctx->table_stride,alloc.block_stride(),alloc.layer_stride(),layer,scale,dev,dt);
+                ctx->table_stride,alloc.block_stride(),alloc.layer_stride(),layer,scale,dev,dt,model->has_fp8);
         }
 
         // O Projection

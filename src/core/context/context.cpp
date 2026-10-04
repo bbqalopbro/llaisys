@@ -17,14 +17,14 @@ Context::Context() {
     for (auto device_type : device_typs) {
         const LlaisysRuntimeAPI *api_ = llaisysGetRuntimeAPI(device_type);
         int device_count = api_->get_device_count();
-        std::vector<Runtime *> runtimes_(device_count);
+        std::vector<std::shared_ptr<Runtime>> runtimes_(device_count);
         for (int device_id = 0; device_id < device_count; device_id++) {
 
             if (_current_runtime == nullptr) {
-                auto runtime = new Runtime(device_type, device_id);
+                auto runtime = std::shared_ptr<Runtime>(new Runtime(device_type, device_id));
                 runtime->_activate();
                 runtimes_[device_id] = runtime;
-                _current_runtime = runtime;
+                _current_runtime = runtime.get();
             }
         }
         _runtime_map[device_type] = runtimes_;
@@ -32,19 +32,8 @@ Context::Context() {
 }
 
 Context::~Context() {
-    // Destroy current runtime first.
-    delete _current_runtime;
-
-    for (auto &runtime_entry : _runtime_map) {
-        std::vector<Runtime *> runtimes = runtime_entry.second;
-        for (auto runtime : runtimes) {
-            if (runtime != nullptr && runtime != _current_runtime) {
-                runtime->_activate();
-                delete runtime;
-            }
-        }
-        runtimes.clear();
-    }
+    // Tensors may escape an inference worker. Its context releases ownership,
+    // while live Storage objects keep the runtime and allocator alive.
     _current_runtime = nullptr;
     _runtime_map.clear();
 }
@@ -52,16 +41,16 @@ Context::~Context() {
 void Context::setDevice(llaisysDeviceType_t device_type, int device_id) {
     // If doest not match the current runtime.
     if (_current_runtime == nullptr || _current_runtime->deviceType() != device_type || _current_runtime->deviceId() != device_id) {
-        auto runtimes = _runtime_map[device_type];
+        auto &runtimes = _runtime_map[device_type];
         CHECK_ARGUMENT((size_t)device_id < runtimes.size() && device_id >= 0, "invalid device id");
         if (_current_runtime != nullptr) {
             _current_runtime->_deactivate();
         }
         if (runtimes[device_id] == nullptr) {
-            runtimes[device_id] = new Runtime(device_type, device_id);
+            runtimes[device_id] = std::shared_ptr<Runtime>(new Runtime(device_type, device_id));
         }
         runtimes[device_id]->_activate();
-        _current_runtime = runtimes[device_id];
+        _current_runtime = runtimes[device_id].get();
     }
 }
 

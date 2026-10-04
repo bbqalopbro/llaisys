@@ -5,7 +5,7 @@
 #include "../allocator/allocator.hpp"
 
 namespace llaisys::core {
-class Runtime {
+class Runtime : public std::enable_shared_from_this<Runtime> {
 private:
     llaisysDeviceType_t _device_type;
     int _device_id;

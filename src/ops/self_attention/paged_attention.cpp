@@ -20,11 +20,11 @@ namespace llaisys::ops {
 
 void paged_prefill(void *out,const void *q,const void *k,const void *v,const int *table,
     int nq,int nk,int h,int hkv,int dim,int bs,int max_pages,size_t block_stride,
-    size_t layer_stride,int layer,float scale,llaisysDeviceType_t dev,llaisysDataType_t dtype) {
+    size_t layer_stride,int layer,float scale,llaisysDeviceType_t dev,llaisysDataType_t dtype,bool stable) {
 #ifdef ENABLE_NVIDIA_API
     if(dev==LLAISYS_DEVICE_NVIDIA) {
         llmops::cuda::paged_prefill_device(out,q,k,v,table,nq,nk,h,hkv,dim,bs,max_pages,
-            block_stride,layer_stride,layer,scale,kernel_dtype(dtype),operator_stream());
+            block_stride,layer_stride,layer,scale,kernel_dtype(dtype),operator_stream(),stable);
         record_dispatch("paged_prefill","llmops.cuda");return;
     }
 #endif

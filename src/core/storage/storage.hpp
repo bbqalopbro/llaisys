@@ -10,9 +10,10 @@ class Storage {
 private:
     std::byte *_memory;
     size_t _size;
-    Runtime &_runtime;
+    // Own the allocating runtime even after its thread-local context exits.
+    std::shared_ptr<Runtime> _runtime;
     bool _is_host;
-    Storage(std::byte *memory, size_t size, Runtime &runtime, bool is_host);
+    Storage(std::byte *memory, size_t size, std::shared_ptr<Runtime> runtime, bool is_host);
 
 public:
     friend class Runtime;

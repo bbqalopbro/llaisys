@@ -13,9 +13,6 @@ Runtime::Runtime(llaisysDeviceType_t device_type, int device_id)
 }
 
 Runtime::~Runtime() {
-    if (!_is_active) {
-        std::cerr << "Mallicious destruction of inactive runtime." << std::endl;
-    }
     delete _allocator;
     _allocator = nullptr;
     _api->destroy_stream(_stream);
@@ -48,11 +45,11 @@ const LlaisysRuntimeAPI *Runtime::api() const {
 }
 
 storage_t Runtime::allocateDeviceStorage(size_t size) {
-    return std::shared_ptr<Storage>(new Storage(_allocator->allocate(size), size, *this, false));
+    return std::shared_ptr<Storage>(new Storage(_allocator->allocate(size), size, shared_from_this(), false));
 }
 
 storage_t Runtime::allocateHostStorage(size_t size) {
-    return std::shared_ptr<Storage>(new Storage((std::byte *)_api->malloc_host(size), size, *this, true));
+    return std::shared_ptr<Storage>(new Storage((std::byte *)_api->malloc_host(size), size, shared_from_this(), true));
 }
 
 void Runtime::freeStorage(Storage *storage) {

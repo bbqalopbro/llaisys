@@ -29,6 +29,7 @@ void rope(tensor_t out, tensor_t in, tensor_t pos_ids, float theta);
 
 // 6. Self Attention (GQA + Causal Mask)
 void self_attention(tensor_t attn_val, tensor_t q, tensor_t k, tensor_t v, float scale);
+void self_attention(tensor_t attn_val, tensor_t q, tensor_t k, tensor_t v, float scale, bool stable);
 
 // 7. SwiGLU (Element-wise)
 void swiglu(tensor_t out, tensor_t gate, tensor_t up);

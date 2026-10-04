@@ -3,11 +3,11 @@
 #include "../runtime/runtime.hpp"
 
 namespace llaisys::core {
-Storage::Storage(std::byte *memory, size_t size, Runtime &runtime, bool is_host)
-    : _memory(memory), _size(size), _runtime(runtime), _is_host(is_host) {}
+Storage::Storage(std::byte *memory, size_t size, std::shared_ptr<Runtime> runtime, bool is_host)
+    : _memory(memory), _size(size), _runtime(std::move(runtime)), _is_host(is_host) {}
 
 Storage::~Storage() {
-    _runtime.freeStorage(this);
+    _runtime->freeStorage(this);
 }
 
 std::byte *Storage::memory() const {
@@ -22,7 +22,7 @@ llaisysDeviceType_t Storage::deviceType() const {
     if (isHost()) {
         return LLAISYS_DEVICE_CPU;
     } else {
-        return _runtime.deviceType();
+        return _runtime->deviceType();
     }
 }
 
@@ -30,7 +30,7 @@ int Storage::deviceId() const {
     if (isHost()) {
         return 0;
     } else {
-        return _runtime.deviceId();
+        return _runtime->deviceId();
     }
 }
 
